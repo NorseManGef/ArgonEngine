@@ -1,3 +1,6 @@
+cmake_minimum_required(VERSION 3.20)
+project(argonengine)
+
 set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -std=c++0x")
 
 include_directories(
@@ -1184,19 +1187,19 @@ set(SRC_WINDOWS
 )
 
 set(SOURCES
-    SRC_WINDOWS
-    SRC_ARGONAPP
-    SRC_ARGONENGINE
-    SRC_JSON
-    SRC_STB
-    SRC_STL2
-    SRC_OPUSFULE
-    SRC_OPUS
-    SRC_OGG
-    SRC_MINICL
-    SRC_LNEARMATH
-    SRC_BULLET
+    ${SRC_WINDOWS}
+    ${SRC_ARGONAPP}
+    ${SRC_ARGONENGINE}
+    ${SRC_JSON}
+    ${SRC_STB}
+    ${SRC_STL2}
+    ${SRC_OPUSFULE}
+    ${SRC_OPUS}
+    ${SRC_OGG}
+    ${SRC_MINICL}
+    ${SRC_LNEARMATH}
+    ${SRC_BULLET}
 )
 
-add_executable(app ${SOURCES} )
+add_executable(argonapp ${SOURCES} )
 
