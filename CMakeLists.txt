@@ -1,247 +1,48 @@
 cmake_minimum_required(VERSION 3.20)
 project(argonengine)
 
-set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -std=c++0x")
+find_package(OpenGL REQUIRED)
 
 include_directories(
     common
     app
+    win
+    ${OPENGL_INCLUDE_DIR}
 )
 
-target_precompile_headers(
-    common/precompiled.h
+#target_precompile_headers(
+#    common/precompiled.h
+#)
+
+set(SRC_ARGONENGINE
+    common/ArgonEngine/ArgonInit.cpp
+    common/ArgonEngine/AudioSystem.cpp
+    common/ArgonEngine/BasicShape.cpp
+    common/ArgonEngine/BoundingCube.cpp
+    common/ArgonEngine/Collision.cpp
+    common/ArgonEngine/Hardware.cpp
+    common/ArgonEngine/MeshFormat.cpp
+    common/ArgonEngine/Node.cpp
+    common/ArgonEngine/OpenGLES.cpp
+    common/ArgonEngine/Reflection.cpp
+    common/ArgonEngine/RenderSystem.cpp
+    common/ArgonEngine/RenderSystemConstants.cpp
+    common/ArgonEngine/ScoreController.cpp
+    common/ArgonEngine/Sprite.cpp
+    common/ArgonEngine/Text.cpp
+    common/ArgonEngine/Thread.cpp
+    common/ArgonEngine/UserInterface.cpp
+    common/ArgonEngine/UserMusic.cpp
+    common/ArgonEngine/Utility.cpp
+    common/ArgonEngine/VirtualResource.cpp
+    common/ArgonEngine/VirtualResourceImage.cpp
+    common/ArgonEngine/Curves.cpp
 )
 
-target_compile_options(
-    -ftree-vectorize
-    -ffast-math
-    -funroll-loops
-    -Wall
-    -W
-)
-
-set(INC_BULLET
-    common/btBulletCollisionCommon.h
-    common/btBulletDynamicsCommon.h
-    common/Bullet-C-Api.h
-    common/BulletCollision/BroadphaseCollision/btAxisSweep3.h
-    common/BulletCollision/BroadphaseCollision/btBroadphaseInterface.h
-    common/BulletCollision/BroadphaseCollision/btBroadphaseProxy.h
-    common/BulletCollision/BroadphaseCollision/btCollisionAlgorithm.h
-    common/BulletCollision/BroadphaseCollision/btDbvt.h
-    common/BulletCollision/BroadphaseCollision/btDbvtBroadphase.h
-    common/BulletCollision/BroadphaseCollision/btDispatcher.h
-    common/BulletCollision/BroadphaseCollision/btMultiSapBroadphase.h
-    common/BulletCollision/BroadphaseCollision/btOverlappingPairCache.h
-    common/BulletCollision/BroadphaseCollision/btOverlappingPairCallback.h
-    common/BulletCollision/BroadphaseCollision/btQuantizedBvh.h
-    common/BulletCollision/BroadphaseCollision/btSimpleBroadphase.h
-    common/BulletCollision/CollisionDispatch/btActivatingCollisionAlgorithm.h
-    common/BulletCollision/CollisionDispatch/btBox2dBox2dCollisionAlgorithm.h
-    common/BulletCollision/CollisionDispatch/btBoxBoxCollisionAlgorithm.h
-    common/BulletCollision/CollisionDispatch/btBoxBoxDetector.h
-    common/BulletCollision/CollisionDispatch/btCollisionConfiguration.h
-    common/BulletCollision/CollisionDispatch/btCollisionCreateFunc.h
-    common/BulletCollision/CollisionDispatch/btCollisionDispatcher.h
-    common/BulletCollision/CollisionDispatch/btCollisionObject.h
-    common/BulletCollision/CollisionDispatch/btCollisionObjectWrapper.h
-    common/BulletCollision/CollisionDispatch/btCollisionWorld.h
-    common/BulletCollision/CollisionDispatch/btCompoundCollisionAlgorithm.h
-    common/BulletCollision/CollisionDispatch/btConvex2dConvex2dAlgorithm.h
-    common/BulletCollision/CollisionDispatch/btConvexConcaveCollisionAlgorithm.h
-    common/BulletCollision/CollisionDispatch/btConvexConvexAlgorithm.h
-    common/BulletCollision/CollisionDispatch/btConvexPlaneCollisionAlgorithm.h
-    common/BulletCollision/CollisionDispatch/btDefaultCollisionConfiguration.h
-    common/BulletCollision/CollisionDispatch/btEmptyCollisionAlgorithm.h
-    common/BulletCollision/CollisionDispatch/btGhostObject.h
-    common/BulletCollision/CollisionDispatch/btInternalEdgeUtility.h
-    common/BulletCollision/CollisionDispatch/btManifoldResult.h
-    common/BulletCollision/CollisionDispatch/btSimulationIslandManager.h
-    common/BulletCollision/CollisionDispatch/btSphereBoxCollisionAlgorithm.h
-    common/BulletCollision/CollisionDispatch/btSphereSphereCollisionAlgorithm.h
-    common/BulletCollision/CollisionDispatch/btSphereTriangleCollisionAlgorithm.h
-    common/BulletCollision/CollisionDispatch/btUnionFind.h
-    common/BulletCollision/CollisionDispatch/SphereTriangleDetector.h
-    common/BulletCollision/CollisionShapes/btBox2dShape.h
-    common/BulletCollision/CollisionShapes/btBoxShape.h
-    common/BulletCollision/CollisionShapes/btBvhTriangleMeshShape.h
-    common/BulletCollision/CollisionShapes/btCapsuleShape.h
-    common/BulletCollision/CollisionShapes/btCollisionMargin.h
-    common/BulletCollision/CollisionShapes/btCollisionShape.h
-    common/BulletCollision/CollisionShapes/btCompoundShape.h
-    common/BulletCollision/CollisionShapes/btConcaveShape.h
-    common/BulletCollision/CollisionShapes/btConeShape.h
-    common/BulletCollision/CollisionShapes/btConvex2dShape.h
-    common/BulletCollision/CollisionShapes/btConvexHullShape.h
-    common/BulletCollision/CollisionShapes/btConvexInternalShape.h
-    common/BulletCollision/CollisionShapes/btConvexPointCloudShape.h
-    common/BulletCollision/CollisionShapes/btConvexPolyhedron.h
-    common/BulletCollision/CollisionShapes/btConvexShape.h
-    common/BulletCollision/CollisionShapes/btConvexTriangleMeshShape.h
-    common/BulletCollision/CollisionShapes/btCylinderShape.h
-    common/BulletCollision/CollisionShapes/btEmptyShape.h
-    common/BulletCollision/CollisionShapes/btHeightfieldTerrainShape.h
-    common/BulletCollision/CollisionShapes/btMaterial.h
-    common/BulletCollision/CollisionShapes/btMinkowskiSumShape.h
-    common/BulletCollision/CollisionShapes/btMultimaterialTriangleMeshShape.h
-    common/BulletCollision/CollisionShapes/btMultiSphereShape.h
-    common/BulletCollision/CollisionShapes/btOptimizedBvh.h
-    common/BulletCollision/CollisionShapes/btPolyhedralConvexShape.h
-    common/BulletCollision/CollisionShapes/btScaledBvhTriangleMeshShape.h
-    common/BulletCollision/CollisionShapes/btShapeHull.h
-    common/BulletCollision/CollisionShapes/btSphereShape.h
-    common/BulletCollision/CollisionShapes/btStaticPlaneShape.h
-    common/BulletCollision/CollisionShapes/btStridingMeshInterface.h
-    common/BulletCollision/CollisionShapes/btTetrahedronShape.h
-    common/BulletCollision/CollisionShapes/btTriangleBuffer.h
-    common/BulletCollision/CollisionShapes/btTriangleCallback.h
-    common/BulletCollision/CollisionShapes/btTriangleIndexVertexArray.h
-    common/BulletCollision/CollisionShapes/btTriangleIndexVertexMaterialArray.h
-    common/BulletCollision/CollisionShapes/btTriangleInfoMap.h
-    common/BulletCollision/CollisionShapes/btTriangleMesh.h
-    common/BulletCollision/CollisionShapes/btTriangleMeshShape.h
-    common/BulletCollision/CollisionShapes/btTriangleShape.h
-    common/BulletCollision/CollisionShapes/btUniformScalingShape.h
-    common/BulletCollision/Gimpact/btBoxCollision.h
-    common/BulletCollision/Gimpact/btClipPolygon.h
-    common/BulletCollision/Gimpact/btContactProcessing.h
-    common/BulletCollision/Gimpact/btGenericPoolAllocator.h
-    common/BulletCollision/Gimpact/btGeometryOperations.h
-    common/BulletCollision/Gimpact/btGImpactBvh.h
-    common/BulletCollision/Gimpact/btGImpactCollisionAlgorithm.h
-    common/BulletCollision/Gimpact/btGImpactMassUtil.h
-    common/BulletCollision/Gimpact/btGImpactQuantizedBvh.h
-    common/BulletCollision/Gimpact/btGImpactShape.h
-    common/BulletCollision/Gimpact/btQuantization.h
-    common/BulletCollision/Gimpact/btTriangleShapeEx.h
-    common/BulletCollision/Gimpact/gim_array.h
-    common/BulletCollision/Gimpact/gim_basic_geometry_operations.h
-    common/BulletCollision/Gimpact/gim_bitset.h
-    common/BulletCollision/Gimpact/gim_box_collision.h
-    common/BulletCollision/Gimpact/gim_box_set.h
-    common/BulletCollision/Gimpact/gim_clip_polygon.h
-    common/BulletCollision/Gimpact/gim_contact.h
-    common/BulletCollision/Gimpact/gim_geom_types.h
-    common/BulletCollision/Gimpact/gim_geometry.h
-    common/BulletCollision/Gimpact/gim_hash_table.h
-    common/BulletCollision/Gimpact/gim_linear_math.h
-    common/BulletCollision/Gimpact/gim_math.h
-    common/BulletCollision/Gimpact/gim_memory.h
-    common/BulletCollision/Gimpact/gim_radixsort.h
-    common/BulletCollision/Gimpact/gim_tri_collision.h
-    common/BulletCollision/NarrowPhaseCollision/btContinuousConvexCollision.h
-    common/BulletCollision/NarrowPhaseCollision/btConvexCast.h
-    common/BulletCollision/NarrowPhaseCollision/btConvexPenetrationDepthSolver.h
-    common/BulletCollision/NarrowPhaseCollision/btDiscreteCollisionDetectorInterface.h
-    common/BulletCollision/NarrowPhaseCollision/btGjkConvexCast.h
-    common/BulletCollision/NarrowPhaseCollision/btGjkEpa2.h
-    common/BulletCollision/NarrowPhaseCollision/btGjkEpaPenetrationDepthSolver.h
-    common/BulletCollision/NarrowPhaseCollision/btGjkPairDetector.h
-    common/BulletCollision/NarrowPhaseCollision/btManifoldPoint.h
-    common/BulletCollision/NarrowPhaseCollision/btMinkowskiPenetrationDepthSolver.h
-    common/BulletCollision/NarrowPhaseCollision/btPersistentManifold.h
-    common/BulletCollision/NarrowPhaseCollision/btPointCollector.h
-    common/BulletCollision/NarrowPhaseCollision/btPolyhedralContactClipping.h
-    common/BulletCollision/NarrowPhaseCollision/btRaycastCallback.h
-    common/BulletCollision/NarrowPhaseCollision/btSimplexSolverInterface.h
-    common/BulletCollision/NarrowPhaseCollision/btSubSimplexConvexCast.h
-    common/BulletCollision/NarrowPhaseCollision/btVoronoiSimplexSolver.h
-    common/BulletDynamics/Character/btCharacterControllerInterface.h
-    common/BulletDynamics/Character/btKinematicCharacterController.h
-    common/BulletDynamics/ConstraintSolver/btConeTwistConstraint.h
-    common/BulletDynamics/ConstraintSolver/btConstraintSolver.h
-    common/BulletDynamics/ConstraintSolver/btContactConstraint.h
-    common/BulletDynamics/ConstraintSolver/btContactSolverInfo.h
-    common/BulletDynamics/ConstraintSolver/btGearConstraint.h
-    common/BulletDynamics/ConstraintSolver/btGeneric6DofConstraint.h
-    common/BulletDynamics/ConstraintSolver/btGeneric6DofSpringConstraint.h
-    common/BulletDynamics/ConstraintSolver/btHinge2Constraint.h
-    common/BulletDynamics/ConstraintSolver/btHingeConstraint.h
-    common/BulletDynamics/ConstraintSolver/btJacobianEntry.h
-    common/BulletDynamics/ConstraintSolver/btPoint2PointConstraint.h
-    common/BulletDynamics/ConstraintSolver/btSequentialImpulseConstraintSolver.h
-    common/BulletDynamics/ConstraintSolver/btSliderConstraint.h
-    common/BulletDynamics/ConstraintSolver/btSolve2LinearConstraint.h
-    common/BulletDynamics/ConstraintSolver/btSolverBody.h
-    common/BulletDynamics/ConstraintSolver/btSolverConstraint.h
-    common/BulletDynamics/ConstraintSolver/btTypedConstraint.h
-    common/BulletDynamics/ConstraintSolver/btUniversalConstraint.h
-    common/BulletDynamics/Dynamics/btActionInterface.h
-    common/BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h
-    common/BulletDynamics/Dynamics/btDynamicsWorld.h
-    common/BulletDynamics/Dynamics/btRigidBody.h
-    common/BulletDynamics/Dynamics/btSimpleDynamicsWorld.h
-    common/BulletDynamics/Vehicle/btRaycastVehicle.h
-    common/BulletDynamics/Vehicle/btVehicleRaycaster.h
-    common/BulletDynamics/Vehicle/btWheelInfo.h
-    common/BulletMultiThreaded/btGpu3DGridBroadphase.h
-    common/BulletMultiThreaded/btGpu3DGridBroadphaseSharedCode.h
-    common/BulletMultiThreaded/btGpu3DGridBroadphaseSharedDefs.h
-    common/BulletMultiThreaded/btGpu3DGridBroadphaseSharedTypes.h
-    common/BulletMultiThreaded/btGpuDefines.h
-    common/BulletMultiThreaded/btGpuUtilsSharedCode.h
-    common/BulletMultiThreaded/btGpuUtilsSharedDefs.h
-    common/BulletMultiThreaded/btParallelConstraintSolver.h
-    common/BulletMultiThreaded/btThreadSupportInterface.h
-    common/BulletMultiThreaded/GpuSoftBodySolvers/DX11/btSoftBodySolver_DX11.h
-    common/BulletMultiThreaded/GpuSoftBodySolvers/DX11/btSoftBodySolver_DX11SIMDAware.h
-    common/BulletMultiThreaded/GpuSoftBodySolvers/DX11/btSoftBodySolverBuffer_DX11.h
-    common/BulletMultiThreaded/GpuSoftBodySolvers/DX11/btSoftBodySolverLinkData_DX11.h
-    common/BulletMultiThreaded/GpuSoftBodySolvers/DX11/btSoftBodySolverLinkData_DX11SIMDAware.h
-    common/BulletMultiThreaded/GpuSoftBodySolvers/DX11/btSoftBodySolverTriangleData_DX11.h
-    common/BulletMultiThreaded/GpuSoftBodySolvers/DX11/btSoftBodySolverVertexBuffer_DX11.h
-    common/BulletMultiThreaded/GpuSoftBodySolvers/DX11/btSoftBodySolverVertexData_DX11.h
-    common/BulletMultiThreaded/GpuSoftBodySolvers/OpenCL/btSoftBodySolver_OpenCL.h
-    common/BulletMultiThreaded/GpuSoftBodySolvers/OpenCL/btSoftBodySolver_OpenCLSIMDAware.h
-    common/BulletMultiThreaded/GpuSoftBodySolvers/OpenCL/btSoftBodySolverBuffer_OpenCL.h
-    common/BulletMultiThreaded/GpuSoftBodySolvers/OpenCL/btSoftBodySolverLinkData_OpenCL.h
-    common/BulletMultiThreaded/GpuSoftBodySolvers/OpenCL/btSoftBodySolverLinkData_OpenCLSIMDAware.h
-    common/BulletMultiThreaded/GpuSoftBodySolvers/OpenCL/btSoftBodySolverOutputCLtoGL.h
-    common/BulletMultiThreaded/GpuSoftBodySolvers/OpenCL/btSoftBodySolverTriangleData_OpenCL.h
-    common/BulletMultiThreaded/GpuSoftBodySolvers/OpenCL/btSoftBodySolverVertexBuffer_OpenGL.h
-    common/BulletMultiThreaded/GpuSoftBodySolvers/OpenCL/btSoftBodySolverVertexData_OpenCL.h
-    common/BulletMultiThreaded/GpuSoftBodySolvers/Shared/btSoftBodySolverData.h
-    common/BulletMultiThreaded/HeapManager.h
-    common/BulletMultiThreaded/PlatformDefinitions.h
-    common/BulletMultiThreaded/PosixThreadSupport.h
-    common/BulletMultiThreaded/PpuAddressSpace.h
-    common/BulletMultiThreaded/SequentialThreadSupport.h
-    common/BulletMultiThreaded/SpuCollisionObjectWrapper.h
-    common/BulletMultiThreaded/SpuCollisionTaskProcess.h
-    common/BulletMultiThreaded/SpuContactManifoldCollisionAlgorithm.h
-    common/BulletMultiThreaded/SpuDoubleBuffer.h
-    common/BulletMultiThreaded/SpuFakeDma.h
-    common/BulletMultiThreaded/SpuGatheringCollisionDispatcher.h
-    common/BulletMultiThreaded/SpuLibspe2Support.h
-    common/BulletMultiThreaded/SpuNarrowPhaseCollisionTask/Box.h
-    common/BulletMultiThreaded/SpuNarrowPhaseCollisionTask/boxBoxDistance.h
-    common/BulletMultiThreaded/SpuNarrowPhaseCollisionTask/SpuCollisionShapes.h
-    common/BulletMultiThreaded/SpuNarrowPhaseCollisionTask/SpuContactResult.h
-    common/BulletMultiThreaded/SpuNarrowPhaseCollisionTask/SpuConvexPenetrationDepthSolver.h
-    common/BulletMultiThreaded/SpuNarrowPhaseCollisionTask/SpuGatheringCollisionTask.h
-    common/BulletMultiThreaded/SpuNarrowPhaseCollisionTask/SpuLocalSupport.h
-    common/BulletMultiThreaded/SpuNarrowPhaseCollisionTask/SpuMinkowskiPenetrationDepthSolver.h
-    common/BulletMultiThreaded/SpuNarrowPhaseCollisionTask/SpuPreferredPenetrationDirections.h
-    common/BulletMultiThreaded/SpuSampleTask/SpuSampleTask.h
-    common/BulletMultiThreaded/SpuSampleTaskProcess.h
-    common/BulletMultiThreaded/SpuSync.h
-    common/BulletMultiThreaded/TrbDynBody.h
-    common/BulletMultiThreaded/TrbStateVec.h
-    common/BulletMultiThreaded/vectormath2bullet.h
-    common/BulletMultiThreaded/Win32ThreadSupport.h
-    common/BulletSoftBody/btDefaultSoftBodySolver.h
-    common/BulletSoftBody/btSoftBody.h
-    common/BulletSoftBody/btSoftBodyConcaveCollisionAlgorithm.h
-    common/BulletSoftBody/btSoftBodyData.h
-    common/BulletSoftBody/btSoftBodyHelpers.h
-    common/BulletSoftBody/btSoftBodyInternals.h
-    common/BulletSoftBody/btSoftBodyRigidBodyCollisionConfiguration.h
-    common/BulletSoftBody/btSoftBodySolvers.h
-    common/BulletSoftBody/btSoftBodySolverVertexBuffer.h
-    common/BulletSoftBody/btSoftRigidCollisionAlgorithm.h
-    common/BulletSoftBody/btSoftRigidDynamicsWorld.h
-    common/BulletSoftBody/btSoftSoftCollisionAlgorithm.h
-    common/BulletSoftBody/btSparseSDF.h
+set(SRC_ARGONAPP
+    app/ArgonAppBase.cpp
+    app/ArgonAppFlowControl.cpp
+    app/main.cpp
 )
 
 set(SRC_BULLET
@@ -392,33 +193,10 @@ set(SRC_BULLET
     common/BulletSoftBody/btSoftSoftCollisionAlgorithm.cpp
 )
 
-set(INC_LINEARMATH
-    common/LinearMath/btAabbUtil2.h
-    common/LinearMath/btAlignedAllocator.h
-    common/LinearMath/btAlignedObjectArray.h
-    common/LinearMath/btConvexHull.h
-    common/LinearMath/btConvexHullComputer.h
-    common/LinearMath/btDefaultMotionState.h
-    common/LinearMath/btGeometryUtil.h
-    common/LinearMath/btGrahamScan2dConvexHull.h
-    common/LinearMath/btHashMap.h
-    common/LinearMath/btIDebugDraw.h
-    common/LinearMath/btList.h
-    common/LinearMath/btMatrix3x3.h
-    common/LinearMath/btMinMax.h
-    common/LinearMath/btMotionState.h
-    common/LinearMath/btPolarDecomposition.h
-    common/LinearMath/btPoolAllocator.h
-    common/LinearMath/btQuadWord.h
-    common/LinearMath/btQuaternion.h
-    common/LinearMath/btQuickprof.h
-    common/LinearMath/btRandom.h
-    common/LinearMath/btScalar.h
-    common/LinearMath/btSerializer.h
-    common/LinearMath/btStackAlloc.h
-    common/LinearMath/btTransform.h
-    common/LinearMath/btTransformUtil.h
-    common/LinearMath/btVector3.h
+set(SRC_JSON
+    common/json/json_reader.cpp
+    common/json/json_value.cpp
+    common/json/json_writer.cpp
 )
 
 set(SRC_LNEARMATH
@@ -432,107 +210,15 @@ set(SRC_LNEARMATH
     common/LinearMath/btVector3.cpp
 )
 
-set(INC_MINICL
-    common/MiniCL/cl.h
-    common/MiniCL/cl_gl.h
-    common/MiniCL/cl_MiniCL_Defs.h
-    common/MiniCL/cl_platform.h
-    common/MiniCL/MiniCLTask/MiniCLTask.h
-    common/MiniCL/MiniCLTaskScheduler.h
-)
-
 set(SRC_MINICL
     common/MiniCL/MiniCL.cpp
     common/MiniCL/MiniCLTask/MiniCLTask.cpp
     common/MiniCL/MiniCLTaskScheduler.cpp
 )
 
-set(INC_OGG
-    common/ogg/ogg.h
-    common/ogg/os_types.h
-)
-
 set(SRC_OGG
     common/ogg/bitwise.c
     common/ogg/framing.c
-)
-
-set(INC_OPUS
-    common/opus/analysis.h
-    common/opus/arch.h
-    common/opus/celt/_kiss_fft_guts.h
-    common/opus/celt/arch.h
-    common/opus/celt/arm/armcpu.h
-    common/opus/celt/arm/fixed_armv4.h
-    common/opus/celt/arm/fixed_armv5e.h
-    common/opus/celt/arm/kiss_fft_armv4.h
-    common/opus/celt/arm/kiss_fft_armv5e.h
-    common/opus/celt/arm/pitch_arm.h
-    common/opus/celt/bands.h
-    common/opus/celt/celt.h
-    common/opus/celt/celt_lpc.h
-    common/opus/celt/cpu_support.h
-    common/opus/celt/cwrs.h
-    common/opus/celt/ecintrin.h
-    common/opus/celt/entcode.h
-    common/opus/celt/entdec.h
-    common/opus/celt/entenc.h
-    common/opus/celt/fixed_debug.h
-    common/opus/celt/fixed_generic.h
-    common/opus/celt/float_cast.h
-    common/opus/celt/kiss_fft.h
-    common/opus/celt/laplace.h
-    common/opus/celt/mathops.h
-    common/opus/celt/mdct.h
-    common/opus/celt/mfrngcod.h
-    common/opus/celt/modes.h
-    common/opus/celt/os_support.h
-    common/opus/celt/pitch.h
-    common/opus/celt/quant_bands.h
-    common/opus/celt/rate.h
-    common/opus/celt/stack_alloc.h
-    common/opus/celt/static_modes_fixed.h
-    common/opus/celt/static_modes_float.h
-    common/opus/celt/vq.h
-    common/opus/celt/x86/pitch_sse.h
-    common/opus/mlp.h common/opus/opus.h
-    common/opus/opus_custom.h
-    common/opus/opus_defines.h
-    common/opus/opus_multistream.h
-    common/opus/opus_private.h
-    common/opus/opus_types.h
-    common/opus/silk/API.h
-    common/opus/silk/arm/macros_armv4.h
-    common/opus/silk/arm/macros_armv5e.h
-    common/opus/silk/arm/SigProc_FIX_armv4.h
-    common/opus/silk/arm/SigProc_FIX_armv5e.h
-    common/opus/silk/control.h
-    common/opus/silk/debug.h
-    common/opus/silk/define.h
-    common/opus/silk/errors.h
-    common/opus/silk/fixed/main_FIX.h
-    common/opus/silk/fixed/structs_FIX.h
-    common/opus/silk/float/main_FLP.h
-    common/opus/silk/float/SigProc_FLP.h
-    common/opus/silk/float/structs_FLP.h
-    common/opus/silk/Inlines.h
-    common/opus/silk/MacroCount.h
-    common/opus/silk/MacroDebug.h
-    common/opus/silk/macros.h
-    common/opus/silk/main.h
-    common/opus/silk/pitch_est_defines.h
-    common/opus/silk/PLC.h
-    common/opus/silk/resampler_private.h
-    common/opus/silk/resampler_rom.h
-    common/opus/silk/resampler_structs.h
-    common/opus/silk/SigProc_FIX.h
-    common/opus/silk/structs.h
-    common/opus/silk/tables.h
-    common/opus/silk/tuning_parameters.h
-    common/opus/silk/typedef.h
-    common/opus/tansig_table.h
-    common/opusfile/internal.h
-    common/opusfile/opusfile.h
 )
 
 SET(SRC_OPUS
@@ -700,7 +386,7 @@ SET(SRC_OPUS
     common/opus/silk/VQ_WMat_EC.c 
 )
 
-set(SRC_OPUSFULE
+set(SRC_OPUSFILE
     common/opusfile/http.c
     common/opusfile/info.c
     common/opusfile/internal.c
@@ -708,168 +394,20 @@ set(SRC_OPUSFULE
     common/opusfile/stream.c
 )
 
-set(INC_SDL2
-    common/SDL2/audio/arts/SDL_artsaudio.h
-    common/SDL2/audio/baudio/SDL_beaudio.h
-    common/SDL2/audio/bsd/SDL_bsdaudio.h
-    common/SDL2/audio/disk/SDL_diskaudio.h
-    common/SDL2/audio/dsp/SDL_dspaudio.h
-    common/SDL2/audio/esd/SDL_esdaudio.h
-    common/SDL2/audio/fusionsound/SDL_fsaudio.h
-    common/SDL2/audio/nas/SDL_nasaudio.h
-    common/SDL2/audio/paudio/SDL_paudio.h
-    common/SDL2/audio/qsa/SDL_qsa_audio.h
-    common/SDL2/audio/SDL_audio_c.h
-    common/SDL2/audio/SDL_audiodev_c.h
-    common/SDL2/audio/SDL_audiomem.h
-    common/SDL2/audio/SDL_sysaudio.h
-    common/SDL2/audio/SDL_wave.h
-    common/SDL2/audio/sndio/SDL_sndioaudio.h
-    common/SDL2/audio/sun/SDL_sunaudio.h
-    common/SDL2/begin_code.h
-    common/SDL2/close_code.h
-    common/SDL2/events/blank_cursor.h
-    common/SDL2/events/default_cursor.h
-    common/SDL2/events/scancodes_darwin.h
-    common/SDL2/events/scancodes_linux.h
-    common/SDL2/events/scancodes_windows.h
-    common/SDL2/events/scancodes_xfree86.h
-    common/SDL2/events/SDL_clipboardevents_c.h
-    common/SDL2/events/SDL_dropevents_c.h
-    common/SDL2/events/SDL_events_c.h
-    common/SDL2/events/SDL_gesture_c.h
-    common/SDL2/events/SDL_keyboard_c.h
-    common/SDL2/events/SDL_mouse_c.h
-    common/SDL2/events/SDL_sysevents.h
-    common/SDL2/events/SDL_touch_c.h
-    common/SDL2/events/SDL_windowevents_c.h
-    common/SDL2/haptic/SDL_haptic_c.h
-    common/SDL2/haptic/SDL_syshaptic.h
-    common/SDL2/input/evdev/SDL_evdev.h
-    common/SDL2/joystick/SDL_gamecontrollerdb.h
-    common/SDL2/joystick/SDL_joystick_c.h
-    common/SDL2/joystick/SDL_sysjoystick.h
-    common/SDL2/libm/math_libm.h
-    common/SDL2/libm/math_private.h
-    common/SDL2/render/mmx.h
-    common/SDL2/render/opengl/SDL_glfuncs.h
-    common/SDL2/render/opengl/SDL_shaders_gl.h
-    common/SDL2/render/opengles/SDL_glesfuncs.h
-    common/SDL2/render/opengles2/SDL_gles2funcs.h
-    common/SDL2/render/opengles2/SDL_shaders_gles2.h
-    common/SDL2/render/SDL_sysrender.h
-    common/SDL2/render/SDL_yuv_sw_c.h
-    common/SDL2/render/software/SDL_blendfillrect.h
-    common/SDL2/render/software/SDL_blendline.h
-    common/SDL2/render/software/SDL_blendpoint.h
-    common/SDL2/render/software/SDL_draw.h
-    common/SDL2/render/software/SDL_drawline.h
-    common/SDL2/render/software/SDL_drawpoint.h
-    common/SDL2/render/software/SDL_render_sw_c.h
-    common/SDL2/render/software/SDL_rotate.h
-    common/SDL2/SDL.h
-    common/SDL2/SDL_assert.h
-    common/SDL2/SDL_assert_c.h
-    common/SDL2/SDL_atomic.h
-    common/SDL2/SDL_audio.h
-    common/SDL2/SDL_bits.h
-    common/SDL2/SDL_blendmode.h
-    common/SDL2/SDL_clipboard.h
-    common/SDL2/SDL_config.h
-    common/SDL2/SDL_config_android.h
-    common/SDL2/SDL_config_iphoneos.h
-    common/SDL2/SDL_config_macosx.h
-    common/SDL2/SDL_config_minimal.h
-    common/SDL2/SDL_config_pandora.h
-    common/SDL2/SDL_config_psp.h
-    common/SDL2/SDL_config_windows.h
-    common/SDL2/SDL_config_wiz.h
-    common/SDL2/SDL_copying.h
-    common/SDL2/SDL_cpuinfo.h
-    common/SDL2/SDL_endian.h
-    common/SDL2/SDL_error.h
-    common/SDL2/SDL_error_c.h
-    common/SDL2/SDL_events.h
-    common/SDL2/SDL_filesystem.h
-    common/SDL2/SDL_gamecontroller.h
-    common/SDL2/SDL_gesture.h
-    common/SDL2/SDL_haptic.h
-    common/SDL2/SDL_hints.h
-    common/SDL2/SDL_joystick.h
-    common/SDL2/SDL_keyboard.h
-    common/SDL2/SDL_keycode.h
-    common/SDL2/SDL_loadso.h
-    common/SDL2/SDL_log.h
-    common/SDL2/SDL_main.h
-    common/SDL2/SDL_messagebox.h
-    common/SDL2/SDL_mouse.h
-    common/SDL2/SDL_mutex.h
-    common/SDL2/SDL_name.h
-    common/SDL2/SDL_opengl.h
-    common/SDL2/SDL_opengles.h
-    common/SDL2/SDL_opengles2.h
-    common/SDL2/SDL_pixels.h
-    common/SDL2/SDL_platform.h
-    common/SDL2/SDL_power.h
-    common/SDL2/SDL_quit.h
-    common/SDL2/SDL_rect.h
-    common/SDL2/SDL_render.h
-    common/SDL2/SDL_revision.h
-    common/SDL2/SDL_rwops.h
-    common/SDL2/SDL_scancode.h
-    common/SDL2/SDL_shape.h
-    common/SDL2/SDL_stdinc.h
-    common/SDL2/SDL_surface.h
-    common/SDL2/SDL_system.h
-    common/SDL2/SDL_syswm.h
-    common/SDL2/SDL_test.h
-    common/SDL2/SDL_test_assert.h
-    common/SDL2/SDL_test_common.h
-    common/SDL2/SDL_test_compare.h
-    common/SDL2/SDL_test_crc32.h
-    common/SDL2/SDL_test_font.h
-    common/SDL2/SDL_test_fuzzer.h
-    common/SDL2/SDL_test_harness.h
-    common/SDL2/SDL_test_images.h
-    common/SDL2/SDL_test_log.h
-    common/SDL2/SDL_test_md5.h
-    common/SDL2/SDL_test_random.h
-    common/SDL2/SDL_thread.h
-    common/SDL2/SDL_timer.h
-    common/SDL2/SDL_touch.h
-    common/SDL2/SDL_types.h
-    common/SDL2/SDL_version.h
-    common/SDL2/SDL_video.h
-    common/SDL2/thread/generic/SDL_sysmutex_c.h
-    common/SDL2/thread/generic/SDL_systhread_c.h
-    common/SDL2/thread/SDL_systhread.h
-    common/SDL2/thread/SDL_thread_c.h
-    common/SDL2/timer/SDL_timer_c.h
-    common/SDL2/video/directfb/SDL_DirectFB_dyn.h
-    common/SDL2/video/directfb/SDL_DirectFB_events.h
-    common/SDL2/video/directfb/SDL_DirectFB_modes.h
-    common/SDL2/video/directfb/SDL_DirectFB_mouse.h
-    common/SDL2/video/directfb/SDL_DirectFB_opengl.h
-    common/SDL2/video/directfb/SDL_DirectFB_render.h
-    common/SDL2/video/directfb/SDL_DirectFB_shape.h
-    common/SDL2/video/directfb/SDL_DirectFB_video.h
-    common/SDL2/video/directfb/SDL_DirectFB_window.h
-    common/SDL2/video/directfb/SDL_DirectFB_WM.h
-    common/SDL2/video/SDL_blit.h
-    common/SDL2/video/SDL_blit_auto.h
-    common/SDL2/video/SDL_blit_copy.h
-    common/SDL2/video/SDL_blit_slow.h
-    common/SDL2/video/SDL_egl.h
-    common/SDL2/video/SDL_pixels_c.h
-    common/SDL2/video/SDL_rect_c.h
-    common/SDL2/video/SDL_RLEaccel_c.h
-    common/SDL2/video/SDL_shape_internals.h
-    common/SDL2/video/SDL_sysvideo.h 
-)
-
-set(SRC_STL2
+set(SRC_SDL2
+    common/SDL2/SDL.c
+    common/SDL2/SDL_assert.c
+    common/SDL2/SDL_error.c
+    common/SDL2/SDL_hints.c
+    common/SDL2/SDL_log.c
     common/SDL2/atomic/SDL_atomic.c
     common/SDL2/atomic/SDL_spinlock.c
+    common/SDL2/audio/SDL_audio.c
+    common/SDL2/audio/SDL_audiocvt.c
+    common/SDL2/audio/SDL_audiodev.c
+    common/SDL2/audio/SDL_audiotypecvt.c
+    common/SDL2/audio/SDL_mixer.c
+    common/SDL2/audio/SDL_wave.c
     common/SDL2/audio/arts/SDL_artsaudio.c
     common/SDL2/audio/bsd/SDL_bsdaudio.c
     common/SDL2/audio/disk/SDL_diskaudio.c
@@ -879,12 +417,6 @@ set(SRC_STL2
     common/SDL2/audio/nas/SDL_nasaudio.c
     common/SDL2/audio/paudio/SDL_paudio.c
     common/SDL2/audio/qsa/SDL_qsa_audio.c
-    common/SDL2/audio/SDL_audio.c
-    common/SDL2/audio/SDL_audiocvt.c
-    common/SDL2/audio/SDL_audiodev.c
-    common/SDL2/audio/SDL_audiotypecvt.c
-    common/SDL2/audio/SDL_mixer.c
-    common/SDL2/audio/SDL_wave.c
     common/SDL2/audio/sndio/SDL_sndioaudio.c
     common/SDL2/audio/sun/SDL_sunaudio.c
     common/SDL2/cpuinfo/SDL_cpuinfo.c
@@ -900,9 +432,9 @@ set(SRC_STL2
     common/SDL2/file/SDL_rwops.c
     common/SDL2/haptic/SDL_haptic.c
     common/SDL2/input/evdev/SDL_evdev.c
-    common/SDL2/joystick/bsd/SDL_sysjoystick.c
     common/SDL2/joystick/SDL_gamecontroller.c
     common/SDL2/joystick/SDL_joystick.c
+    common/SDL2/joystick/bsd/SDL_sysjoystick.c
     common/SDL2/libm/e_atan2.c
     common/SDL2/libm/e_log.c
     common/SDL2/libm/e_pow.c
@@ -919,14 +451,14 @@ set(SRC_STL2
     common/SDL2/libm/s_scalbn.c
     common/SDL2/libm/s_sin.c
     common/SDL2/power/SDL_power.c
+    common/SDL2/render/SDL_render.c
+    common/SDL2/render/SDL_yuv_mmx.c
+    common/SDL2/render/SDL_yuv_sw.c
     common/SDL2/render/opengl/SDL_render_gl.c
     common/SDL2/render/opengl/SDL_shaders_gl.c
     common/SDL2/render/opengles/SDL_render_gles.c
     common/SDL2/render/opengles2/SDL_render_gles2.c
     common/SDL2/render/opengles2/SDL_shaders_gles2.c
-    common/SDL2/render/SDL_render.c
-    common/SDL2/render/SDL_yuv_mmx.c
-    common/SDL2/render/SDL_yuv_sw.c
     common/SDL2/render/software/SDL_blendfillrect.c
     common/SDL2/render/software/SDL_blendline.c
     common/SDL2/render/software/SDL_blendpoint.c
@@ -934,11 +466,6 @@ set(SRC_STL2
     common/SDL2/render/software/SDL_drawpoint.c
     common/SDL2/render/software/SDL_render_sw.c
     common/SDL2/render/software/SDL_rotate.c
-    common/SDL2/SDL.c
-    common/SDL2/SDL_assert.c
-    common/SDL2/SDL_error.c
-    common/SDL2/SDL_hints.c
-    common/SDL2/SDL_log.c
     common/SDL2/stdlib/SDL_getenv.c
     common/SDL2/stdlib/SDL_iconv.c
     common/SDL2/stdlib/SDL_malloc.c
@@ -947,16 +474,6 @@ set(SRC_STL2
     common/SDL2/stdlib/SDL_string.c
     common/SDL2/thread/SDL_thread.c
     common/SDL2/timer/SDL_timer.c
-    common/SDL2/video/directfb/SDL_DirectFB_dyn.c
-    common/SDL2/video/directfb/SDL_DirectFB_events.c
-    common/SDL2/video/directfb/SDL_DirectFB_modes.c
-    common/SDL2/video/directfb/SDL_DirectFB_mouse.c
-    common/SDL2/video/directfb/SDL_DirectFB_opengl.c
-    common/SDL2/video/directfb/SDL_DirectFB_render.c
-    common/SDL2/video/directfb/SDL_DirectFB_shape.c
-    common/SDL2/video/directfb/SDL_DirectFB_video.c
-    common/SDL2/video/directfb/SDL_DirectFB_window.c
-    common/SDL2/video/directfb/SDL_DirectFB_WM.c
     common/SDL2/video/SDL_blit.c
     common/SDL2/video/SDL_blit_0.c
     common/SDL2/video/SDL_blit_1.c
@@ -976,12 +493,16 @@ set(SRC_STL2
     common/SDL2/video/SDL_stretch.c
     common/SDL2/video/SDL_surface.c
     common/SDL2/video/SDL_video.c
-)
-
-set(INC_STB
-    common/stb/stb_image.h
-    common/stb/stb_image_write.h
-    common/stb/stb_truetype.h
+    common/SDL2/video/directfb/SDL_DirectFB_dyn.c
+    common/SDL2/video/directfb/SDL_DirectFB_events.c
+    common/SDL2/video/directfb/SDL_DirectFB_modes.c
+    common/SDL2/video/directfb/SDL_DirectFB_mouse.c
+    common/SDL2/video/directfb/SDL_DirectFB_opengl.c
+    common/SDL2/video/directfb/SDL_DirectFB_render.c
+    common/SDL2/video/directfb/SDL_DirectFB_shape.c
+    common/SDL2/video/directfb/SDL_DirectFB_video.c
+    common/SDL2/video/directfb/SDL_DirectFB_window.c
+    common/SDL2/video/directfb/SDL_DirectFB_WM.c
 )
 
 set(SRC_STB
@@ -1015,146 +536,8 @@ set(SRC_VORBIS
     common/vorbis/window.c
 )
 
-set(INC_VECTORMATH
-    common/vectormath/neon/boolInVec.h
-    common/vectormath/neon/floatInVec.h
-    common/vectormath/neon/mat_aos.h
-    common/vectormath/neon/quat_aos.h
-    common/vectormath/neon/vec_aos.h
-    common/vectormath/neon/vectormath_aos.h
-    common/vectormath/scalar/boolInVec.h
-    common/vectormath/scalar/floatInVec.h
-    common/vectormath/scalar/mat_aos.h
-    common/vectormath/scalar/quat_aos.h
-    common/vectormath/scalar/vec_aos.h
-    common/vectormath/scalar/vectormath_aos.h
-    common/vectormath/sse/boolInVec.h
-    common/vectormath/sse/floatInVec.h
-    common/vectormath/sse/mat_aos.h
-    common/vectormath/sse/quat_aos.h
-    common/vectormath/sse/vec_aos.h
-    common/vectormath/sse/vecidx_aos.h
-    common/vectormath/sse/vectormath_aos.h
-    common/vectormath/vmInclude.h
-)
-
-set(INC_JSON
-    common/json/autolink.h
-    common/json/config.h
-    common/json/features.h
-    common/json/forwards.h
-    common/json/json_batchallocator.h
-    common/json/json_internalarray.inl
-    common/json/json_internalmap.inl
-    common/json/json_valueiterator.inl
-    common/json/json.h
-    common/json/reader.h
-    common/json/value.h
-    common/json/writer.h
-)
-
-set(SRC_JSON
-    common/json/json_reader.cpp
-    common/json/json_value.cpp
-    common/json/json_writer.cpp
-)
-
-set(INC_ARGONENGINE
-    common/ArgonEngine/ArgonInit.h
-    common/ArgonEngine/AudioSystem.h
-    common/ArgonEngine/BasicShape.h
-    common/ArgonEngine/BoundingCube.h
-    common/ArgonEngine/Collision.h
-    common/ArgonEngine/ContainerReflection.h
-    common/ArgonEngine/ForwardRenderer.h
-    common/ArgonEngine/Hardware.h
-    common/ArgonEngine/InstancedRenderable.h
-    common/ArgonEngine/Instancing.h
-    common/ArgonEngine/Matrix.h
-    common/ArgonEngine/MeshFormat.h
-    common/ArgonEngine/Node.h
-    common/ArgonEngine/OpenGLES.h
-    common/ArgonEngine/PackTree.h
-    common/ArgonEngine/ParticleSystem.h
-    common/ArgonEngine/Quaternion.h
-    common/ArgonEngine/Reflection.h
-    common/ArgonEngine/RenderAPI.h
-    common/ArgonEngine/RenderSystem.h
-    common/ArgonEngine/RenderSystemConstants.h
-    common/ArgonEngine/ScoreController.h
-    common/ArgonEngine/Sprite.h
-    common/ArgonEngine/TemplateUtilities.h
-    common/ArgonEngine/Text.h
-    common/ArgonEngine/Thread.h
-    common/ArgonEngine/TypeInfo.h
-    common/ArgonEngine/Types.h
-    common/ArgonEngine/UserInterface.h
-    common/ArgonEngine/UserMusic.h
-    common/ArgonEngine/UTF8Iterator.h
-    common/ArgonEngine/Utility.h
-    common/ArgonEngine/Vector.h
-    common/ArgonEngine/VertexIterator.h
-    common/ArgonEngine/VirtualResource.h
-    common/ArgonEngine/VirtualResourceImage.h
-    common/config.h
-    common/precompiled.h
-    common/ArgonEngine/Instancing.h
-    common/ArgonEngine/Curves.h
-)
-
-set(SRC_ARGONENGINE
-    common/ArgonEngine/ArgonInit.cpp
-    common/ArgonEngine/AudioSystem.cpp
-    common/ArgonEngine/BasicShape.cpp
-    common/ArgonEngine/BoundingCube.cpp
-    common/ArgonEngine/Collision.cpp
-    common/ArgonEngine/Hardware.cpp
-    common/ArgonEngine/MeshFormat.cpp
-    common/ArgonEngine/Node.cpp
-    common/ArgonEngine/OpenGLES.cpp
-    common/ArgonEngine/Reflection.cpp
-    common/ArgonEngine/RenderSystem.cpp
-    common/ArgonEngine/RenderSystemConstants.cpp
-    common/ArgonEngine/ScoreController.cpp
-    common/ArgonEngine/Sprite.cpp
-    common/ArgonEngine/Text.cpp
-    common/ArgonEngine/Thread.cpp
-    common/ArgonEngine/UserInterface.cpp
-    common/ArgonEngine/UserMusic.cpp
-    common/ArgonEngine/Utility.cpp
-    common/ArgonEngine/VirtualResource.cpp
-    common/ArgonEngine/VirtualResourceImage.cpp
-    common/ArgonEngine/Curves.cpp
-)
-
-set(INC_ARGONAPP
-    app/ArgonAppBase.h
-    app/ArgonAppFlowControl.h
-    app/BasicShapeTest.h
-    app/bullet-test.h
-    app/DeferredRenderer.h
-    app/DevConsole.h
-    app/ExplodingTeapots.h
-    app/FontTest.h
-    app/NortonCodes.h
-    app/RayMarchingTest.h
-    app/RayTracingTest.h
-    app/RayTriangleTest.h
-    app/ShipTest.h
-    app/SpriteTest.h
-    app/StreamedTexture.h
-    app/StreamedTexture2.h
-    app/StreamedVertexArray.h
-    app/TeapotTest.h
-)
-
-set(SRC_ARGONAPP
-    app/ArgonAppBase.cpp
-    app/ArgonAppFlowControl.cpp
-    app/main.cpp
-)
-
 set(SRC_WINDOWS
+    win/GL/glew.c
     win/SDL2/audio/directsound/SDL_directsound.c
     win/SDL2/audio/winmm/SDL_winmm.c
     win/SDL2/core/windows/SDL_windows.c
@@ -1183,23 +566,480 @@ set(SRC_WINDOWS
     win/SDL2/video/windows/SDL_windowsshape.c
     win/SDL2/video/windows/SDL_windowsvideo.c
     win/SDL2/video/windows/SDL_windowswindow.c
-    win/GL/glew.c
+)
+
+# TODO: Figure out which of these is actually needed.
+# WINMM.LIB is needed
+set(LIB_WINDOWS
+    AclUI.Lib
+    ActiveDS.Lib
+    ADSIid.Lib
+    AdvAPI32.Lib
+    advpack.Lib
+    ahadmin.lib
+    amsi.lib
+    amstrmid.lib
+    appmgmts.lib
+    appmgr.lib
+    appnotify.lib
+    audiobaseprocessingobject.lib
+    AudioBaseProcessingObjectV140.lib
+    audioeng.lib
+    audiomediatypecrt.lib
+    AuthZ.Lib
+    aux_ulib.lib
+    avifil32.Lib
+    avrt.lib
+    basesrv.lib
+    bcp47mrm.Lib
+    bcrypt.lib
+    bindlink.lib
+    Bits.Lib
+    BluetoothApis.lib
+    bthprops.lib
+    BufferOverflow.lib
+    BufferOverflowU.lib
+    Cabinet.Lib
+    certadm.lib
+    certca.lib
+    certcli.lib
+    CertIdl.Lib
+    CertPolEng.Lib
+    cfgmgr32.lib
+    Chakrart.lib
+    cimfs.lib
+    cldapi.lib
+    clfsw32.lib
+    ClusApi.Lib
+    ComCtl32.Lib
+    ComDlg32.Lib
+    CompPkgSup.lib
+    compstui.lib
+    computecore.lib
+    computenetwork.lib
+    computestorage.lib
+    ComSvcs.Lib
+    CoreMessaging.lib
+    corrEngine.lib
+    Credui.lib
+    Crypt32.Lib
+    cryptdll.lib
+    CryptNet.Lib
+    cryptui.lib
+    cryptxml.lib
+    cscapi.lib
+    cscdll.lib
+    d2d1.lib
+    d3d10.lib
+    d3d10_1.lib
+    d3d11.lib
+    d3d12.lib
+    d3d9.lib
+    d3dcompiler.lib
+    davclnt.lib
+    DbgEng.Lib
+    DbgHelp.Lib
+    DbgModel.Lib
+    dcomp.lib
+    ddraw.lib
+    devenum.lib
+    deviceaccess.lib
+    devmgr.lib
+    dflayout.lib
+    DhcpCSvc.Lib
+    DhcpCSvc6.Lib
+    dhcpsapi.lib
+    DiagnosticDataQuery.Lib
+    dinput8.lib
+    directml.lib
+    dloadhelper.lib
+    dmoguids.lib
+    dmprocessxmlfiltered.lib
+    DnsAPI.Lib
+    dnscrcli.lib
+    dnslib.lib
+    dnsperf.lib
+    dnsrpc.lib
+    dnsrslvr.lib
+    dpx.lib
+    dsound.lib
+    DSProp.Lib
+    dssec.lib
+    dststlog.lib
+    DSUIExt.Lib
+    DtcHelp.Lib
+    dwmapi.lib
+    dwrite.lib
+    dxcompiler.lib
+    dxcore.lib
+    dxgi.lib
+    dxguid.lib
+    dxtmsft.lib
+    dxtrans.lib
+    dxva2.lib
+    eappcfg.lib
+    eappprxy.lib
+    efswrt.lib
+    ehstorguids.lib
+    els.lib
+    ElsCore.lib
+    esent.lib
+    evr.lib
+    FaultRep.Lib
+    feclient.lib
+    FhSvcCtl.lib
+    fileextd.lib
+    fltLib.lib
+    fontsub.lib
+    FrameDyd.Lib
+    FrameDyn.Lib
+    fwpuclnt.lib
+    gameinput.lib
+    Gdi32.Lib
+    gdiplus.lib
+    glmf32.lib
+    GlU32.Lib
+    GPEdit.lib
+    gpmuuid.lib
+    hbaapi.lib
+    hhsetup.lib
+    hid.lib
+    HLink.Lib
+    hrtfapo.lib
+    Htmlhelp.Lib
+    httpapi.lib
+    HwReqChk.lib
+    iashlpr.lib
+    Icm32.Lib
+    Icmui.Lib
+    icu.lib
+    icuin.Lib
+    icuuc.lib
+    IEPMAPI.Lib
+    iesetup.lib
+    ImageHlp.Lib
+    imgutil.Lib
+    Imm32.Lib
+    inkobjcore.lib
+    inseng.lib
+    iphlpapi.lib
+    Iprop.Lib
+    iscsidsc.lib
+    jsrt.lib
+    kerbcli.lib
+    kernel32.Lib
+    keycredmgr.lib
+    KSProxy.Lib
+    ksuser.lib
+    ktmw32.lib
+    lamparray.lib
+    LicenseProtection.Lib
+    LoadPerf.Lib
+    locationapi.lib
+    Lz32.Lib
+    magnification.lib
+    MAPI32.Lib
+    mbnapi_uuid.lib
+    mciole32.lib
+    mdmlocalmanagement.lib
+    MDMRegistration.lib
+    Mf.lib
+    Mfcore.lib
+    Mfplat.lib
+    mfplay.lib
+    mfreadwrite.lib
+    mfsensorgroup.lib
+    Mfsrcsnk.lib
+    mfuuid.lib
+    MgmtAPI.Lib
+    mi.lib
+    mincore.lib
+    mincore_downlevel.lib
+    MMC.Lib
+    mmdevapi.lib
+    Mpr.Lib
+    Mprapi.Lib
+    mprsnap.lib
+    MqOA.Lib
+    MqRt.Lib
+    MrmSupport.lib
+    msaatext.lib
+    MSAcm32.Lib
+    Mscms.Lib
+    MsCtfMonitor.lib
+    msdasc.lib
+    msdelta.lib
+    msdmo.lib
+    msdrm.lib
+    Msi.Lib
+    MSImg32.Lib
+    mspatcha.lib
+    mspatchc.lib
+    mspbase.lib
+    msports.lib
+    MSRating.Lib
+    MSTask.Lib
+    msv1_0.lib
+    msvfw32.Lib
+    MsWSock.Lib
+    MsXml2.Lib
+    msxml6.lib
+    Mtx.Lib
+    mtxdm.lib
+    muiload.lib
+    ncrypt.lib
+    nddeapi.lib
+    ndfapi.lib
+    ndproxystub.lib
+    NetAPI32.Lib
+    netlib.lib
+    NetSh.Lib
+    newdev.lib
+    ninput.lib
+    normaliz.lib
+    nt.lib
+    ntdll.lib
+    ntdsa.lib
+    NtDsAPI.Lib
+    ntdsatq.lib
+    ntdsetup.lib
+    ntfrsapi.lib
+    ntlanman.lib
+    ntmarta.lib
+    NtQuery.Lib
+    objsel.lib
+    odbc32.lib
+    odbcbcp.lib
+    odbccp32.lib
+    OemLicense.lib
+    Ole32.Lib
+    OleAcc.Lib
+    OleAut32.Lib
+    olecli32.lib
+    oledb.lib
+    OleDlg.Lib
+    olesvr32.lib
+    ondemandconnroutehelper.lib
+    OneCore.Lib
+    OneCoreUAP.Lib
+    OneCoreUAP_apiset.Lib
+    OneCoreUAP_downlevel.Lib
+    OneCore_apiset.Lib
+    OneCore_downlevel.Lib
+    OpenGL32.Lib
+    osptk.lib
+    pathcch.lib
+    Pdh.Lib
+    PeerDist.lib
+    PhotoAcquireUID.lib
+    PortableDeviceGuids.lib
+    powrprof.lib
+    prntvpt.lib
+    ProjectedFSLib.lib
+    propsys.lib
+    psapi.lib
+    quartz.lib
+    query.lib
+    qwave.lib
+    RASAPI32.Lib
+    RASDlg.Lib
+    rasuser.lib
+    resutils.lib
+    rometadata.lib
+    rpcexts.lib
+    Rpcns4.Lib
+    rpcproxy.lib
+    RpcRT4.Lib
+    rpcutil.lib
+    rstrtmgr.lib
+    Rtm.Lib
+    rtutils.lib
+    RTWorkQ.lib
+    runtimeobject.lib
+    samlib.lib
+    samsrv.lib
+    SAPI.Lib
+    sas.lib
+    sbtsv.lib
+    SCardDlg.Lib
+    scecli.lib
+    scesrv.lib
+    schannel.lib
+    ScrnSave.Lib
+    ScrnSavW.Lib
+    SearchSDK.lib
+    Secur32.Lib
+    security.lib
+    sens.lib
+    SensAPI.Lib
+    sensorsapi.lib
+    SensorsUtils.lib
+    SetupAPI.Lib
+    Sfc.Lib
+    shcore.lib
+    shdocvw.lib
+    shell32.lib
+    ShFolder.Lib
+    ShLwApi.Lib
+    slc.lib
+    slcext.lib
+    slwga.lib
+    SnmpAPI.Lib
+    softintrin.lib
+    spoolss.lib
+    SpOrder.Lib
+    SrClient.lib
+    srpapi.lib
+    ssdpapi.lib
+    Sti.Lib
+    strmbase.lib
+    strmiids.lib
+    strsafe.lib
+    structuredquery.lib
+    Svcguid.Lib
+    swdevice.lib
+    synchronization.lib
+    t2embed.lib
+    Tapi32.Lib
+    tapi32l.lib
+    taskschd.lib
+    tbs.lib
+    tdh.lib
+    tokenbinding.lib
+    Traffic.Lib
+    TranscodeImageUID.lib
+    tsec.lib
+    tspubplugincom.lib
+    twinapi.lib
+    txfw32.lib
+    ualapi.lib
+    UIAutomationCore.lib
+    umpdddi.lib
+    Urlmon.Lib
+    User32.Lib
+    UserEnv.Lib
+    USP10.Lib
+    Uuid.Lib
+    Uxtheme.lib
+    vccomsup.lib
+    vds_uuid.lib
+    Version.Lib
+    vertdll.lib
+    Vfw32.Lib
+    Virtdisk.Lib
+    vmdevicehost.lib
+    volatileaccessu.lib
+    vscmgr.lib
+    vssapi.lib
+    vss_uuid.lib
+    vstorinterface.lib
+    wbemuuid.lib
+    wcmapi.lib
+    wcmguid.lib
+    wdsbp.lib
+    wdsClientAPI.LIB
+    wdsmc.lib
+    wdspxe.lib
+    wdstptc.lib
+    webauthn.lib
+    WebServices.lib
+    websocket.lib
+    wecapi.lib
+    Wer.lib
+    wevtapi.lib
+    WiaGuid.Lib
+    wiaservc.lib
+    wiautil.lib
+    WinBio.lib
+    windows.ai.machinelearning.lib
+    windows.data.pdf.lib
+    windows.media.mediacontrol.lib
+    windows.networking.lib
+    windows.ui.lib
+    WindowsApp.lib
+    WindowsApp_downlevel.lib
+    windowscodecs.lib
+    windowscoreheadless.Lib
+    windowscoreheadless_apiset.Lib
+    windowssideshowguids.lib
+    winhttp.lib
+    WinHvPlatform.lib
+    wininet.Lib
+    winml.lib
+    WinMM.Lib
+    winsatapi.lib
+    winscard.lib
+    WinSpool.Lib
+    winsqlite3.lib
+    winsta.lib
+    WinStrm.Lib
+    WinTrust.Lib
+    winusb.lib
+    wlanapi.lib
+    wlanui.lib
+    Wldap32.Lib
+    Wldp.Lib
+    wmcodecdspuuid.lib
+    wmip.lib
+    wmiutils.lib
+    wmvcore.lib
+    wofutil.lib
+    workspaceax.lib
+    WS2_32.Lib
+    wscapi.lib
+    wsclient.lib
+    wsdapi.lib
+    wsmsvc.lib
+    WSnmp32.Lib
+    WSock32.Lib
+    WtsApi32.Lib
+    wuguid.lib
+    xapobase.lib
+    xapobase2_8.lib
+    xaswitch.lib
+    xaudio2.lib
+    xaudio2_8.lib
+    xinput.lib
+    Xinput9_1_0.lib
+    xinputuap.lib
+    xmllite.lib
+    xolehlp.lib
+    xpsdocumenttargetprint.lib
+    xpsprint.lib
+
 )
 
 set(SOURCES
-    ${SRC_WINDOWS}
     ${SRC_ARGONAPP}
     ${SRC_ARGONENGINE}
-    ${SRC_JSON}
-    ${SRC_STB}
-    ${SRC_STL2}
-    ${SRC_OPUSFULE}
-    ${SRC_OPUS}
-    ${SRC_OGG}
-    ${SRC_MINICL}
-    ${SRC_LNEARMATH}
     ${SRC_BULLET}
+    ${SRC_OGG}
+    ${SRC_OPUS}
+    ${SRC_OPUSFILE}
+    ${SRC_JSON}
+    ${SRC_LNEARMATH}
+    ${SRC_MINICL}
+    ${SRC_STB}
+    ${SRC_SDL2}
+    ${SRC_VORBIS}
+    ${SRC_WINDOWS}
 )
 
 add_executable(argonapp ${SOURCES} )
+target_link_libraries(argonapp
+    PRIVATE
+        ${OPENGL_LIBRARIES}
+        ${LIB_WINDOWS}
+)
+target_compile_definitions(argonapp
+    PRIVATE
+        "_UNICODE"
+        "UNICODE"
+)
+target_compile_options( argonapp
+    PRIVATE
+        "/w"
+)
 
+file(COPY resources DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/Debug")
+file(COPY shaders DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/Debug")
