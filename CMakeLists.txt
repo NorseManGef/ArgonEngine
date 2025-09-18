@@ -3,16 +3,16 @@ project(argonengine)
 
 find_package(OpenGL REQUIRED)
 
+if(WIN32)
+set(INC_OS win)
+endif(WIN32)
+
 include_directories(
     common
     app
-    win
+    ${INC_OS}
     ${OPENGL_INCLUDE_DIR}
 )
-
-#target_precompile_headers(
-#    common/precompiled.h
-#)
 
 set(SRC_ARGONENGINE
     common/ArgonEngine/ArgonInit.cpp
@@ -536,6 +536,21 @@ set(SRC_VORBIS
     common/vorbis/window.c
 )
 
+set(SRC_COMMON
+    ${SRC_ARGONAPP}
+    ${SRC_ARGONENGINE}
+    ${SRC_BULLET}
+    ${SRC_OGG}
+    ${SRC_OPUS}
+    ${SRC_OPUSFILE}
+    ${SRC_JSON}
+    ${SRC_LNEARMATH}
+    ${SRC_MINICL}
+    ${SRC_STB}
+    ${SRC_SDL2}
+    ${SRC_VORBIS}
+)
+
 set(SRC_WINDOWS
     win/GL/glew.c
     win/SDL2/audio/directsound/SDL_directsound.c
@@ -568,42 +583,41 @@ set(SRC_WINDOWS
     win/SDL2/video/windows/SDL_windowswindow.c
 )
 
+if(WIN32)
+set(SRC_OS ${SRC_WINDOWS})
+endif(WIN32)
+
 set(LIB_WINDOWS
     Imm32.Lib
     windowscoreheadless.Lib
     WinMM.Lib
 )
 
+if(WIN32)
+set(LIB_OS ${LIB_WINDOWS})
+endif(WIN32)
+
 set(SOURCES
-    ${SRC_ARGONAPP}
-    ${SRC_ARGONENGINE}
-    ${SRC_BULLET}
-    ${SRC_OGG}
-    ${SRC_OPUS}
-    ${SRC_OPUSFILE}
-    ${SRC_JSON}
-    ${SRC_LNEARMATH}
-    ${SRC_MINICL}
-    ${SRC_STB}
-    ${SRC_SDL2}
-    ${SRC_VORBIS}
-    ${SRC_WINDOWS}
+    ${SRC_COMMON}
+    ${SRC_OS}
 )
 
 add_executable(argonapp ${SOURCES} )
+
+target_precompile_headers(argonapp
+    PRIVATE
+        common/precompiled.h
+)
+
 target_link_libraries(argonapp
     PRIVATE
         ${OPENGL_LIBRARIES}
-        ${LIB_WINDOWS}
+        ${LIB_OS}
 )
 target_compile_definitions(argonapp
     PRIVATE
         "_UNICODE"
         "UNICODE"
-)
-target_compile_options( argonapp
-    PRIVATE
-        "/w"
 )
 
 file(COPY resources DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/Debug")
