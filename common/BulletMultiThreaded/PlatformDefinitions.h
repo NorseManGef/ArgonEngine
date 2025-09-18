@@ -40,7 +40,7 @@ typedef union
 #ifndef __PHYSICS_COMMON_H__
 #ifndef PFX_USE_FREE_VECTORMATH
 #ifndef __BT_SKIP_UINT64_H
-        typedef unsigned long int uint64_t;
+        typedef unsigned long long int uint64_t;
 #endif //__BT_SKIP_UINT64_H
 #endif //PFX_USE_FREE_VECTORMATH
         typedef unsigned int      uint32_t;
