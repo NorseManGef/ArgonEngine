@@ -12,6 +12,7 @@
 #include <memory>
 #include <type_traits>
 #include <map>
+#include <iostream>
 #include "Thread.h"
 /**
  * @brief This macro allows you to quickly define the TypeInfo of most structs.
