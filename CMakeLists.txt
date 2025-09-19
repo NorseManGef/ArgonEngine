@@ -7,6 +7,10 @@ if(WIN32)
 set(INC_OS win)
 endif(WIN32)
 
+if(UNIX AND NOT APPLE)
+set(INC_OS linux)
+endif(UNIX AND NOT APPLE)
+
 include_directories(
     common
     app
@@ -583,9 +587,48 @@ set(SRC_WINDOWS
     win/SDL2/video/windows/SDL_windowswindow.c
 )
 
+set(SRC_LINUX
+    linux/GL/glew.c
+    linux/SDL2/audio/alsa/SDL_alsa_audio.c
+    linux/SDL2/audio/pulseaudio/SDL_pulseaudio.c
+    linux/SDL2/core/linux/SDL_udev.c
+    linux/SDL2/filesystem/unix/SDL_sysfilesystem.c
+    linux/SDL2/haptic/linux/SDL_syshaptic.c
+    linux/SDL2/joystick/linux/SDL_sysjoystick.c
+    linux/SDL2/loadso/dlopen/SDL_sysloadso.c
+    linux/SDL2/power/linux/SDL_syspower.c
+    linux/SDL2/thread/pthread/SDL_syscond.c
+    linux/SDL2/thread/pthread/SDL_sysmutex.c
+    linux/SDL2/thread/pthread/SDL_syssem.c
+    linux/SDL2/thread/pthread/SDL_systhread.c
+    linux/SDL2/thread/pthread/SDL_systls.c
+    linux/SDL2/timer/unix/SDL_systimer.c
+    linux/SDL2/video/x11/edid-parse.c
+    linux/SDL2/video/x11/imKStoUCS.c
+    linux/SDL2/video/x11/SDL_x11clipboard.c
+    linux/SDL2/video/x11/SDL_x11dyn.c
+    linux/SDL2/video/x11/SDL_x11events.c
+    linux/SDL2/video/x11/SDL_x11framebuffer.c
+    linux/SDL2/video/x11/SDL_x11keyboard.c
+    linux/SDL2/video/x11/SDL_x11messagebox.c
+    linux/SDL2/video/x11/SDL_x11modes.c
+    linux/SDL2/video/x11/SDL_x11mouse.c
+    linux/SDL2/video/x11/SDL_x11opengl.c
+    linux/SDL2/video/x11/SDL_x11opengles.c
+    linux/SDL2/video/x11/SDL_x11shape.c
+    linux/SDL2/video/x11/SDL_x11touch.c
+    linux/SDL2/video/x11/SDL_x11video.c
+    linux/SDL2/video/x11/SDL_x11window.c
+    linux/SDL2/video/x11/SDL_x11xinput2.c
+)
+
 if(WIN32)
 set(SRC_OS ${SRC_WINDOWS})
 endif(WIN32)
+
+if(UNIX AND NOT APPLE)
+set(SRC_OS ${SRC_LINUX})
+endif(UNIX AND NOT APPLE)
 
 set(LIB_WINDOWS
     Imm32.Lib
@@ -593,9 +636,18 @@ set(LIB_WINDOWS
     WinMM.Lib
 )
 
+set(LIB_LINUX
+    pulse-simple
+    pulse
+)
+
 if(WIN32)
 set(LIB_OS ${LIB_WINDOWS})
 endif(WIN32)
+
+if(UNIX AND NOT APPLE)
+set(LIB_OS ${LIB_LINUX})
+endif(UNIX AND NOT APPLE)
 
 set(SOURCES
     ${SRC_COMMON}
@@ -620,5 +672,12 @@ target_compile_definitions(argonapp
         "UNICODE"
 )
 
+if(WIN32)
 file(COPY resources DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/Debug")
 file(COPY shaders DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/Debug")
+endif(WIN32)
+
+if(UNIX AND NOT APPLE)
+file(COPY resources DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
+file(COPY shaders DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
+endif(UNIX AND NOT APPLE)
