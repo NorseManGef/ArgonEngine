@@ -673,8 +673,8 @@ target_compile_definitions(argonapp
 )
 
 if(WIN32)
-file(COPY resources DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/Debug")
-file(COPY shaders DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/Debug")
+file(COPY resources DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_BUILD_TYPE}")
+file(COPY shaders DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_BUILD_TYPE}")
 endif(WIN32)
 
 if(UNIX AND NOT APPLE)
