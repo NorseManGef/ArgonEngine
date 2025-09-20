@@ -11,6 +11,10 @@ if(UNIX AND NOT APPLE)
 set(INC_OS linux)
 endif(UNIX AND NOT APPLE)
 
+if(APPLE)
+set(INC_OS mac)
+endif(APPLE)
+
 include_directories(
     common
     app
@@ -622,6 +626,22 @@ set(SRC_LINUX
     linux/SDL2/video/x11/SDL_x11xinput2.c
 )
 
+set(SRC_MAC
+    mac/GL/glew.c
+    mac/SDL2/audio/coreaudio/SDL_coreaudio.c
+    mac/SDL2/haptic/darwin/SDL_syshaptic.c
+    mac/SDL2/joystick/darwin/SDL_sysjoystick.c
+    mac/SDL2/loadso/dlopen/SDL_sysloadso.c
+    mac/SDL2/power/macosx/SDL_syspower.c
+    mac/SDL2/thread/generic/SDL_syssem.c
+    mac/SDL2/thread/pthread/SDL_syscond.c
+    mac/SDL2/thread/pthread/SDL_sysmutex.c
+    mac/SDL2/thread/pthread/SDL_syssem.c
+    mac/SDL2/thread/pthread/SDL_systhread.c
+    mac/SDL2/thread/pthread/SDL_systls.c
+    mac/SDL2/timer/unix/SDL_systimer.c
+)
+
 if(WIN32)
 set(SRC_OS ${SRC_WINDOWS})
 endif(WIN32)
@@ -629,6 +649,10 @@ endif(WIN32)
 if(UNIX AND NOT APPLE)
 set(SRC_OS ${SRC_LINUX})
 endif(UNIX AND NOT APPLE)
+
+if(APPLE)
+set(SRC_OS ${SRC_MAC})
+endif(APPLE)
 
 set(LIB_WINDOWS
     Imm32
