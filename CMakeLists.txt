@@ -672,15 +672,7 @@ target_compile_definitions(argonapp
         "UNICODE"
 )
 
-
-if(WIN32)
 add_custom_command(TARGET argonapp POST_BUILD
-    COMMAND "${CMAKE_COMMAND}" -E copy_directory "resources" "${CMAKE_BINARY_DIR}/$<CONFIG>/resources/"
-    COMMAND "${CMAKE_COMMAND}" -E copy_directory "shaders" "${CMAKE_BINARY_DIR}/$<CONFIG>/shaders/"
+    COMMAND "${CMAKE_COMMAND}" -E copy_directory "${PROJECT_SOURCE_DIR}/resources" "$<TARGET_FILE_DIR:argonapp>/resources"
+    COMMAND "${CMAKE_COMMAND}" -E copy_directory "${PROJECT_SOURCE_DIR}/shaders" "$<TARGET_FILE_DIR:argonapp>/shaders"
 )
-endif(WIN32)
-
-if(UNIX AND NOT APPLE)
-file(COPY resources DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
-file(COPY shaders DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
-endif(UNIX AND NOT APPLE)

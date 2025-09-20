@@ -18,6 +18,10 @@ build
 
 .vscode
 
+# Visual Studio
+
+.vs
+
 # MacOS
 
 .DS_Store
