@@ -631,9 +631,9 @@ set(SRC_OS ${SRC_LINUX})
 endif(UNIX AND NOT APPLE)
 
 set(LIB_WINDOWS
-    Imm32.Lib
-    windowscoreheadless.Lib
-    WinMM.Lib
+    Imm32
+    windowscoreheadless
+    WinMM
 )
 
 set(LIB_LINUX
@@ -672,9 +672,12 @@ target_compile_definitions(argonapp
         "UNICODE"
 )
 
+
 if(WIN32)
-file(COPY resources DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_BUILD_TYPE}")
-file(COPY shaders DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_BUILD_TYPE}")
+add_custom_command(TARGET argonapp POST_BUILD
+    COMMAND "${CMAKE_COMMAND}" -E copy_directory "resources" "${CMAKE_BINARY_DIR}/$<CONFIG>/resources/"
+    COMMAND "${CMAKE_COMMAND}" -E copy_directory "shaders" "${CMAKE_BINARY_DIR}/$<CONFIG>/shaders/"
+    )
 endif(WIN32)
 
 if(UNIX AND NOT APPLE)
