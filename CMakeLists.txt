@@ -1,0 +1,678 @@
+cmake_minimum_required(VERSION 3.20)
+project(argonengine)
+
+find_package(OpenGL REQUIRED)
+
+if(WIN32)
+set(INC_OS win)
+endif(WIN32)
+
+if(UNIX AND NOT APPLE)
+set(INC_OS linux)
+endif(UNIX AND NOT APPLE)
+
+include_directories(
+    common
+    app
+    ${INC_OS}
+    ${OPENGL_INCLUDE_DIR}
+)
+
+set(SRC_ARGONENGINE
+    common/ArgonEngine/ArgonInit.cpp
+    common/ArgonEngine/AudioSystem.cpp
+    common/ArgonEngine/BasicShape.cpp
+    common/ArgonEngine/BoundingCube.cpp
+    common/ArgonEngine/Collision.cpp
+    common/ArgonEngine/Hardware.cpp
+    common/ArgonEngine/MeshFormat.cpp
+    common/ArgonEngine/Node.cpp
+    common/ArgonEngine/OpenGLES.cpp
+    common/ArgonEngine/Reflection.cpp
+    common/ArgonEngine/RenderSystem.cpp
+    common/ArgonEngine/RenderSystemConstants.cpp
+    common/ArgonEngine/ScoreController.cpp
+    common/ArgonEngine/Sprite.cpp
+    common/ArgonEngine/Text.cpp
+    common/ArgonEngine/Thread.cpp
+    common/ArgonEngine/UserInterface.cpp
+    common/ArgonEngine/UserMusic.cpp
+    common/ArgonEngine/Utility.cpp
+    common/ArgonEngine/VirtualResource.cpp
+    common/ArgonEngine/VirtualResourceImage.cpp
+    common/ArgonEngine/Curves.cpp
+)
+
+set(SRC_ARGONAPP
+    app/ArgonAppBase.cpp
+    app/ArgonAppFlowControl.cpp
+    app/main.cpp
+)
+
+set(SRC_BULLET
+    common/BulletCollision/BroadphaseCollision/btAxisSweep3.cpp
+    common/BulletCollision/BroadphaseCollision/btBroadphaseProxy.cpp
+    common/BulletCollision/BroadphaseCollision/btCollisionAlgorithm.cpp
+    common/BulletCollision/BroadphaseCollision/btDbvt.cpp
+    common/BulletCollision/BroadphaseCollision/btDbvtBroadphase.cpp
+    common/BulletCollision/BroadphaseCollision/btDispatcher.cpp
+    common/BulletCollision/BroadphaseCollision/btMultiSapBroadphase.cpp
+    common/BulletCollision/BroadphaseCollision/btOverlappingPairCache.cpp
+    common/BulletCollision/BroadphaseCollision/btQuantizedBvh.cpp
+    common/BulletCollision/BroadphaseCollision/btSimpleBroadphase.cpp
+    common/BulletCollision/CollisionDispatch/btActivatingCollisionAlgorithm.cpp
+    common/BulletCollision/CollisionDispatch/btBox2dBox2dCollisionAlgorithm.cpp
+    common/BulletCollision/CollisionDispatch/btBoxBoxCollisionAlgorithm.cpp
+    common/BulletCollision/CollisionDispatch/btBoxBoxDetector.cpp
+    common/BulletCollision/CollisionDispatch/btCollisionDispatcher.cpp
+    common/BulletCollision/CollisionDispatch/btCollisionObject.cpp
+    common/BulletCollision/CollisionDispatch/btCollisionWorld.cpp
+    common/BulletCollision/CollisionDispatch/btCompoundCollisionAlgorithm.cpp
+    common/BulletCollision/CollisionDispatch/btConvex2dConvex2dAlgorithm.cpp
+    common/BulletCollision/CollisionDispatch/btConvexConcaveCollisionAlgorithm.cpp
+    common/BulletCollision/CollisionDispatch/btConvexConvexAlgorithm.cpp
+    common/BulletCollision/CollisionDispatch/btConvexPlaneCollisionAlgorithm.cpp
+    common/BulletCollision/CollisionDispatch/btDefaultCollisionConfiguration.cpp
+    common/BulletCollision/CollisionDispatch/btEmptyCollisionAlgorithm.cpp
+    common/BulletCollision/CollisionDispatch/btGhostObject.cpp
+    common/BulletCollision/CollisionDispatch/btInternalEdgeUtility.cpp
+    common/BulletCollision/CollisionDispatch/btManifoldResult.cpp
+    common/BulletCollision/CollisionDispatch/btSimulationIslandManager.cpp
+    common/BulletCollision/CollisionDispatch/btSphereBoxCollisionAlgorithm.cpp
+    common/BulletCollision/CollisionDispatch/btSphereSphereCollisionAlgorithm.cpp
+    common/BulletCollision/CollisionDispatch/btSphereTriangleCollisionAlgorithm.cpp
+    common/BulletCollision/CollisionDispatch/btUnionFind.cpp
+    common/BulletCollision/CollisionDispatch/SphereTriangleDetector.cpp
+    common/BulletCollision/CollisionShapes/btBox2dShape.cpp
+    common/BulletCollision/CollisionShapes/btBoxShape.cpp
+    common/BulletCollision/CollisionShapes/btBvhTriangleMeshShape.cpp
+    common/BulletCollision/CollisionShapes/btCapsuleShape.cpp
+    common/BulletCollision/CollisionShapes/btCollisionShape.cpp
+    common/BulletCollision/CollisionShapes/btCompoundShape.cpp
+    common/BulletCollision/CollisionShapes/btConcaveShape.cpp
+    common/BulletCollision/CollisionShapes/btConeShape.cpp
+    common/BulletCollision/CollisionShapes/btConvex2dShape.cpp
+    common/BulletCollision/CollisionShapes/btConvexHullShape.cpp
+    common/BulletCollision/CollisionShapes/btConvexInternalShape.cpp
+    common/BulletCollision/CollisionShapes/btConvexPointCloudShape.cpp
+    common/BulletCollision/CollisionShapes/btConvexPolyhedron.cpp
+    common/BulletCollision/CollisionShapes/btConvexShape.cpp
+    common/BulletCollision/CollisionShapes/btConvexTriangleMeshShape.cpp
+    common/BulletCollision/CollisionShapes/btCylinderShape.cpp
+    common/BulletCollision/CollisionShapes/btEmptyShape.cpp
+    common/BulletCollision/CollisionShapes/btHeightfieldTerrainShape.cpp
+    common/BulletCollision/CollisionShapes/btMinkowskiSumShape.cpp
+    common/BulletCollision/CollisionShapes/btMultimaterialTriangleMeshShape.cpp
+    common/BulletCollision/CollisionShapes/btMultiSphereShape.cpp
+    common/BulletCollision/CollisionShapes/btOptimizedBvh.cpp
+    common/BulletCollision/CollisionShapes/btPolyhedralConvexShape.cpp
+    common/BulletCollision/CollisionShapes/btScaledBvhTriangleMeshShape.cpp
+    common/BulletCollision/CollisionShapes/btShapeHull.cpp
+    common/BulletCollision/CollisionShapes/btSphereShape.cpp
+    common/BulletCollision/CollisionShapes/btStaticPlaneShape.cpp
+    common/BulletCollision/CollisionShapes/btStridingMeshInterface.cpp
+    common/BulletCollision/CollisionShapes/btTetrahedronShape.cpp
+    common/BulletCollision/CollisionShapes/btTriangleBuffer.cpp
+    common/BulletCollision/CollisionShapes/btTriangleCallback.cpp
+    common/BulletCollision/CollisionShapes/btTriangleIndexVertexArray.cpp
+    common/BulletCollision/CollisionShapes/btTriangleIndexVertexMaterialArray.cpp
+    common/BulletCollision/CollisionShapes/btTriangleMesh.cpp
+    common/BulletCollision/CollisionShapes/btTriangleMeshShape.cpp
+    common/BulletCollision/CollisionShapes/btUniformScalingShape.cpp
+    common/BulletCollision/Gimpact/btContactProcessing.cpp
+    common/BulletCollision/Gimpact/btGenericPoolAllocator.cpp
+    common/BulletCollision/Gimpact/btGImpactBvh.cpp
+    common/BulletCollision/Gimpact/btGImpactCollisionAlgorithm.cpp
+    common/BulletCollision/Gimpact/btGImpactQuantizedBvh.cpp
+    common/BulletCollision/Gimpact/btGImpactShape.cpp
+    common/BulletCollision/Gimpact/btTriangleShapeEx.cpp
+    common/BulletCollision/Gimpact/gim_box_set.cpp
+    common/BulletCollision/Gimpact/gim_contact.cpp
+    common/BulletCollision/Gimpact/gim_memory.cpp
+    common/BulletCollision/Gimpact/gim_tri_collision.cpp
+    common/BulletCollision/NarrowPhaseCollision/btContinuousConvexCollision.cpp
+    common/BulletCollision/NarrowPhaseCollision/btConvexCast.cpp
+    common/BulletCollision/NarrowPhaseCollision/btGjkConvexCast.cpp
+    common/BulletCollision/NarrowPhaseCollision/btGjkEpa2.cpp
+    common/BulletCollision/NarrowPhaseCollision/btGjkEpaPenetrationDepthSolver.cpp
+    common/BulletCollision/NarrowPhaseCollision/btGjkPairDetector.cpp
+    common/BulletCollision/NarrowPhaseCollision/btMinkowskiPenetrationDepthSolver.cpp
+    common/BulletCollision/NarrowPhaseCollision/btPersistentManifold.cpp
+    common/BulletCollision/NarrowPhaseCollision/btPolyhedralContactClipping.cpp
+    common/BulletCollision/NarrowPhaseCollision/btRaycastCallback.cpp
+    common/BulletCollision/NarrowPhaseCollision/btSubSimplexConvexCast.cpp
+    common/BulletCollision/NarrowPhaseCollision/btVoronoiSimplexSolver.cpp
+    common/BulletDynamics/Character/btKinematicCharacterController.cpp
+    common/BulletDynamics/ConstraintSolver/btConeTwistConstraint.cpp
+    common/BulletDynamics/ConstraintSolver/btContactConstraint.cpp
+    common/BulletDynamics/ConstraintSolver/btGearConstraint.cpp
+    common/BulletDynamics/ConstraintSolver/btGeneric6DofConstraint.cpp
+    common/BulletDynamics/ConstraintSolver/btGeneric6DofSpringConstraint.cpp
+    common/BulletDynamics/ConstraintSolver/btHinge2Constraint.cpp
+    common/BulletDynamics/ConstraintSolver/btHingeConstraint.cpp
+    common/BulletDynamics/ConstraintSolver/btPoint2PointConstraint.cpp
+    common/BulletDynamics/ConstraintSolver/btSequentialImpulseConstraintSolver.cpp
+    common/BulletDynamics/ConstraintSolver/btSliderConstraint.cpp
+    common/BulletDynamics/ConstraintSolver/btSolve2LinearConstraint.cpp
+    common/BulletDynamics/ConstraintSolver/btTypedConstraint.cpp
+    common/BulletDynamics/ConstraintSolver/btUniversalConstraint.cpp
+    common/BulletDynamics/Dynamics/btDiscreteDynamicsWorld.cpp
+    common/BulletDynamics/Dynamics/btRigidBody.cpp
+    common/BulletDynamics/Dynamics/btSimpleDynamicsWorld.cpp
+    common/BulletDynamics/Dynamics/Bullet-C-API.cpp
+    common/BulletDynamics/Vehicle/btRaycastVehicle.cpp
+    common/BulletDynamics/Vehicle/btWheelInfo.cpp
+    common/BulletMultiThreaded/btGpu3DGridBroadphase.cpp
+    common/BulletMultiThreaded/btParallelConstraintSolver.cpp
+    common/BulletMultiThreaded/btThreadSupportInterface.cpp
+    common/BulletMultiThreaded/GpuSoftBodySolvers/DX11/btSoftBodySolver_DX11.cpp
+    common/BulletMultiThreaded/GpuSoftBodySolvers/DX11/btSoftBodySolver_DX11SIMDAware.cpp
+    common/BulletMultiThreaded/GpuSoftBodySolvers/OpenCL/btSoftBodySolver_OpenCL.cpp
+    common/BulletMultiThreaded/GpuSoftBodySolvers/OpenCL/btSoftBodySolver_OpenCLSIMDAware.cpp
+    common/BulletMultiThreaded/GpuSoftBodySolvers/OpenCL/btSoftBodySolverOutputCLtoGL.cpp
+    common/BulletMultiThreaded/GpuSoftBodySolvers/OpenCL/MiniCL/MiniCLTaskWrap.cpp
+    common/BulletMultiThreaded/PosixThreadSupport.cpp
+    common/BulletMultiThreaded/SequentialThreadSupport.cpp
+    common/BulletMultiThreaded/SpuCollisionObjectWrapper.cpp
+    common/BulletMultiThreaded/SpuCollisionTaskProcess.cpp
+    common/BulletMultiThreaded/SpuContactManifoldCollisionAlgorithm.cpp
+    common/BulletMultiThreaded/SpuFakeDma.cpp
+    common/BulletMultiThreaded/SpuGatheringCollisionDispatcher.cpp
+    common/BulletMultiThreaded/SpuLibspe2Support.cpp
+    common/BulletMultiThreaded/SpuNarrowPhaseCollisionTask/boxBoxDistance.cpp
+    common/BulletMultiThreaded/SpuNarrowPhaseCollisionTask/SpuCollisionShapes.cpp
+    common/BulletMultiThreaded/SpuNarrowPhaseCollisionTask/SpuContactResult.cpp
+    common/BulletMultiThreaded/SpuNarrowPhaseCollisionTask/SpuGatheringCollisionTask.cpp
+    common/BulletMultiThreaded/SpuNarrowPhaseCollisionTask/SpuMinkowskiPenetrationDepthSolver.cpp
+    common/BulletMultiThreaded/SpuSampleTask/SpuSampleTask.cpp
+    common/BulletMultiThreaded/SpuSampleTaskProcess.cpp
+    common/BulletMultiThreaded/Win32ThreadSupport.cpp
+    common/BulletSoftBody/btDefaultSoftBodySolver.cpp
+    common/BulletSoftBody/btSoftBody.cpp
+    common/BulletSoftBody/btSoftBodyConcaveCollisionAlgorithm.cpp
+    common/BulletSoftBody/btSoftBodyHelpers.cpp
+    common/BulletSoftBody/btSoftBodyRigidBodyCollisionConfiguration.cpp
+    common/BulletSoftBody/btSoftRigidCollisionAlgorithm.cpp
+    common/BulletSoftBody/btSoftRigidDynamicsWorld.cpp
+    common/BulletSoftBody/btSoftSoftCollisionAlgorithm.cpp
+)
+
+set(SRC_JSON
+    common/json/json_reader.cpp
+    common/json/json_value.cpp
+    common/json/json_writer.cpp
+)
+
+set(SRC_LNEARMATH
+    common/LinearMath/btAlignedAllocator.cpp
+    common/LinearMath/btConvexHull.cpp
+    common/LinearMath/btConvexHullComputer.cpp
+    common/LinearMath/btGeometryUtil.cpp
+    common/LinearMath/btPolarDecomposition.cpp
+    common/LinearMath/btQuickprof.cpp
+    common/LinearMath/btSerializer.cpp
+    common/LinearMath/btVector3.cpp
+)
+
+set(SRC_MINICL
+    common/MiniCL/MiniCL.cpp
+    common/MiniCL/MiniCLTask/MiniCLTask.cpp
+    common/MiniCL/MiniCLTaskScheduler.cpp
+)
+
+set(SRC_OGG
+    common/ogg/bitwise.c
+    common/ogg/framing.c
+)
+
+SET(SRC_OPUS
+    common/opus/analysis.c
+    common/opus/celt/arm/arm_celt_map.c
+    common/opus/celt/arm/armcpu.c
+    common/opus/celt/bands.c
+    common/opus/celt/celt.c
+    common/opus/celt/celt_decoder.c
+    common/opus/celt/celt_encoder.c
+    common/opus/celt/celt_lpc.c
+    common/opus/celt/cwrs.c
+    common/opus/celt/entcode.c
+    common/opus/celt/entdec.c
+    common/opus/celt/entenc.c
+    common/opus/celt/kiss_fft.c
+    common/opus/celt/laplace.c
+    common/opus/celt/mathops.c
+    common/opus/celt/mdct.c
+    common/opus/celt/modes.c
+    common/opus/celt/pitch.c
+    common/opus/celt/quant_bands.c
+    common/opus/celt/rate.c
+    common/opus/celt/vq.c
+    common/opus/mlp.c
+    common/opus/mlp_data.c
+    common/opus/opus.c
+    common/opus/opus_decoder.c
+    common/opus/opus_encoder.c
+    common/opus/opus_multistream.c
+    common/opus/opus_multistream_decoder.c
+    common/opus/opus_multistream_encoder.c
+    common/opus/repacketizer.c
+    common/opus/silk/A2NLSF.c
+    common/opus/silk/ana_filt_bank_1.c
+    common/opus/silk/biquad_alt.c
+    common/opus/silk/bwexpander.c
+    common/opus/silk/bwexpander_32.c
+    common/opus/silk/check_control_input.c
+    common/opus/silk/CNG.c
+    common/opus/silk/code_signs.c
+    common/opus/silk/control_audio_bandwidth.c
+    common/opus/silk/control_codec.c
+    common/opus/silk/control_SNR.c
+    common/opus/silk/debug.c
+    common/opus/silk/dec_API.c
+    common/opus/silk/decode_core.c
+    common/opus/silk/decode_frame.c
+    common/opus/silk/decode_indices.c
+    common/opus/silk/decode_parameters.c
+    common/opus/silk/decode_pitch.c
+    common/opus/silk/decode_pulses.c
+    common/opus/silk/decoder_set_fs.c
+    common/opus/silk/enc_API.c
+    common/opus/silk/encode_indices.c
+    common/opus/silk/encode_pulses.c
+    common/opus/silk/fixed/apply_sine_window_FIX.c
+    common/opus/silk/fixed/autocorr_FIX.c
+    common/opus/silk/fixed/burg_modified_FIX.c
+    common/opus/silk/fixed/corrMatrix_FIX.c
+    common/opus/silk/fixed/encode_frame_FIX.c
+    common/opus/silk/fixed/find_LPC_FIX.c
+    common/opus/silk/fixed/find_LTP_FIX.c
+    common/opus/silk/fixed/find_pitch_lags_FIX.c
+    common/opus/silk/fixed/find_pred_coefs_FIX.c
+    common/opus/silk/fixed/k2a_FIX.c
+    common/opus/silk/fixed/k2a_Q16_FIX.c
+    common/opus/silk/fixed/LTP_analysis_filter_FIX.c
+    common/opus/silk/fixed/LTP_scale_ctrl_FIX.c
+    common/opus/silk/fixed/noise_shape_analysis_FIX.c
+    common/opus/silk/fixed/pitch_analysis_core_FIX.c
+    common/opus/silk/fixed/prefilter_FIX.c
+    common/opus/silk/fixed/process_gains_FIX.c
+    common/opus/silk/fixed/regularize_correlations_FIX.c
+    common/opus/silk/fixed/residual_energy16_FIX.c
+    common/opus/silk/fixed/residual_energy_FIX.c
+    common/opus/silk/fixed/schur64_FIX.c
+    common/opus/silk/fixed/schur_FIX.c
+    common/opus/silk/fixed/solve_LS_FIX.c
+    common/opus/silk/fixed/vector_ops_FIX.c
+    common/opus/silk/fixed/warped_autocorrelation_FIX.c
+    common/opus/silk/float/apply_sine_window_FLP.c
+    common/opus/silk/float/autocorrelation_FLP.c
+    common/opus/silk/float/burg_modified_FLP.c
+    common/opus/silk/float/bwexpander_FLP.c
+    common/opus/silk/float/corrMatrix_FLP.c
+    common/opus/silk/float/encode_frame_FLP.c
+    common/opus/silk/float/energy_FLP.c
+    common/opus/silk/float/find_LPC_FLP.c
+    common/opus/silk/float/find_LTP_FLP.c
+    common/opus/silk/float/find_pitch_lags_FLP.c
+    common/opus/silk/float/find_pred_coefs_FLP.c
+    common/opus/silk/float/inner_product_FLP.c
+    common/opus/silk/float/k2a_FLP.c
+    common/opus/silk/float/levinsondurbin_FLP.c
+    common/opus/silk/float/LPC_analysis_filter_FLP.c
+    common/opus/silk/float/LPC_inv_pred_gain_FLP.c
+    common/opus/silk/float/LTP_analysis_filter_FLP.c
+    common/opus/silk/float/LTP_scale_ctrl_FLP.c
+    common/opus/silk/float/noise_shape_analysis_FLP.c
+    common/opus/silk/float/pitch_analysis_core_FLP.c
+    common/opus/silk/float/prefilter_FLP.c
+    common/opus/silk/float/process_gains_FLP.c
+    common/opus/silk/float/regularize_correlations_FLP.c
+    common/opus/silk/float/residual_energy_FLP.c
+    common/opus/silk/float/scale_copy_vector_FLP.c
+    common/opus/silk/float/scale_vector_FLP.c
+    common/opus/silk/float/schur_FLP.c
+    common/opus/silk/float/solve_LS_FLP.c
+    common/opus/silk/float/sort_FLP.c
+    common/opus/silk/float/warped_autocorrelation_FLP.c
+    common/opus/silk/float/wrappers_FLP.c
+    common/opus/silk/gain_quant.c
+    common/opus/silk/HP_variable_cutoff.c
+    common/opus/silk/init_decoder.c
+    common/opus/silk/init_encoder.c
+    common/opus/silk/inner_prod_aligned.c
+    common/opus/silk/interpolate.c
+    common/opus/silk/lin2log.c
+    common/opus/silk/log2lin.c
+    common/opus/silk/LP_variable_cutoff.c
+    common/opus/silk/LPC_analysis_filter.c
+    common/opus/silk/LPC_inv_pred_gain.c
+    common/opus/silk/NLSF2A.c
+    common/opus/silk/NLSF_decode.c
+    common/opus/silk/NLSF_del_dec_quant.c
+    common/opus/silk/NLSF_encode.c
+    common/opus/silk/NLSF_stabilize.c
+    common/opus/silk/NLSF_unpack.c
+    common/opus/silk/NLSF_VQ.c
+    common/opus/silk/NLSF_VQ_weights_laroia.c
+    common/opus/silk/NSQ.c
+    common/opus/silk/NSQ_del_dec.c
+    common/opus/silk/pitch_est_tables.c
+    common/opus/silk/PLC.c
+    common/opus/silk/process_NLSFs.c
+    common/opus/silk/quant_LTP_gains.c
+    common/opus/silk/resampler.c
+    common/opus/silk/resampler_down2.c
+    common/opus/silk/resampler_down2_3.c
+    common/opus/silk/resampler_private_AR2.c
+    common/opus/silk/resampler_private_down_FIR.c
+    common/opus/silk/resampler_private_IIR_FIR.c
+    common/opus/silk/resampler_private_up2_HQ.c
+    common/opus/silk/resampler_rom.c
+    common/opus/silk/shell_coder.c
+    common/opus/silk/sigm_Q15.c
+    common/opus/silk/sort.c
+    common/opus/silk/stereo_decode_pred.c
+    common/opus/silk/stereo_encode_pred.c
+    common/opus/silk/stereo_find_predictor.c
+    common/opus/silk/stereo_LR_to_MS.c
+    common/opus/silk/stereo_MS_to_LR.c
+    common/opus/silk/stereo_quant_pred.c
+    common/opus/silk/sum_sqr_shift.c
+    common/opus/silk/table_LSF_cos.c
+    common/opus/silk/tables_gain.c
+    common/opus/silk/tables_LTP.c
+    common/opus/silk/tables_NLSF_CB_NB_MB.c
+    common/opus/silk/tables_NLSF_CB_WB.c
+    common/opus/silk/tables_other.c
+    common/opus/silk/tables_pitch_lag.c
+    common/opus/silk/tables_pulses_per_block.c
+    common/opus/silk/VAD.c
+    common/opus/silk/VQ_WMat_EC.c 
+)
+
+set(SRC_OPUSFILE
+    common/opusfile/http.c
+    common/opusfile/info.c
+    common/opusfile/internal.c
+    common/opusfile/opusfile.c
+    common/opusfile/stream.c
+)
+
+set(SRC_SDL2
+    common/SDL2/SDL.c
+    common/SDL2/SDL_assert.c
+    common/SDL2/SDL_error.c
+    common/SDL2/SDL_hints.c
+    common/SDL2/SDL_log.c
+    common/SDL2/atomic/SDL_atomic.c
+    common/SDL2/atomic/SDL_spinlock.c
+    common/SDL2/audio/SDL_audio.c
+    common/SDL2/audio/SDL_audiocvt.c
+    common/SDL2/audio/SDL_audiodev.c
+    common/SDL2/audio/SDL_audiotypecvt.c
+    common/SDL2/audio/SDL_mixer.c
+    common/SDL2/audio/SDL_wave.c
+    common/SDL2/audio/arts/SDL_artsaudio.c
+    common/SDL2/audio/bsd/SDL_bsdaudio.c
+    common/SDL2/audio/disk/SDL_diskaudio.c
+    common/SDL2/audio/dsp/SDL_dspaudio.c
+    common/SDL2/audio/esd/SDL_esdaudio.c
+    common/SDL2/audio/fusionsound/SDL_fsaudio.c
+    common/SDL2/audio/nas/SDL_nasaudio.c
+    common/SDL2/audio/paudio/SDL_paudio.c
+    common/SDL2/audio/qsa/SDL_qsa_audio.c
+    common/SDL2/audio/sndio/SDL_sndioaudio.c
+    common/SDL2/audio/sun/SDL_sunaudio.c
+    common/SDL2/cpuinfo/SDL_cpuinfo.c
+    common/SDL2/events/SDL_clipboardevents.c
+    common/SDL2/events/SDL_dropevents.c
+    common/SDL2/events/SDL_events.c
+    common/SDL2/events/SDL_gesture.c
+    common/SDL2/events/SDL_keyboard.c
+    common/SDL2/events/SDL_mouse.c
+    common/SDL2/events/SDL_quit.c
+    common/SDL2/events/SDL_touch.c
+    common/SDL2/events/SDL_windowevents.c
+    common/SDL2/file/SDL_rwops.c
+    common/SDL2/haptic/SDL_haptic.c
+    common/SDL2/input/evdev/SDL_evdev.c
+    common/SDL2/joystick/SDL_gamecontroller.c
+    common/SDL2/joystick/SDL_joystick.c
+    common/SDL2/joystick/bsd/SDL_sysjoystick.c
+    common/SDL2/libm/e_atan2.c
+    common/SDL2/libm/e_log.c
+    common/SDL2/libm/e_pow.c
+    common/SDL2/libm/e_rem_pio2.c
+    common/SDL2/libm/e_sqrt.c
+    common/SDL2/libm/k_cos.c
+    common/SDL2/libm/k_rem_pio2.c
+    common/SDL2/libm/k_sin.c
+    common/SDL2/libm/s_atan.c
+    common/SDL2/libm/s_copysign.c
+    common/SDL2/libm/s_cos.c
+    common/SDL2/libm/s_fabs.c
+    common/SDL2/libm/s_floor.c
+    common/SDL2/libm/s_scalbn.c
+    common/SDL2/libm/s_sin.c
+    common/SDL2/power/SDL_power.c
+    common/SDL2/render/SDL_render.c
+    common/SDL2/render/SDL_yuv_mmx.c
+    common/SDL2/render/SDL_yuv_sw.c
+    common/SDL2/render/opengl/SDL_render_gl.c
+    common/SDL2/render/opengl/SDL_shaders_gl.c
+    common/SDL2/render/opengles/SDL_render_gles.c
+    common/SDL2/render/opengles2/SDL_render_gles2.c
+    common/SDL2/render/opengles2/SDL_shaders_gles2.c
+    common/SDL2/render/software/SDL_blendfillrect.c
+    common/SDL2/render/software/SDL_blendline.c
+    common/SDL2/render/software/SDL_blendpoint.c
+    common/SDL2/render/software/SDL_drawline.c
+    common/SDL2/render/software/SDL_drawpoint.c
+    common/SDL2/render/software/SDL_render_sw.c
+    common/SDL2/render/software/SDL_rotate.c
+    common/SDL2/stdlib/SDL_getenv.c
+    common/SDL2/stdlib/SDL_iconv.c
+    common/SDL2/stdlib/SDL_malloc.c
+    common/SDL2/stdlib/SDL_qsort.c
+    common/SDL2/stdlib/SDL_stdlib.c
+    common/SDL2/stdlib/SDL_string.c
+    common/SDL2/thread/SDL_thread.c
+    common/SDL2/timer/SDL_timer.c
+    common/SDL2/video/SDL_blit.c
+    common/SDL2/video/SDL_blit_0.c
+    common/SDL2/video/SDL_blit_1.c
+    common/SDL2/video/SDL_blit_A.c
+    common/SDL2/video/SDL_blit_auto.c
+    common/SDL2/video/SDL_blit_copy.c
+    common/SDL2/video/SDL_blit_N.c
+    common/SDL2/video/SDL_blit_slow.c
+    common/SDL2/video/SDL_bmp.c
+    common/SDL2/video/SDL_clipboard.c
+    common/SDL2/video/SDL_egl.c
+    common/SDL2/video/SDL_fillrect.c
+    common/SDL2/video/SDL_pixels.c
+    common/SDL2/video/SDL_rect.c
+    common/SDL2/video/SDL_RLEaccel.c
+    common/SDL2/video/SDL_shape.c
+    common/SDL2/video/SDL_stretch.c
+    common/SDL2/video/SDL_surface.c
+    common/SDL2/video/SDL_video.c
+    common/SDL2/video/directfb/SDL_DirectFB_dyn.c
+    common/SDL2/video/directfb/SDL_DirectFB_events.c
+    common/SDL2/video/directfb/SDL_DirectFB_modes.c
+    common/SDL2/video/directfb/SDL_DirectFB_mouse.c
+    common/SDL2/video/directfb/SDL_DirectFB_opengl.c
+    common/SDL2/video/directfb/SDL_DirectFB_render.c
+    common/SDL2/video/directfb/SDL_DirectFB_shape.c
+    common/SDL2/video/directfb/SDL_DirectFB_video.c
+    common/SDL2/video/directfb/SDL_DirectFB_window.c
+    common/SDL2/video/directfb/SDL_DirectFB_WM.c
+)
+
+set(SRC_STB
+    common/stb/stb_image.c
+    common/stb/stb_image_write.c
+    common/stb/stb_truetype.c
+)
+
+set(SRC_VORBIS
+    common/vorbis/analysis.c
+    common/vorbis/bitrate.c
+    common/vorbis/block.c
+    common/vorbis/codebook.c
+    common/vorbis/envelope.c
+    common/vorbis/floor0.c
+    common/vorbis/floor1.c
+    common/vorbis/info.c
+    common/vorbis/lookup.c
+    common/vorbis/lpc.c
+    common/vorbis/lsp.c
+    common/vorbis/mapping0.c
+    common/vorbis/mdct.c
+    common/vorbis/psy.c
+    common/vorbis/registry.c
+    common/vorbis/res0.c
+    common/vorbis/sharedbook.c
+    common/vorbis/smallft.c
+    common/vorbis/synthesis.c
+    common/vorbis/vorbisenc.c
+    common/vorbis/vorbisfile.c
+    common/vorbis/window.c
+)
+
+set(SRC_COMMON
+    ${SRC_ARGONAPP}
+    ${SRC_ARGONENGINE}
+    ${SRC_BULLET}
+    ${SRC_OGG}
+    ${SRC_OPUS}
+    ${SRC_OPUSFILE}
+    ${SRC_JSON}
+    ${SRC_LNEARMATH}
+    ${SRC_MINICL}
+    ${SRC_STB}
+    ${SRC_SDL2}
+    ${SRC_VORBIS}
+)
+
+set(SRC_WINDOWS
+    win/GL/glew.c
+    win/SDL2/audio/directsound/SDL_directsound.c
+    win/SDL2/audio/winmm/SDL_winmm.c
+    win/SDL2/core/windows/SDL_windows.c
+    win/SDL2/filesystem/windows/SDL_sysfilesystem.c
+    win/SDL2/haptic/windows/SDL_syshaptic.c
+    win/SDL2/joystick/windows/SDL_dxjoystick.c
+    win/SDL2/joystick/windows/SDL_mmjoystick.c
+    win/SDL2/loadso/windows/SDL_sysloadso.c
+    win/SDL2/main/windows/SDL_windows_main.c
+    win/SDL2/power/windows/SDL_syspower.c
+    win/SDL2/render/direct3d/SDL_render_d3d.c
+    win/SDL2/thread/generic/SDL_syscond.c
+    win/SDL2/thread/windows/SDL_sysmutex.c
+    win/SDL2/thread/windows/SDL_syssem.c
+    win/SDL2/thread/windows/SDL_systhread.c
+    win/SDL2/thread/windows/SDL_systls.c
+    win/SDL2/timer/windows/SDL_systimer.c
+    win/SDL2/video/windows/SDL_windowsclipboard.c
+    win/SDL2/video/windows/SDL_windowsevents.c
+    win/SDL2/video/windows/SDL_windowsframebuffer.c
+    win/SDL2/video/windows/SDL_windowskeyboard.c
+    win/SDL2/video/windows/SDL_windowsmessagebox.c
+    win/SDL2/video/windows/SDL_windowsmodes.c
+    win/SDL2/video/windows/SDL_windowsmouse.c
+    win/SDL2/video/windows/SDL_windowsopengl.c
+    win/SDL2/video/windows/SDL_windowsshape.c
+    win/SDL2/video/windows/SDL_windowsvideo.c
+    win/SDL2/video/windows/SDL_windowswindow.c
+)
+
+set(SRC_LINUX
+    linux/GL/glew.c
+    linux/SDL2/audio/alsa/SDL_alsa_audio.c
+    linux/SDL2/audio/pulseaudio/SDL_pulseaudio.c
+    linux/SDL2/core/linux/SDL_udev.c
+    linux/SDL2/filesystem/unix/SDL_sysfilesystem.c
+    linux/SDL2/haptic/linux/SDL_syshaptic.c
+    linux/SDL2/joystick/linux/SDL_sysjoystick.c
+    linux/SDL2/loadso/dlopen/SDL_sysloadso.c
+    linux/SDL2/power/linux/SDL_syspower.c
+    linux/SDL2/thread/pthread/SDL_syscond.c
+    linux/SDL2/thread/pthread/SDL_sysmutex.c
+    linux/SDL2/thread/pthread/SDL_syssem.c
+    linux/SDL2/thread/pthread/SDL_systhread.c
+    linux/SDL2/thread/pthread/SDL_systls.c
+    linux/SDL2/timer/unix/SDL_systimer.c
+    linux/SDL2/video/x11/edid-parse.c
+    linux/SDL2/video/x11/imKStoUCS.c
+    linux/SDL2/video/x11/SDL_x11clipboard.c
+    linux/SDL2/video/x11/SDL_x11dyn.c
+    linux/SDL2/video/x11/SDL_x11events.c
+    linux/SDL2/video/x11/SDL_x11framebuffer.c
+    linux/SDL2/video/x11/SDL_x11keyboard.c
+    linux/SDL2/video/x11/SDL_x11messagebox.c
+    linux/SDL2/video/x11/SDL_x11modes.c
+    linux/SDL2/video/x11/SDL_x11mouse.c
+    linux/SDL2/video/x11/SDL_x11opengl.c
+    linux/SDL2/video/x11/SDL_x11opengles.c
+    linux/SDL2/video/x11/SDL_x11shape.c
+    linux/SDL2/video/x11/SDL_x11touch.c
+    linux/SDL2/video/x11/SDL_x11video.c
+    linux/SDL2/video/x11/SDL_x11window.c
+    linux/SDL2/video/x11/SDL_x11xinput2.c
+)
+
+if(WIN32)
+set(SRC_OS ${SRC_WINDOWS})
+endif(WIN32)
+
+if(UNIX AND NOT APPLE)
+set(SRC_OS ${SRC_LINUX})
+endif(UNIX AND NOT APPLE)
+
+set(LIB_WINDOWS
+    Imm32
+    windowscoreheadless
+    WinMM
+)
+
+set(LIB_LINUX
+    pulse-simple
+    pulse
+)
+
+if(WIN32)
+set(LIB_OS ${LIB_WINDOWS})
+endif(WIN32)
+
+if(UNIX AND NOT APPLE)
+set(LIB_OS ${LIB_LINUX})
+endif(UNIX AND NOT APPLE)
+
+set(SOURCES
+    ${SRC_COMMON}
+    ${SRC_OS}
+)
+
+add_executable(argonapp ${SOURCES} )
+
+target_precompile_headers(argonapp
+    PRIVATE
+        common/precompiled.h
+)
+
+target_link_libraries(argonapp
+    PRIVATE
+        ${OPENGL_LIBRARIES}
+        ${LIB_OS}
+)
+target_compile_definitions(argonapp
+    PRIVATE
+        "_UNICODE"
+        "UNICODE"
+)
+
+add_custom_command(TARGET argonapp POST_BUILD
+    COMMAND "${CMAKE_COMMAND}" -E copy_directory "${PROJECT_SOURCE_DIR}/resources" "$<TARGET_FILE_DIR:argonapp>/resources"
+    COMMAND "${CMAKE_COMMAND}" -E copy_directory "${PROJECT_SOURCE_DIR}/shaders" "$<TARGET_FILE_DIR:argonapp>/shaders"
+)

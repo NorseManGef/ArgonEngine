@@ -66,7 +66,6 @@
 #ifndef PLATFORM_POSIX
 #endif
 #ifdef PLATFORM_WINDOWS
-    #define __MINGW32__ 1
     #define USE_ALLOCA 1
 #ifndef NOMINMAX
     #define NOMINMAX
