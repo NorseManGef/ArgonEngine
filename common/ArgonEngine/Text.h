@@ -118,9 +118,29 @@ namespace Argon{
 
     };
 
+    struct Line {
+        const char* begin;
+        const char* end;
+        float width;
+    };
+
+    /*!
+        \brief a text object
+    */
     struct Label: public Renderable{
         Argon::Vector2f glpyh_scale;
+        LineStyle line_style;
+        float max_width;
+        bool isMultiLine;
         Label();
+
+        /*!
+            \brief generates the texture of the label
+            \param string the text to be displayed
+            \paran font the font to use
+            \param s whether to align the text to the center, left, or right; defaults to left
+            \remarks should only be used in the constructor of an Argon::Node
+        */
         void render_str(const char* string,Argon::VirtualResource font,LineStyle s = kLineLeft);
         MAKE_VISIT_HEAD(Label)
     };
