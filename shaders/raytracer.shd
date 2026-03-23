@@ -70,7 +70,7 @@ vec3 sky(vec3 pos, vec3 dir){
     vec2 p= mod(pos.xy*10.,vec2(0.5));
     return vec3(p.x+p.y);
 }
-vec3 
+//vec3 
 void main()
 {
     float dist =0.0;

@@ -199,7 +199,7 @@ namespace Argon{
         bool loop;
         void init_opus(VirtualResource path){
             if(!path.get_source<VirtualResourceIMPL::Source*>()){
-                std::cout <<"Could not fing OGG file: "<<path.get_path_string()<<std::endl;
+                PLOGE<<"Could not fing OGG file: "<<path.get_path_string();
                 return;
             }
             playback_position=0;
@@ -225,7 +225,7 @@ namespace Argon{
             }
             if(!opus_file&&vorbis_success<0){
                 vorbis_file=NULL;
-                std::cout<<"Failed to open ogg file: "<<path.get_path_string()<<"\n";
+                PLOGE<<"Failed to open ogg file: "<<path.get_path_string();
             }else initialized = true;
 
         }
@@ -300,7 +300,8 @@ namespace Argon{
             if(distance_squared<0.25)distance_squared=0.25;
             // http://www.sengpielaudio.com/calculator-soundpower.htm
             const float pi4 = 3.14159/4.;
-            return 1.0f/(pi4*distance_squared+0.00001)*volume;
+            // FIXME This attenuation curve is way to strong, needs to be softer.
+            return 0.1f/(pi4*distance_squared+0.00001)*volume;
         }
         float intensity_at_distance(float distance){return intensity_at_distance_squared(distance*distance);}
         float sample_delay_for_distance(float dist){

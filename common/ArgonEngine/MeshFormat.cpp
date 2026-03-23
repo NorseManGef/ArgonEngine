@@ -106,7 +106,7 @@ namespace Argon{
     std::shared_ptr<MeshFormatObject> MeshFormat::spawn_object(const StringIntern& s){
         MeshFormatObjectData* d = &get_object_data(s);
         if(!d){
-            std::cout<<s<<" was not found\n";
+            PLOGE<<s<<" was not found";
             return nullptr;
         }
         std::shared_ptr<MeshFormatObject> o(new MeshFormatObject(d,&file));

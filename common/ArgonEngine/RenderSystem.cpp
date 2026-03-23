@@ -185,7 +185,7 @@ void VertexArray::optimize_vertices(){
         b.d=vertex(i);
         needed_indices[b]=0;
     }
-    std::cout<<"Before: "<<s<<" After: "<<needed_indices.size()<<"\n";
+    PLOGV<<"Before: "<<s<<" After: "<<needed_indices.size();
 }
 
 

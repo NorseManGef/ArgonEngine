@@ -8,6 +8,8 @@
 //
 //
 
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+
 #include "VirtualResourceImage.h"
 #include <stb/stb_image.h>
 #include <stb/stb_image_write.h>
@@ -131,7 +133,7 @@ namespace Argon{
 
         else if(f=="S8")format =kTextureStencil8;
         else if(f=="DS")format =kTextureDepthStencil;
-        else std::cout<<"Unknown tex format: "<<f<<"\n";
+        else PLOGE<<"Unknown tex format: "<<f;
 
 
 

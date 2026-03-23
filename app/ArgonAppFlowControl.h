@@ -66,7 +66,7 @@ public:
         test_name.layer=10;
         current_node=std::make_shared<ArgonAppBase>();
 
-        left_playback->volume = right_playback->volume=1.0;
+        left_playback->volume = right_playback->volume=.5;
         right_playback->direction_factor=left_playback->direction_factor=0.2;
 
         left_playback->direction = Argon::normalize(Argon::normalize(Argon::Vector3f(-1.0,0.3,0.0)));
@@ -90,7 +90,7 @@ public:
     }
     bool draw(){
         static Argon::OpenGLES render_api;
-        render.viewport=Argon::Screen::size;
+        render.viewport=Argon::Screen::framebuffer_size;
         animate();
         if(input[' '])opus->playback_position=0.95;
 

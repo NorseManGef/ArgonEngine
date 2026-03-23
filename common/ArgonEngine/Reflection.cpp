@@ -9,6 +9,7 @@
 //
 
 #include "Reflection.h"
+#include "Log.h"
 #include <fstream>
 #include "Utility.h"
 #include <sstream>
@@ -37,7 +38,7 @@ namespace Argon{
 void ReflectionBase::read(VirtualResource res){
     VisitableResource *r = res.get_data<VisitableResource*>();
     if(!r){
-        std::cout<<"Virtual Resource "<<res.get_path_string()<<" is not visitable\n";
+        PLOGE<<"Virtual Resource "<<res.get_path_string()<<" is not visitable";
         return;
     }
 
@@ -49,7 +50,7 @@ void ReflectionBase::read(VirtualResource res){
 void ReflectionBase::write(VirtualResource res){
     VisitableResource *r = res.get_data<VisitableResource*>();
     if(!r){
-        std::cout<<"Virtual Resource "<<res.get_path_string()<<" is not visitable\n";
+        PLOGE<<"Virtual Resource "<<res.get_path_string()<<" is not visitable";
         return;
     }
     auto write_vis = r->write_visitor();
@@ -258,8 +259,8 @@ void ReflectionBase::write(VirtualResource res){
 
         bool success = r.parse(data,stack.back().map_value,false);
         if(!success){
-            std::cout<< "Failed to parse JSON from string. "<<"\n";
-            std::cout<<"Error:\n"<<r.getFormatedErrorMessages()<<"\n";
+            PLOGE << "Failed to parse JSON from string. ERROR: " <<
+            r.getFormatedErrorMessages();
         }
         stack.back().value = stack.back().map_value;
         return success&&!stack.back().map_value.isNull();
@@ -269,8 +270,8 @@ void ReflectionBase::write(VirtualResource res){
         Json::Reader r;
         bool success = r.parse(res.get_data_as_string(),stack.back().map_value,false);
         if(!success){
-            std::cout<< "Failed to parse JSON from resource: "<<res<<"\n";
-            std::cout<<"Error:\n"<<r.getFormatedErrorMessages()<<"\n";
+            PLOGE << "Failed to parse JSON from Resource: "<< res <<
+            "\nError: "<<r.getFormatedErrorMessages();
         }
         return success&&!stack.back().map_value.isNull();
     }
@@ -452,7 +453,7 @@ void ReflectionBase::write(VirtualResource res){
         source->read(&str[0], str.size(),0);
 
         if(!json_read->read(str)){
-            std::cout<<"Failed to parse json file"<<std::endl;
+            PLOGE<<"Failed to parse json file";
 
         }
         return json_read;

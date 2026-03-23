@@ -17,7 +17,7 @@
 #ifdef USE_OPENGL
 #if GRAPHICS_DEBUG_LEVEL > 5 && USE_OPENGL
 
-#define GL_CHECK(A) if(int x = glGetError()){std::cout<<"GLERROR: "<< A <<" E: "<< x <<"\n";}
+#define GL_CHECK(A) if(int x = glGetError()){PLOGE<<"GLERROR: "<< A <<" E: "<< x;}
 #else
 #define GL_CHECK(A) ;
 #endif
@@ -41,20 +41,17 @@
 #ifdef USE_GLEW
 #include "GL/glew.h"
 #endif
-#ifdef USE_GLFW
-#include "GLFW/glfw3.h"
 #endif
 #ifdef USE_SDL
 #ifndef USE_OPENGLES
-    #include "SDL2/SDL_opengl.h"
+    #include <SDL3/SDL_opengl.h>
 #endif
 #ifdef USE_OPENGLES
 #ifdef PLATFORM_ANDROID
     #include <GLES2/gl2.h>
     #include <GLES2/gl2ext.h>
 #endif
-    #include "SDL2/SDL_opengles2.h"
-#endif
+    #include <SDL3/SDL_opengles2.h>
 #endif
 #ifdef PLATFORM_WINDOWS
 #undef near
@@ -253,7 +250,7 @@ public:
         current_frame_buffer=render_tex_frame_buffer;
         GLenum g=glCheckFramebufferStatus(GL_FRAMEBUFFER);
 
-        if(g!=GL_FRAMEBUFFER_COMPLETE) std::cout<<"FBO is not complete error:"<<g<<"\n";
+        if(g!=GL_FRAMEBUFFER_COMPLETE) PLOGE<<"FBO is not complete error:"<<g;
         current_frame_buffer=render_tex_frame_buffer;
         GL_CHECK("AfterDepthTexBind");
 
@@ -270,7 +267,7 @@ public:
 #endif
         GLenum g=glCheckFramebufferStatus(GL_FRAMEBUFFER);
 
-        if(g!=GL_FRAMEBUFFER_COMPLETE) std::cout<<"FBO is not complete error:"<<std::hex<<g<<"\n";
+        if(g!=GL_FRAMEBUFFER_COMPLETE) PLOGE<<"FBO is not complete error:"<<std::hex<<g;
         current_frame_buffer=render_tex_frame_buffer;
         GL_CHECK("AfterColorTexBind");
 

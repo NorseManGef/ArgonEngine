@@ -254,7 +254,7 @@ void OpenGLES::cache_texture(VirtualResource tex){
                 glBindTexture(GL_TEXTURE_2D, bound_textures[0]);
         }
     }else{
-        std::cout<<tex.get_path_string()<<" is not a valid texture.\n";
+        PLOGE<<tex.get_path_string()<<" is not a valid texture.";
     }
 }
 
@@ -275,7 +275,7 @@ void OpenGLES::cache_material(Material& state, const VirtualResource&  shader){
 }\
 }\
     if(cont)\
-    std::cout<<"No value was set for uniform: "<<it->first<<" of type: "<<#A<<" and size "<<it->second.size<<"\n";\
+    PLOGW<<"No value was set for uniform: "<<it->first<<" of type: "<<#A<<" and size "<<it->second.size;\
 }
 #define SET_UNIFORM_MAT(A,B,C){\
     bool cont =true;\
@@ -287,7 +287,8 @@ void OpenGLES::cache_material(Material& state, const VirtualResource&  shader){
     break;\
 }\
 }\
-    if(cont)std::cout<<"No value was set for uniform: "<<it->first<<" of type: "<<#A<<" and size "<<it->second.size<<"\n";\
+    if(cont)\
+    PLOGW<<"No value was set for uniform: "<<it->first<<" of type: "<<#A<<" and size "<<it->second.size;\
 }
 
 #define SET_UNIFORM_COPY(A,B,C,D){\
@@ -304,7 +305,8 @@ void OpenGLES::cache_material(Material& state, const VirtualResource&  shader){
     break;\
 }\
 }\
-    if(cont)std::cout<<"No value was set for uniform: "<<it->first<<" of type: "<<#A<<" and size "<<it->second.size<<"\n";\
+    if(cont)\
+    PLOGW<<"No value was set for uniform: "<<it->first<<" of type: "<<#A<<" and size "<<it->second.size;\
 }
 #define SET_UNIFORM_COPY2(A,B,C,D){\
     bool cont =true;\
@@ -318,7 +320,8 @@ void OpenGLES::cache_material(Material& state, const VirtualResource&  shader){
     break;\
 }\
 }\
-if(cont)std::cout<<"No value was set for uniform: "<<it->first<<" of type: "<<#A<<" and size "<<it->second.size<<"\n";\
+    if(cont)\
+    PLOGW<<"No value was set for uniform: "<<it->first<<" of type: "<<#A<<" and size "<<it->second.size;\
 }
 void OpenGLES::set_uniforms(Uniforms ** all_uniforms, int size){
     typedef VectorBase<GLint, 2> gliv2;
@@ -366,7 +369,8 @@ void OpenGLES::set_uniforms(Uniforms ** all_uniforms, int size){
 
                 }
             }
-            if(cont)std::cout<<"No value was set for uniform: "<<it->first<<" of type: texture and size "<<it->second.size<<"\n";\
+            if(cont)\
+            PLOGW<<"No value was set for uniform: "<<it->first<<" of type: texture and size "<<it->second.size;\
 
         }
 
@@ -392,7 +396,7 @@ void OpenGLES::set_uniforms(Uniforms ** all_uniforms, int size){
         case GL_FLOAT_MAT2:SET_UNIFORM_MAT(mat2,glUniformMatrix2fv,GLfloat);break;
         case GL_FLOAT_MAT3:SET_UNIFORM_MAT(mat3,glUniformMatrix3fv,GLfloat);break;
         case GL_FLOAT_MAT4:SET_UNIFORM_MAT(mat4,glUniformMatrix4fv,GLfloat);break;
-        default: std::cout<<std::hex<<"Shader uses unknown uniform type: "<<it->second.type<<"\n"<<std::dec;break;
+        default: PLOGE<<std::hex<<"Shader uses unknown uniform type: "<<it->second.type<<std::dec;break;
 
 
         }
@@ -511,10 +515,8 @@ int OpenGLES::make_shader(VirtualResource& shader){
     prefix_string+= "#line 0\n";
     shader_string = shader.get_data_as_string();
 
-    //std::cout<<"----BEGIN---\n"<<shad_da<<"\n";
     std::string vert_sh = prefix_string+"#define VERTEX_SHADER 1\n"+shader_string;
     std::string frag_sh = prefix_string+"#define FRAGMENT_SHADER 1\n"+shader_string;
-    //std::cout<<"----END---\n";
 
     GLuint v=glCreateShader(GL_VERTEX_SHADER);
     GLuint f=glCreateShader(GL_FRAGMENT_SHADER);
@@ -522,14 +524,14 @@ int OpenGLES::make_shader(VirtualResource& shader){
     bool success=compile_shader(v, GL_VERTEX_SHADER, vert_sh) && compile_shader(f, GL_FRAGMENT_SHADER, frag_sh);
 
     if(!success)
-        std::cout<<"Failed to compile program:"<<shader.get_path_string()<<"\n";
+        PLOGE<<"Failed to compile program:"<<shader.get_path_string();
 
     glAttachShader(s.program, v);
     glAttachShader(s.program, f);
 
     success = link_shader(s.program);
     if (!success)
-        std::cout<< "Failed to link program: "<<s.program<<"\n";
+        PLOGE<< "Failed to link program: "<<s.program;
 
     glGetProgramiv(s.program,GL_ACTIVE_ATTRIBUTES,&s.active_attribs);
     for(GLuint i=0;i<s.active_attribs;++i){
@@ -596,7 +598,6 @@ void OpenGLES::update_resources(){
         if(it2->second.last_frame>30){
             glDeleteBuffers(1,&it2->second.index_buffer);
             glDeleteBuffers(1,&it2->second.vert_buffer);
-            std::cout<<"DELETE\n";
             it2= vertex_arrays.erase(it2);
         }else ++it2;
     }
