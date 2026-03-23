@@ -10,19 +10,24 @@
 *.dll
 *.dylib
 
-# Qt-es
+# CMake
 
-/.qmake.cache
-/.qmake.stash
-*.pro.user
-*.pro.user.*
-*.moc
-moc_*.cpp
-qrc_*.cpp
-ui_*.h
-Makefile*
-*-build-*
+build
 
-# QtCreator
+# VS Code
 
-*.autosave
+.vscode
+
+# Visual Studio
+
+.vs
+
+# MacOS
+
+.DS_Store
+
+# NixOS
+
+.direnv/
+.cache/
+.ccls-cache/
