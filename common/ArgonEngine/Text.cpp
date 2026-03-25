@@ -261,7 +261,7 @@ void TTFFont::get_font_size_ratio(float &w_r, float & h_r){
         vertex_array->add_attribute<uint8_t>(4, "glow_color");
 
         material=std::make_shared<Argon::Material>();
-        material->shader="shader://text_shader.shd";
+        material->shader=TEXT_SHADER;
         uniform.get_texture("texture")=GlyphCache::get_cache().texture;
         material = material;
         cull_face=Argon::kCullNone;
@@ -292,7 +292,7 @@ void TTFFont::get_font_size_ratio(float &w_r, float & h_r){
                     width += g->xmax;
                 }
 
-                lines.push_back({lineBegin, s, width});
+                lines.push_back({lineBegin, s, width}); // struct initialization
 
                 if(*s=='\0')break;
 
@@ -313,13 +313,21 @@ void TTFFont::get_font_size_ratio(float &w_r, float & h_r){
         for(const Line& l : lines)
             max_width = std::max(max_width, l.width);
 
-        if(lines.size()>1) {
-            isMultiLine=true;
-        } else { isMultiLine = false; }
+        isMultiLine = lines.size()>1;
         
-        bounds.origin[0]= (style==kLineLeft) ? 0 :
-                          (style==kLineCenter) ? -max_width*.5 :
-                          -max_width;
+        switch(style) {
+            case kLineLeft:
+                bounds.origin[0] = 0;
+                break;
+            case kLineCenter:
+                bounds.origin[0] = -max_width*.5;
+                break;
+            case kLineRight:
+                bounds.origin[0] = -max_width;
+                break;
+        }
+
+        bounds.origin[0]=
          
         bounds.origin[1]=0;
         bounds.origin[2]=0;

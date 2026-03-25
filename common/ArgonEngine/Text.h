@@ -132,6 +132,8 @@ namespace Argon{
         LineStyle line_style;
         float max_width;
         bool isMultiLine;
+
+        const char* TEXT_SHADER = "shader://text_shader.shd";
         Label();
 
         /*!
@@ -139,7 +141,7 @@ namespace Argon{
             \param string the text to be displayed
             \paran font the font to use
             \param s whether to align the text to the center, left, or right; defaults to left
-            \remarks should only be used in the constructor of an Argon::Node
+            \remarks should only be used for initialization or change
         */
         void render_str(const char* string,Argon::VirtualResource font,LineStyle s = kLineLeft);
         MAKE_VISIT_HEAD(Label)

@@ -1,10 +1,8 @@
-#include <ArgonEngine/Text.h>
-#include <ArgonEngine/Sprite.h>
-
-#include <iostream>
-
 #ifndef BORDERED_LABEL
 #define BORDERED_LABEL
+
+#include <ArgonEngine/Text.h>
+#include <ArgonEngine/Sprite.h>
 
 namespace Argon{
 namespace Addons{
@@ -28,14 +26,14 @@ struct BorderedLabel : public Label, public Sprite {
         \param dX how much wider the background is compared to the label
         \param dY how much taller the background is compared to the label
 
-        \remarks should only be used in an Argon::Node's constructor
+        \remarks should only be for initialization or change
     */
     void render(const char* string,
                 VirtualResource font,
                 VirtualResource bgTexture,
                 LineStyle style = kLineCenter,
-                float dX = 0.5,
-                float dY = 0.5);
+                float marginX = 0.5,
+                float marginY = 0.5);
 
 
     /*!
@@ -98,7 +96,7 @@ struct BorderedLabel : public Label, public Sprite {
     */
     void setxScale(float x){
         Label::scale[0] = x;
-        Sprite::scale[0] = Label::bounds.size[0]*Label::scale[0] + dX*Label::scale[0];
+        Sprite::scale[0] = Label::bounds.size[0]*Label::scale[0] + marginX*Label::scale[0];
         setxPosition(Sprite::position[0]);
     }
 
@@ -108,7 +106,7 @@ struct BorderedLabel : public Label, public Sprite {
     */   
     void setyScale(float y){
         Label::scale[1] = y;
-        Sprite::scale[1] = Label::bounds.size[1]*Label::scale[1] + dY*Label::scale[1];
+        Sprite::scale[1] = Label::bounds.size[1]*Label::scale[1] + marginY*Label::scale[1];
         setyPosition(Sprite::position[1]);
     }
 
@@ -180,7 +178,6 @@ struct BorderedLabel : public Label, public Sprite {
         \param sprite whether to return the scale of the sprite, or the label
         \return the scale along the x axis
     */
-
     float xScale(bool sprite = true){
         return sprite ? Sprite::scale[0] : Label::scale[0];
     }
@@ -267,9 +264,9 @@ struct BorderedLabel : public Label, public Sprite {
     }
     
 private:
-    const float bgOffset = 1/100;
-    float dX;
-    float dY;
+    const float BGOFFSET = 1/100;
+    float marginX;
+    float marginY;
 
 };
 }

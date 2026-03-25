@@ -1,5 +1,4 @@
 #include "BorderedLabel.h"
-#include <iostream>
 
 namespace Argon {
     namespace Addons {
@@ -14,15 +13,13 @@ namespace Argon {
         Label::vertex_array->add_attribute<uint8_t>(4, "glow_color");
 
         Label::material=std::make_shared<Argon::Material>();
-        Label::material->shader="shader://text_shader.shd";
+        Label::material->shader=TEXT_SHADER;
         Label::uniform.get_texture("texture")=GlyphCache::get_cache().texture;
         Label::material = Label::material;
         Label::cull_face=Argon::kCullNone;
         Label::material->blend=Argon::kBlendAlpha;
         line_style = kLineLeft;
         max_width = 0.;
-
-        texture="resource://test.png";
 
         Sprite::material=std::make_shared<Argon::Material>();
         Sprite::material->shader="shader://sprite_shader.shd";
@@ -55,18 +52,18 @@ namespace Argon {
         Sprite::color.set(1,1,1,1);
         Label::color.set(0,0,0,1);
 
-        dX = 0.5;
-        dY = 0.5;
+        marginX = 0.5;
+        marginY = 0.5;
     }
 
     void BorderedLabel::render(const char* string,
                               VirtualResource font,
                               VirtualResource bgTexture,
                               LineStyle style,
-                              float dX,
-                              float dY) {  
-        this->dX = dX;
-        this->dY = dY;
+                              float marginX,
+                              float marginY) {  
+        this->marginX = marginX;
+        this->marginY = marginY;
 
         texture = bgTexture;
         render_str(string, font, style);
@@ -74,8 +71,8 @@ namespace Argon {
         setxPosition(Sprite::position[0]);
         setyPosition(Sprite::position[1]);
 
-        Sprite::scale[0] = Label::bounds.size[0]*Label::scale[0] + dX*Label::scale[0];
-        Sprite::scale[1] = Label::bounds.size[1]*Label::scale[1] + dY*Label::scale[1];
+        Sprite::scale[0] = Label::bounds.size[0]*Label::scale[0] + marginX*Label::scale[0];
+        Sprite::scale[1] = Label::bounds.size[1]*Label::scale[1] + marginY*Label::scale[1];
     } 
     }
 }
