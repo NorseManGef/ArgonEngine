@@ -261,35 +261,76 @@ void TTFFont::get_font_size_ratio(float &w_r, float & h_r){
         vertex_array->add_attribute<uint8_t>(4, "glow_color");
 
         material=std::make_shared<Argon::Material>();
-        material->shader="shader://text_shader.shd";
+        material->shader=TEXT_SHADER;
         uniform.get_texture("texture")=GlyphCache::get_cache().texture;
         material = material;
         cull_face=Argon::kCullNone;
         material->blend=Argon::kBlendAlpha;
-
+        
+        line_style = kLineLeft;
+        max_width = 0.;
+        isMultiLine = false;
     }
     void Label::render_str(const char* string,Argon::VirtualResource font,LineStyle style){
+        line_style = style;
+        std::vector<Line> lines;
+
+        const char *lineBegin = string;
         const char *s =string;
+
         int size =0;
         float offset = 0.;
         float y_offset=0;
         int last_glyph = '\0';
         Font* f = font.get_data<Font*>();
-        while(*s){
-            ++size;
-            if(s!=string)offset+=f->get_advance(last_glyph,*s);
+        while(true){
+            if(*s == '\n' || *s == '\0' || *s == '\r'){
+                float width = offset;
+                
+                if(s != lineBegin) {
+                    Glyph *g=GlyphCache::get_cache().get_glyph(font, last_glyph);
+                    width += g->xmax;
+                }
+
+                lines.push_back({lineBegin, s, width}); // struct initialization
+
+                if(*s=='\0')break;
+
+                if(*s=='\r' && *(s+1) == '\n')++s;
+
+                ++s;
+                lineBegin = s;
+                offset = 0.;
+                last_glyph = '\0';
+                continue;
+            }
+            if(s!=lineBegin)offset+=f->get_advance(last_glyph,*s);
             last_glyph=*s;
             ++s;
+            ++size;
         }
-        Glyph*g=GlyphCache::get_cache().get_glyph(font, last_glyph);
 
-        float total_advance = offset+g->xmax;
-        if(style==kLineLeft) offset=0;
-        else if(style==kLineCenter)offset= -total_advance*0.5;
-        else if(style==kLineRight) offset=-total_advance;
-        bounds.origin[0]=offset;
+        for(const Line& l : lines)
+            max_width = std::max(max_width, l.width);
+
+        isMultiLine = lines.size()>1;
+        
+        switch(style) {
+            case kLineLeft:
+                bounds.origin[0] = 0;
+                break;
+            case kLineCenter:
+                bounds.origin[0] = -max_width*.5;
+                break;
+            case kLineRight:
+                bounds.origin[0] = -max_width;
+                break;
+        }
+
+        bounds.origin[0]=
+         
         bounds.origin[1]=0;
-        bounds.origin[2]=0.;
+        bounds.origin[2]=0;
         vertex_array->set_size(size*6);
         vertex_array->generate_indices();
 
@@ -305,50 +346,64 @@ void TTFFont::get_font_size_ratio(float &w_r, float & h_r){
         s = string;
         last_glyph = '\0';
 
-        while(*s){
-            Glyph *g=GlyphCache::get_cache().get_glyph(font, *s);
-            if(s!=string)offset+=f->get_advance(last_glyph,*s);
+        for(const Line& line : lines){
+            offset = 0.;
+            
+            if(style==kLineCenter) offset = -line.width * 0.5;
+            else if(style==kLineRight) offset = -line.width;
 
-            float px1 = offset+g->xmin;
-            float px2 = offset+g->xmax;
-            float py1 =y_offset+g->ymin;
-            float py2 =y_offset+g->ymax;
-            (p++).set(Argon::Vector2f(px1,py1));
-            (p++).set(Argon::Vector2f(px2,py1));
-            (p++).set(Argon::Vector2f(px1,py2));
+            s = line.begin;
+            last_glyph = '\0';
 
-            (p++).set(Argon::Vector2f(px2,py1));
-            (p++).set(Argon::Vector2f(px2,py2));
-            (p++).set(Argon::Vector2f(px1,py2));
-            float off = 1.5/float(kGlyphTextureSize);
-            float xm = g->tex_x+off;
-            float ym = g->tex_y+off;
+            while(s < line.end) {
+                Glyph *g = GlyphCache::get_cache().get_glyph(font, *s);
+                
+                if(s!=line.begin)
+                    offset+=f->get_advance(last_glyph, *s);
 
-            float xmx = xm + float(kGlyphWidth)/kGlyphTextureSize-2*off;
-            float ymx = ym + float(kGlyphHeight)/kGlyphTextureSize-2*off;
+                float px1 = offset+g->xmin;
+                float px2 = offset+g->xmax;
+                float py1 =y_offset+g->ymin;
+                float py2 =y_offset+g->ymax;
+                (p++).set(Argon::Vector2f(px1,py1));
+                (p++).set(Argon::Vector2f(px2,py1));
+                (p++).set(Argon::Vector2f(px1,py2));
 
-            (t++).set(Argon::Vector2f(xm,ymx));
-            (t++).set(Argon::Vector2f(xmx,ymx));
-            (t++).set(Argon::Vector2f(xm,ym));
+                (p++).set(Argon::Vector2f(px2,py1));
+                (p++).set(Argon::Vector2f(px2,py2));
+                (p++).set(Argon::Vector2f(px1,py2));
 
-            (t++).set(Argon::Vector2f(xmx,ymx));
-            (t++).set(Argon::Vector2f(xmx,ym));
-            (t++).set(Argon::Vector2f(xm,ym));
+                float off = 1.5/float(kGlyphTextureSize);
+                float xm = g->tex_x+off;
+                float ym = g->tex_y+off;
 
-            (mc++).set(g->map_color);
-            (mc++).set(g->map_color);
-            (mc++).set(g->map_color);
-            (mc++).set(g->map_color);
-            (mc++).set(g->map_color);
-            (mc++).set(g->map_color);
+                float xmx = xm + float(kGlyphWidth)/kGlyphTextureSize-2*off;
+                float ymx = ym + float(kGlyphHeight)/kGlyphTextureSize-2*off;
 
-            last_glyph=*s;
+                (t++).set(Argon::Vector2f(xm,ymx));
+                (t++).set(Argon::Vector2f(xmx,ymx));
+                (t++).set(Argon::Vector2f(xm,ym));
 
-            ++s;
+                (t++).set(Argon::Vector2f(xmx,ymx));
+                (t++).set(Argon::Vector2f(xmx,ym));
+                (t++).set(Argon::Vector2f(xm,ym));
+
+                (mc++).set(g->map_color);
+                (mc++).set(g->map_color);
+                (mc++).set(g->map_color);
+                (mc++).set(g->map_color);
+                (mc++).set(g->map_color);
+                (mc++).set(g->map_color);
+
+                last_glyph = *s;
+                ++s;
+            }
+            
+            y_offset -= 1.;
         }
-        offset+=f->get_advance(last_glyph,*s);
-        bounds.size[0]=offset-bounds.origin[0];
-        bounds.size[1]=1.0;
+        
+        bounds.size[0]=max_width;
+        bounds.size[1]=lines.size();
         vertex_array->update_id++;
     }
     MAKE_VISIT_IMPL(Label,{
