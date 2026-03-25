@@ -41,7 +41,6 @@ set(SRC_ARGONENGINE
     common/ArgonEngine/VirtualResource.cpp
     common/ArgonEngine/VirtualResourceImage.cpp
     common/ArgonEngine/Curves.cpp
-
     common/ArgonEngine/Addons/BorderedLabel.cpp
 )
 
