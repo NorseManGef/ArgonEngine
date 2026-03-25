@@ -34,10 +34,7 @@ set(SRC_ARGONENGINE
     common/ArgonEngine/ScoreController.cpp
     common/ArgonEngine/Sprite.cpp
     common/ArgonEngine/Text.cpp
-<<<<<<< HEAD
-=======
     common/ArgonEngine/Addons/BorderedLabel.cpp
->>>>>>> 81bca6c (update cmakelists to find borderedlabel after it moved)
     common/ArgonEngine/Thread.cpp
     common/ArgonEngine/UserInterface.cpp
     common/ArgonEngine/UserMusic.cpp
