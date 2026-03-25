@@ -152,7 +152,7 @@ struct BorderedLabel : public Label, public Sprite {
         \return the position along the x axis
     */
     float xPosition(bool sprite = true){
-        return Sprite::position[0] ? sprite : Label::position[0];
+        return sprite ? Sprite::position[0] : Label::position[0];
     }
 
     /*!
@@ -161,7 +161,7 @@ struct BorderedLabel : public Label, public Sprite {
         \return the position along the y axis
     */
     float yPosition(bool sprite = true){
-        return Sprite::position[1] ? sprite : Label::position[1];
+        return sprite ? Sprite::position[1] : Label::position[1];
     }
 
     /*!
@@ -170,7 +170,7 @@ struct BorderedLabel : public Label, public Sprite {
         \return the position along the z axis
     */
     float zPosition(bool sprite = true){
-        return Sprite::position[2] ? sprite : Label::position[2];
+        return sprite ? Sprite::position[2] : Label::position[2];
     }
 
     /*!
