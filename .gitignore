@@ -31,3 +31,4 @@ build
 .direnv/
 .cache/
 .ccls-cache/
+.envrc
