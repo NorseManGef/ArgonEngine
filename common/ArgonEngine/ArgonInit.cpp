@@ -10,14 +10,14 @@
 #include "GL/glew.h"
 #endif
 #ifdef USE_SDL
-#include "SDL2/SDL.h"
+#include <SDL3/SDL.h>
 #ifdef USE_OPENGL
 #ifndef USE_OPENGLES
-#include "SDL2/SDL_opengl.h"
+#include <SDL3/SDL_opengl.h>
 #endif
 #endif
 #ifdef USE_OPENGLES
-    #include "SDL2/SDL_opengles2.h"
+    #include <SDL3/SDL_opengles2.h>
 #endif
 #endif
 
