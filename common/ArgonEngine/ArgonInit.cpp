@@ -362,7 +362,7 @@ namespace Argon{
     void terminate_engine(){
         if (context) {
             /* SDL_GL_MakeCurrent(0, NULL); *//* doesn't do anything */
-            SDL_GL_DeleteContext(context);
+            SDL_GL_DestroyContext(context);
         }
         SDL_Quit();
 
@@ -400,7 +400,7 @@ namespace Argon{
         SDL_AudioSpec want, have;
         SDL_zero(want);
         want.freq = Argon::kAudioSampleRate;
-        want.format = AUDIO_F32SYS;
+        want.format = SDL_AUDIO_F32;
         want.channels = 2;
         want.samples = Argon::kAudioBufferSize;
         want.callback=sdl_audio_callback;
@@ -446,7 +446,7 @@ namespace Argon{
         SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 
         //SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
-        win = SDL_CreateWindow("test", 100, 100, Argon::Screen::size[0], Argon::Screen::size[1],  SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
+        win = SDL_CreateWindow("test", 100, 100, Argon::Screen::size[0], Argon::Screen::size[1],  SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
 
         // Create an OpenGL context associated with the window.
         //SDL_GLContext glcontext = SDL_GL_CreateContext(win);
@@ -551,11 +551,11 @@ namespace Argon{
 
     void handle_window_event(SDL_Event &e){
         switch (e.window.event) {
-            case SDL_WINDOWEVENT_MOVED:
+            case SDL_EVENT_WINDOW_MOVED:
                 Argon::Screen::position=Vector2f(e.window.data1,e.window.data2);
                 last_position=Argon::Screen::position;
                 break;
-            case SDL_WINDOWEVENT_RESIZED:
+            case SDL_EVENT_WINDOW_RESIZED:
                 Argon::Screen::size=Vector2f(e.window.data1,e.window.data2);
                 last_full_screen=Screen::full_screen;
                 last_screen=Screen::size;
@@ -568,28 +568,28 @@ namespace Argon{
                 swap_buffers();
 
                 break;
-            case SDL_WINDOWEVENT_MINIMIZED:
+            case SDL_EVENT_WINDOW_MINIMIZED:
                 Argon::Input::push_update(kInputIDWindowMinimized, 1);
                 break;
 
-            case SDL_WINDOWEVENT_RESTORED:
+            case SDL_EVENT_WINDOW_RESTORED:
                 Argon::Input::push_update(kInputIDWindowMinimized, 0);
                 break;
 
-            case SDL_WINDOWEVENT_ENTER:
+            case SDL_EVENT_WINDOW_MOUSE_ENTER:
                 Argon::Input::push_update(kInputIDWindowHasMouse, 1);
                 break;
-            case SDL_WINDOWEVENT_LEAVE:
+            case SDL_EVENT_WINDOW_MOUSE_LEAVE:
                 Argon::Input::push_update(kInputIDWindowHasMouse, 0);
                 break;
-            case SDL_WINDOWEVENT_EXPOSED:
-            case SDL_WINDOWEVENT_SHOWN:
-            case SDL_WINDOWEVENT_FOCUS_GAINED:
+            case SDL_EVENT_WINDOW_EXPOSED:
+            case SDL_EVENT_WINDOW_SHOWN:
+            case SDL_EVENT_WINDOW_FOCUS_GAINED:
                 Argon::Input::push_update(kInputIDWindowInactive, 0);
 
                 break;
-            case SDL_WINDOWEVENT_HIDDEN:
-            case SDL_WINDOWEVENT_FOCUS_LOST:
+            case SDL_EVENT_WINDOW_HIDDEN:
+            case SDL_EVENT_WINDOW_FOCUS_LOST:
                 Argon::Input::push_update(kInputIDWindowInactive, 1);
 
                 break;
@@ -605,37 +605,37 @@ namespace Argon{
        // while( SDL_PollEvent( &e ) != 0 )
         {
             //User requests quit
-            if( e.type == SDL_QUIT )
+            if( e.type == SDL_EVENT_QUIT )
             {
                 run=false;
-            }else if (e.type==SDL_JOYDEVICEADDED){
+            }else if (e.type==SDL_EVENT_JOYSTICK_ADDED){
                 SDL_Joystick* &j = joys[e.jdevice.which];
-                if(!j) j=SDL_JoystickOpen(e.jdevice.which);
-            }else if (e.type==SDL_JOYDEVICEREMOVED){
+                if(!j) j=SDL_OpenJoystick(e.jdevice.which);
+            }else if (e.type==SDL_EVENT_JOYSTICK_REMOVED){
                 SDL_Joystick* &j = joys[e.jdevice.which];
-                if(j) SDL_JoystickClose(j);
+                if(j) SDL_CloseJoystick(j);
                 j=NULL;
-            }else if (e.type==SDL_MOUSEMOTION){
+            }else if (e.type==SDL_EVENT_MOUSE_MOTION){
                 Argon::Input::push_update(kInputIDMouseX, e.motion.x/Argon::Screen::size[0]*2.-1.);
                 Argon::Input::push_update(kInputIDMouseY, e.motion.y/Argon::Screen::size[1]*-2.+1.);
-            }else if(e.type==SDL_MOUSEBUTTONUP||e.type==SDL_MOUSEBUTTONDOWN){
+            }else if(e.type==SDL_EVENT_MOUSE_BUTTON_UP||e.type==SDL_EVENT_MOUSE_BUTTON_DOWN){
                 Argon::Input::push_update(kInputIDMouseX, e.button.x/Argon::Screen::size[0]*2.-1.);
                 Argon::Input::push_update(kInputIDMouseY, e.button.y/Argon::Screen::size[1]*-2.+1.);
-                Argon::Input::push_update(kInputMouse|e.button.button, SDL_MOUSEBUTTONDOWN==e.type);
+                Argon::Input::push_update(kInputMouse|e.button.button, SDL_EVENT_MOUSE_BUTTON_DOWN==e.type);
 
 
-            }else if(e.type==SDL_KEYDOWN||e.type==SDL_KEYUP){
+            }else if(e.type==SDL_EVENT_KEY_DOWN||e.type==SDL_EVENT_KEY_UP){
                 SDL_Keycode key_c =SDL_GetKeyFromScancode(e.key.keysym.scancode);
                 uint32_t key =sdl_key_to_argon(key_c);
                 Argon::Input::push_update(key, e.key.state==SDL_PRESSED?1.0:0.);
 
             }else if(e.type==SDL_WINDOWEVENT)handle_window_event(e);
-            else if (e.type ==SDL_JOYAXISMOTION)handle_joy_axis_event(e);
-            else if (e.type ==SDL_JOYBUTTONDOWN||e.type==SDL_JOYBUTTONUP)handle_joy_button_event(e);
-            else if (e.type ==SDL_JOYAXISMOTION)handle_joy_axis_event(e);
-            else if (e.type ==SDL_JOYHATMOTION)handle_joy_hat_event(e);
-            else if (e.type==SDL_JOYBALLMOTION){std::cout<<"BALL"<<std::endl;}
-            else if (e.type==SDL_MOUSEWHEEL){
+            else if (e.type ==SDL_EVENT_JOYSTICK_AXIS_MOTION)handle_joy_axis_event(e);
+            else if (e.type ==SDL_EVENT_JOYSTICK_BUTTON_DOWN||e.type==SDL_EVENT_JOYSTICK_BUTTON_UP)handle_joy_button_event(e);
+            else if (e.type ==SDL_EVENT_JOYSTICK_AXIS_MOTION)handle_joy_axis_event(e);
+            else if (e.type ==SDL_EVENT_JOYSTICK_HAT_MOTION)handle_joy_hat_event(e);
+            else if (e.type==SDL_EVENT_JOYSTICK_BALL_MOTION){std::cout<<"BALL"<<std::endl;}
+            else if (e.type==SDL_EVENT_MOUSE_WHEEL){
                 if(e.wheel.which!=SDL_TOUCH_MOUSEID){
 
                     Argon::Input::push_update(kInputIDMouseHorzScroll,mousex+= e.wheel.x);
