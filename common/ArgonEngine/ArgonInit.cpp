@@ -11,6 +11,7 @@
 #endif
 #ifdef USE_SDL
 #include <SDL3/SDL.h>
+#include <SDL3/SDL_main.h>
 #ifdef USE_OPENGL
 #ifndef USE_OPENGLES
 #include <SDL3/SDL_opengl.h>
@@ -357,7 +358,7 @@ namespace Argon{
 #ifdef USE_SDL
     static SDL_GLContext context;
     static SDL_Window *win = nullptr;
-    int handle_event(void* userdata,SDL_Event* event);
+    bool handle_event(void* userdata,SDL_Event* event);
 
     void terminate_engine(){
         if (context) {
@@ -373,7 +374,7 @@ namespace Argon{
     int audio_buffer_index=0;
     static float audio_buffer[Argon::kAudioNumberOfChannels][Argon::kAudioBufferSize];
 
-    void sdl_audio_callback(void *userdata, Uint8 * stream,int len){
+    void argon_sdl_audio_callback(void *userdata, Uint8 * stream,int len){
         float *buffer = (float *) stream;
         len = len/4;
         for(int o=0;o<len;){
@@ -392,31 +393,43 @@ namespace Argon{
 
 
         }
-
         update_frame();
-
     }
-    void init_audio(){
-        SDL_AudioSpec want, have;
-        SDL_zero(want);
-        want.freq = Argon::kAudioSampleRate;
-        want.format = SDL_AUDIO_F32;
-        want.channels = 2;
-        want.samples = Argon::kAudioBufferSize;
-        want.callback=sdl_audio_callback;
 
-        if (SDL_OpenAudio(&want, &have) < 0) {
+    void SDLCALL SdlAudioCallback(void *userdata, SDL_AudioStream *stream, int additional_amount, int total_amount)
+    {
+        if (additional_amount > 0) {
+            Uint8 *data = SDL_stack_alloc(Uint8, additional_amount);
+            if (data) {
+                argon_sdl_audio_callback(userdata, data, additional_amount);
+                SDL_PutAudioStreamData(stream, data, additional_amount);
+                SDL_stack_free(data);
+            }
+        }
+    }
+    
+    void init_audio(){
+        SDL_AudioSpec spec;
+        SDL_zero(spec);
+        spec.freq = Argon::kAudioSampleRate;
+        spec.format = SDL_AUDIO_F32;
+        spec.channels = 2;
+        auto sdlstream = SDL_OpenAudioDeviceStream(
+            SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK,
+            &spec,
+            SdlAudioCallback,
+            nullptr
+        );
+        if (!sdlstream) {
             printf("Failed to open audio: %s\n", SDL_GetError());
         }
-        std::cout<<"Audio Sample Rate: "<<have.freq<<"\n";
-        std::cout<<"Audio Channels: "<<int(have.channels)<<"\n";
 
-        SDL_PauseAudio(0);
+        SDL_ResumeAudioDevice(SDL_GetAudioStreamDevice(sdlstream));
     }
     void initialize_engine(std::string organization_name, std::string app_name){
         SDL_SetMainReady();
 
-        if (SDL_Init(SDL_INIT_EVERYTHING) == -1){
+        if (!SDL_Init(SDL_INIT_AUDIO | SDL_INIT_VIDEO | SDL_INIT_GAMEPAD)){
             std::cout << SDL_GetError() << std::endl;
             terminate_engine();
         }
@@ -445,8 +458,15 @@ namespace Argon{
 
         SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 
+        SDL_PropertiesID props = SDL_CreateProperties();
+    SDL_SetStringProperty(props, SDL_PROP_WINDOW_CREATE_TITLE_STRING, "test");
+    SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X_NUMBER, Argon::Screen::position[0]);
+    SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_Y_NUMBER, Argon::Screen::position[1]);
+    SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, Argon::Screen::size[0]);
+    SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, Argon::Screen::size[1]);
+SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
         //SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
-        win = SDL_CreateWindow("test", 100, 100, Argon::Screen::size[0], Argon::Screen::size[1],  SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
+        win = SDL_CreateWindowWithProperties(props);
 
         // Create an OpenGL context associated with the window.
         //SDL_GLContext glcontext = SDL_GL_CreateContext(win);
@@ -467,8 +487,8 @@ namespace Argon{
         };
 #endif
         //SDL_AddEventWatch(handle_event, NULL);
-        if (SDL_GL_SetSwapInterval(-1) != -1){}
-        else if (SDL_GL_SetSwapInterval(1) != -1){}
+        if (!SDL_GL_SetSwapInterval(-1)){}
+        else if (!SDL_GL_SetSwapInterval(1)){}
         else std::cout << "Could not enable VSync.\n";
 
         SDL_SetEventFilter(handle_event, NULL);
@@ -542,7 +562,7 @@ namespace Argon{
     }
     void handle_joy_button_event(SDL_Event &e){
         uint32_t id = kInputJoy| (kInputDeviceIncrement*e.jbutton.which)|(kInputAxisIncrement*e.jbutton.button+kInputAxisButtonStart);
-        Argon::Input::push_update(id, e.jbutton.state);
+        Argon::Input::push_update(id, e.jbutton.down);
     }
     void handle_joy_hat_event(SDL_Event &e){
         uint32_t id = kInputJoy| (kInputDeviceIncrement*e.jhat.which)|(kInputAxisIncrement*e.jhat.hat+kInputAxisHatStart);
@@ -596,8 +616,35 @@ namespace Argon{
 
         }
     }
+
+    bool is_sdl_window_event(SDL_Event &e){
+        switch(e.type){
+            case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
+            case SDL_EVENT_WINDOW_DISPLAY_CHANGED:
+            case SDL_EVENT_WINDOW_EXPOSED:
+            case SDL_EVENT_WINDOW_FOCUS_GAINED:
+            case SDL_EVENT_WINDOW_FOCUS_LOST:
+            case SDL_EVENT_WINDOW_HIDDEN:
+            case SDL_EVENT_WINDOW_HIDDEN:
+            case SDL_EVENT_WINDOW_HIT_TEST:
+            case SDL_EVENT_WINDOW_ICCPROF_CHANGED:
+            case SDL_EVENT_WINDOW_MOUSE_LEAVE:
+            case SDL_EVENT_WINDOW_MAXIMIZED:
+            case SDL_EVENT_WINDOW_MINIMIZED:
+            case SDL_EVENT_WINDOW_MOVED:
+            case SDL_EVENT_WINDOW_RESIZED:
+            case SDL_EVENT_WINDOW_RESTORED:
+            case SDL_EVENT_WINDOW_SHOWN:
+            case SDL_WINDOW_HIGH_PIXEL_DENSITY:
+            case SDL_WINDOW_MOUSE_GRABBED:
+                return true;
+            default:
+                return false;
+        }
+    }
+
     std::map<int32_t, SDL_Joystick*> joys;
-    int handle_event(void* userdata,SDL_Event* event){
+    bool handle_event(void* userdata,SDL_Event* event){
         static float mousex = 0;
         static float mousey = 0;
         SDL_Event e=*event;
@@ -629,7 +676,7 @@ namespace Argon{
                 uint32_t key =sdl_key_to_argon(key_c);
                 Argon::Input::push_update(key, e.key.state==SDL_PRESSED?1.0:0.);
 
-            }else if(e.type==SDL_WINDOWEVENT)handle_window_event(e);
+            }else if(is_sdl_window_event(e)) handle_window_event(e);
             else if (e.type ==SDL_EVENT_JOYSTICK_AXIS_MOTION)handle_joy_axis_event(e);
             else if (e.type ==SDL_EVENT_JOYSTICK_BUTTON_DOWN||e.type==SDL_EVENT_JOYSTICK_BUTTON_UP)handle_joy_button_event(e);
             else if (e.type ==SDL_EVENT_JOYSTICK_AXIS_MOTION)handle_joy_axis_event(e);
