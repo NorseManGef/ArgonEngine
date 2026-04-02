@@ -846,6 +846,8 @@ set(LIB_LINUX
     pulse
 )
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 if(WIN32)
 set(LIB_OS ${LIB_WINDOWS})
 endif(WIN32)
