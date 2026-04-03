@@ -880,7 +880,9 @@ target_compile_definitions(argonapp
 )
 
 if(UNIX AND NOT APPLE)
-add_compile_options( -fpermissive )
+set_source_files_properties(${SRC_OPUS} PROPERTIES
+    COMPILE_OPTIONS "-Wno-error=incompatible-pointer-types"
+)
 endif(UNIX AND NOT APPLE)
 
 add_custom_command(TARGET argonapp POST_BUILD
