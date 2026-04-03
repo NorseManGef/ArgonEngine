@@ -11,11 +11,24 @@ if(UNIX AND NOT APPLE)
 set(INC_OS linux)
 endif(UNIX AND NOT APPLE)
 
+set(INC_SDL
+    common/SDL3
+    ${INC_OS}/SDL3
+    ${INC_OS}/SDL3/audio
+)
+
+set(INC_LIBUSB
+    common/libusb
+    ${INC_OS}/libusb
+)
+
 include_directories(
     common
     app
     ${INC_OS}
     ${OPENGL_INCLUDE_DIR}
+    ${INC_SDL}
+    ${INC_LIBUSB}
 )
 
 set(SRC_ARGONENGINE
@@ -628,6 +641,16 @@ set(SRC_SDL3
     common/SDL3/video/yuv2rgb/yuv_rgb_std.c
 )
 
+set(SRC_LIBUSB
+    common/libusb/core.c
+    common/libusb/hotplug.c
+    common/libusb/descriptor.c
+    common/libusb/io.c
+    common/libusb/null_usb.c
+    common/libusb/strerror.c
+    common/libusb/sync.c
+)
+
 set(SRC_STB
     common/stb/stb_image.c
     common/stb/stb_image_write.c
@@ -671,6 +694,7 @@ set(SRC_COMMON
     ${SRC_MINICL}
     ${SRC_STB}
     ${SRC_SDL3}
+    ${SRC_LIBUSB}
     ${SRC_VORBIS}
 )
 
@@ -735,6 +759,11 @@ set(SRC_WINDOWS
     win/SDL3/video/windows/SDL_windowsvideo.c
     win/SDL3/video/windows/SDL_windowsvulkan.c
     win/SDL3/video/windows/SDL_windowswindow.c
+    win/libusb/events_windows.c
+    win/libusb/threads_windows.c
+    win/libusb/windows_common.c
+    win/libusb/windows_usbdk.c
+    win/libusb/windows_winusb.c
 )
 
 set(SRC_LINUX
@@ -825,6 +854,11 @@ set(SRC_LINUX
     linux/SDL3/video/x11/SDL_x11xtest.c
     linux/SDL3/video/x11/edid-parse.c
     linux/SDL3/video/x11/xsettings-client.c
+    linux/libusb/events_posix.c
+    linux/libusb/linux_netlink.c
+    linux/libusb/linux_udev.c
+    linux/libusb/linux_usbfs.c
+    linux/libusb/threads_posix.c
 )
 
 if(WIN32)
@@ -882,6 +916,9 @@ target_compile_definitions(argonapp
 if(UNIX AND NOT APPLE)
 set_source_files_properties(${SRC_OPUS} PROPERTIES
     COMPILE_OPTIONS "-Wno-error=incompatible-pointer-types"
+)
+set_source_files_properties(${SRC_SDL3} PROPERTIES
+    COMPILE_OPTIONS "-Wno-error=implicit-function-declaration"
 )
 endif(UNIX AND NOT APPLE)
 
