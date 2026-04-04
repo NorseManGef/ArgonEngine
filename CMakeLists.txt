@@ -17,8 +17,13 @@ set(INC_SDL
     ${INC_OS}/SDL3/audio
 )
 
+set(INC_STB
+    common/stb
+)
+
 set(INC_LIBUSB
     common/libusb
+    ${INC_OS}/libusb
 )
 
 include_directories(
@@ -28,6 +33,7 @@ include_directories(
     ${OPENGL_INCLUDE_DIR}
     ${INC_SDL}
     ${INC_LIBUSB}
+    ${INC_STB}
 )
 
 set(SRC_ARGONENGINE
@@ -925,6 +931,8 @@ set_source_files_properties(${SRC_OPUS} PROPERTIES
 )
 set_source_files_properties(${SRC_SDL3} PROPERTIES
     COMPILE_OPTIONS "-Wno-error=implicit-function-declaration"
+                    "-Wno-error=incompatible-pointer-types"
+                    "-Wno-error=int-conversion"
 )
 endif(UNIX AND NOT APPLE)
 
