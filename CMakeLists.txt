@@ -19,7 +19,6 @@ set(INC_SDL
 
 set(INC_LIBUSB
     common/libusb
-    ${INC_OS}/libusb
 )
 
 include_directories(
@@ -912,6 +911,13 @@ target_compile_definitions(argonapp
         "_UNICODE"
         "UNICODE"
 )
+
+if(UNIX AND NOT APPLE)
+add_compile_definitions(argonapp
+    PRIVATE
+        "HAVE_STDIO_H"
+)
+endif(UNIX AND NOT APPLE)
 
 if(UNIX AND NOT APPLE)
 set_source_files_properties(${SRC_OPUS} PROPERTIES
