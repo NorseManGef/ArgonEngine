@@ -21,8 +21,8 @@
 
 #include "SDL_internal.h"
 
-#include "../SDL_tray_utils.h"
-#include "../../video/SDL_stb_c.h"
+#include "SDL_tray_utils.h"
+#include "video/SDL_stb_c.h"
 
 #include <dlfcn.h>
 #include <errno.h>

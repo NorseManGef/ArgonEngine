@@ -22,7 +22,7 @@
 #ifndef SDL_prograssbar_h_
 #define SDL_prograssbar_h_
 
-#include "../../video/SDL_sysvideo.h"
+#include "video/SDL_sysvideo.h"
 #include "SDL_internal.h"
 
 extern bool DBUS_ApplyWindowProgress(SDL_VideoDevice *_this, SDL_Window *window);

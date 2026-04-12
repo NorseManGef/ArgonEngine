@@ -47,8 +47,8 @@
 #endif
 #endif
 
-#include "../SDL_thread_c.h"
-#include "../SDL_systhread.h"
+#include "SDL_thread_c.h"
+#include "SDL_systhread.h"
 #ifdef SDL_PLATFORM_ANDROID
 #include "../../core/android/SDL_android.h"
 #endif

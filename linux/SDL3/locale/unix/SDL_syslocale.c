@@ -20,7 +20,7 @@
 */
 
 #include "SDL_internal.h"
-#include "../SDL_syslocale.h"
+#include "SDL_syslocale.h"
 
 static void normalize_locale_str(char *dst, char *str, size_t buflen)
 {

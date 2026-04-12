@@ -42,7 +42,7 @@
 #include <linux/input.h>
 #include <libudev.h>
 
-#include "../hidapi/hidapi.h"
+#include "hidapi/hidapi.h"
 
 #ifndef BUS_SPI
 #define BUS_SPI 0x1C

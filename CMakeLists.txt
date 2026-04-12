@@ -2,6 +2,11 @@ cmake_minimum_required(VERSION 3.20)
 project(argonengine)
 
 find_package(OpenGL REQUIRED)
+if(UNIX AND NOT APPLE)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(DBUS REQUIRED dbus-1)
+pkg_check_modules(UDEV REQUIRED libudev)
+endif(UNIX AND NOT APPLE)
 
 if(WIN32)
 set(INC_OS win)
@@ -13,6 +18,13 @@ endif(UNIX AND NOT APPLE)
 
 set(INC_SDL
     common/SDL3
+    common/SDL3/dialog
+    common/SDL3/hidapi
+    common/SDL3/locale
+    common/SDL3/misc
+    common/SDL3/thread
+    common/SDL3/tray
+    common/SDL3/video
     ${INC_OS}/SDL3
     ${INC_OS}/SDL3/audio
 )
@@ -31,6 +43,8 @@ include_directories(
     app
     ${INC_OS}
     ${OPENGL_INCLUDE_DIR}
+    ${DBUS_INCLUDE_DIRS}
+    ${UDEV_INCLUDE_DIRS}
     ${INC_SDL}
     ${INC_LIBUSB}
     ${INC_STB}
@@ -448,7 +462,7 @@ set(SRC_SDL3
     common/SDL3/cpuinfo/SDL_cpuinfo.c
     common/SDL3/dialog/SDL_dialog.c
     common/SDL3/dialog/SDL_dialog_utils.c
-    common/SDL3/dialog/dummy/SDL_dummydialog.c
+    #common/SDL3/dialog/dummy/SDL_dummydialog.c
     common/SDL3/dynapi/SDL_dynapi.c
     common/SDL3/events/SDL_categories.c
     common/SDL3/events/SDL_clipboardevents.c
@@ -476,7 +490,7 @@ set(SRC_SDL3
     common/SDL3/haptic/hidapi/SDL_hidapihaptic.c
     common/SDL3/haptic/hidapi/SDL_hidapihaptic_lg4ff.c
     common/SDL3/hidapi/SDL_hidapi.c
-    common/SDL3/hidapi/libusb/hid.c
+    #common/SDL3/hidapi/libusb/hid.c
     common/SDL3/io/SDL_asyncio.c
     common/SDL3/io/SDL_iostream.c
     common/SDL3/io/generic/SDL_asyncio_generic.c
@@ -540,13 +554,13 @@ set(SRC_SDL3
     common/SDL3/libm/s_tan.c
     common/SDL3/loadso/dummy/SDL_sysloadso.c
     common/SDL3/locale/SDL_locale.c
-    common/SDL3/locale/dummy/SDL_syslocale.c
+    # common/SDL3/locale/dummy/SDL_syslocale.c
     common/SDL3/main/SDL_main_callbacks.c
     common/SDL3/main/SDL_runapp.c
     common/SDL3/main/generic/SDL_sysmain_callbacks.c
     common/SDL3/misc/SDL_libusb.c
     common/SDL3/misc/SDL_url.c
-    common/SDL3/misc/dummy/SDL_sysurl.c
+    #common/SDL3/misc/dummy/SDL_sysurl.c
     common/SDL3/power/SDL_power.c
     common/SDL3/process/SDL_process.c
     common/SDL3/process/dummy/SDL_dummyprocess.c
@@ -598,16 +612,16 @@ set(SRC_SDL3
     common/SDL3/test/SDL_test_md5.c
     common/SDL3/test/SDL_test_memory.c
     common/SDL3/thread/SDL_thread.c
-    common/SDL3/thread/generic/SDL_syscond.c
-    common/SDL3/thread/generic/SDL_sysmutex.c
-    common/SDL3/thread/generic/SDL_sysrwlock.c
-    common/SDL3/thread/generic/SDL_syssem.c
-    common/SDL3/thread/generic/SDL_systhread.c
-    common/SDL3/thread/generic/SDL_systls.c
+    #common/SDL3/thread/generic/SDL_syscond.c
+    #common/SDL3/thread/generic/SDL_sysmutex.c
+    #common/SDL3/thread/generic/SDL_sysrwlock.c
+    #common/SDL3/thread/generic/SDL_syssem.c
+    #common/SDL3/thread/generic/SDL_systhread.c
+    #common/SDL3/thread/generic/SDL_systls.c
     common/SDL3/time/SDL_time.c
     common/SDL3/timer/SDL_timer.c
     common/SDL3/tray/SDL_tray_utils.c
-    common/SDL3/tray/dummy/SDL_tray.c
+    #common/SDL3/tray/dummy/SDL_tray.c
     common/SDL3/video/SDL_RLEaccel.c
     common/SDL3/video/SDL_blit.c
     common/SDL3/video/SDL_blit_0.c
@@ -651,7 +665,7 @@ set(SRC_LIBUSB
     common/libusb/hotplug.c
     common/libusb/descriptor.c
     common/libusb/io.c
-    common/libusb/null_usb.c
+    #common/libusb/null_usb.c
     common/libusb/strerror.c
     common/libusb/sync.c
 )
@@ -883,6 +897,10 @@ set(LIB_WINDOWS
 set(LIB_LINUX
     pulse-simple
     pulse
+    pthread
+    m
+    dl
+    rt
 )
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -911,17 +929,29 @@ target_link_libraries(argonapp
     PRIVATE
         ${OPENGL_LIBRARIES}
         ${LIB_OS}
+        ${UDEV_LIBRARIES}
 )
 target_compile_definitions(argonapp
     PRIVATE
         "_UNICODE"
         "UNICODE"
+        "STBI_ENABLE_HDR=1"
 )
 
 if(UNIX AND NOT APPLE)
 add_compile_definitions(argonapp
     PRIVATE
+        "SDL_PLATFORM_LINUX=1"
         "HAVE_STDIO_H"
+        "DEFAULT_VISIBILITY=__attribute__ ((visibility(\"default\")))"
+        "HAVE_DBUS_DBUS_H"
+        "SDL_VIDEO_DRIVER_X11_SUPPORTS_GENERIC_EVENTS"
+        "SDL_SYSTIME_UNIX"
+        "SDL_SYSTIMER_UNIX"
+        "_GNU_SOURCE"
+        "HAVE_GETRESUID"
+        "HAVE_GETRESGID"
+        "HAVE_CLOCK_GETTIME"
 )
 endif(UNIX AND NOT APPLE)
 
@@ -933,6 +963,9 @@ set_source_files_properties(${SRC_SDL3} PROPERTIES
     COMPILE_OPTIONS "-Wno-error=implicit-function-declaration"
                     "-Wno-error=incompatible-pointer-types"
                     "-Wno-error=int-conversion"
+)
+set_source_files_properties(${SRC_OS} PROPERTIES
+    COMPILE_OPTIONS "-Wno-error=incompatible-pointer-types"
 )
 endif(UNIX AND NOT APPLE)
 

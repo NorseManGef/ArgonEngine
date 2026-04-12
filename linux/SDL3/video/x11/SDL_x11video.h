@@ -23,8 +23,8 @@
 #ifndef SDL_x11video_h_
 #define SDL_x11video_h_
 
-#include "../SDL_sysvideo.h"
-#include "../../events/SDL_keymap_c.h"
+#include "SDL_sysvideo.h"
+#include "events/SDL_keymap_c.h"
 
 #include "../../core/linux/SDL_dbus.h"
 #include "../../core/linux/SDL_ime.h"

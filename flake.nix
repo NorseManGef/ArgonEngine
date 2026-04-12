@@ -33,6 +33,10 @@
               bear
               ninja
 
+              dbus
+              pkg-config
+              systemd.dev
+
               libGL
               libx11
               libxcursor

@@ -20,7 +20,7 @@
 */
 #include "SDL_internal.h"
 
-#include "../SDL_dialog_utils.h"
+#include "SDL_dialog_utils.h"
 #include "SDL_zenitydialog.h"
 #include "SDL_zenitymessagebox.h"
 

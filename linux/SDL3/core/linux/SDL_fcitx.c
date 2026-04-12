@@ -23,9 +23,9 @@
 #include <unistd.h>
 
 #include "SDL_fcitx.h"
-#include "../../video/SDL_sysvideo.h"
-#include "../../events/SDL_keyboard_c.h"
-#include "../../core/unix/SDL_appid.h"
+#include "video/SDL_sysvideo.h"
+#include "events/SDL_keyboard_c.h"
+#include "core/unix/SDL_appid.h"
 #include "SDL_dbus.h"
 
 #ifdef SDL_VIDEO_DRIVER_X11

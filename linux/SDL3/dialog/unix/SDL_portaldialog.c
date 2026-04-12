@@ -19,7 +19,7 @@
   3. This notice may not be removed or altered from any source distribution.
 */
 #include "SDL_internal.h"
-#include "../SDL_dialog_utils.h"
+#include "SDL_dialog_utils.h"
 
 #include "../../core/linux/SDL_dbus.h"
 

@@ -20,7 +20,7 @@
 */
 #include "SDL_internal.h"
 
-#include "../SDL_sysurl.h"
+#include "SDL_sysurl.h"
 
 #include <stdio.h>
 #include <stdlib.h>
