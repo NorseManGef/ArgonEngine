@@ -22,7 +22,7 @@
 
 #ifdef SDL_JOYSTICK_WGI
 
-#include "../SDL_sysjoystick.h"
+#include "SDL_sysjoystick.h"
 #include "../hidapi/SDL_hidapijoystick_c.h"
 #include "SDL_rawinputjoystick_c.h"
 

@@ -22,10 +22,10 @@
 
 #ifdef SDL_AUDIO_DRIVER_WASAPI
 
-#include "../../core/windows/SDL_windows.h"
-#include "../../core/windows/SDL_immdevice.h"
-#include "../../thread/SDL_systhread.h"
-#include "../SDL_sysaudio.h"
+#include "core/windows/SDL_windows.h"
+#include "core/windows/SDL_immdevice.h"
+#include "thread/SDL_systhread.h"
+#include "SDL_sysaudio.h"
 
 #define COBJMACROS
 #include <audioclient.h>

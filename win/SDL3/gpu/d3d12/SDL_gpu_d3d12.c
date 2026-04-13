@@ -23,10 +23,10 @@
 
 #ifdef SDL_GPU_D3D12
 
-#include "../../events/SDL_windowevents_c.h"
-#include "../../core/windows/SDL_windows.h"
-#include "../../video/directx/SDL_d3d12.h"
-#include "../SDL_sysgpu.h"
+#include "events/SDL_windowevents_c.h"
+#include "core/windows/SDL_windows.h"
+#include "video/directx/SDL_d3d12.h"
+#include "SDL_sysgpu.h"
 
 #ifdef __IDXGIInfoQueue_INTERFACE_DEFINED__
 #define HAVE_IDXGIINFOQUEUE

@@ -20,7 +20,7 @@
 */
 #include "SDL_internal.h"
 
-#include "../SDL_sysjoystick.h"
+#include "SDL_sysjoystick.h"
 
 #ifdef SDL_JOYSTICK_DINPUT
 
