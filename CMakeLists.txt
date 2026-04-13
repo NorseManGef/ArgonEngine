@@ -6,7 +6,7 @@ if(UNIX AND NOT APPLE)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(DBUS REQUIRED dbus-1)
 pkg_check_modules(UDEV REQUIRED libudev)
-#pkg_check_modules(PULSE REQUIRED pulseaudio)
+#pkg_check_modules(PULSE REQUIRED pulseaudio) TODO: make pulse audio a requirement for linux
 endif(UNIX AND NOT APPLE)
 
 if(WIN32)
