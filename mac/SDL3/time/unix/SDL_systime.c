@@ -22,7 +22,7 @@
 
 #ifdef SDL_TIME_UNIX
 
-#include "../SDL_time_c.h"
+#include "SDL_time_c.h"
 #include <errno.h>
 #include <langinfo.h>
 #include <sys/time.h>

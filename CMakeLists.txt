@@ -6,6 +6,7 @@ if(UNIX AND NOT APPLE)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(DBUS REQUIRED dbus-1)
 pkg_check_modules(UDEV REQUIRED libudev)
+#pkg_check_modules(PULSE REQUIRED pulseaudio)
 endif(UNIX AND NOT APPLE)
 
 if(WIN32)
@@ -18,15 +19,21 @@ endif(UNIX AND NOT APPLE)
 
 set(INC_SDL
     common/SDL3
+    common/SDL3/dynapi
     common/SDL3/dialog
     common/SDL3/hidapi
+    common/SDL3/dynapi
     common/SDL3/locale
     common/SDL3/misc
     common/SDL3/thread
     common/SDL3/tray
     common/SDL3/video
+    common/SDL3/time
+    common/SDL3/timer
     ${INC_OS}/SDL3
     ${INC_OS}/SDL3/audio
+    ${INC_OS}/SDL3/time
+    ${INC_OS}/SDL3/timer
 )
 
 set(INC_STB
@@ -935,7 +942,6 @@ target_compile_definitions(argonapp
     PRIVATE
         "_UNICODE"
         "UNICODE"
-        "STBI_ENABLE_HDR=1"
 )
 
 if(UNIX AND NOT APPLE)
@@ -948,6 +954,8 @@ add_compile_definitions(argonapp
         "SDL_VIDEO_DRIVER_X11_SUPPORTS_GENERIC_EVENTS"
         "SDL_SYSTIME_UNIX"
         "SDL_SYSTIMER_UNIX"
+        "SDL_TIMER_UNIX"
+        "SDL_TIME_UNIX"
         "_GNU_SOURCE"
         "HAVE_GETRESUID"
         "HAVE_GETRESGID"
@@ -963,6 +971,7 @@ set_source_files_properties(${SRC_SDL3} PROPERTIES
     COMPILE_OPTIONS "-Wno-error=implicit-function-declaration"
                     "-Wno-error=incompatible-pointer-types"
                     "-Wno-error=int-conversion"
+                    #"-w" commented out until port is complete
 )
 set_source_files_properties(${SRC_OS} PROPERTIES
     COMPILE_OPTIONS "-Wno-error=incompatible-pointer-types"
