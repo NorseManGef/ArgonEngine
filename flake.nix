@@ -35,7 +35,9 @@
 
               dbus
               pkg-config
-              systemd.dev
+              udev
+
+              vulkan-loader
 
               libGL
               libx11
@@ -43,9 +45,20 @@
               libxext
               xorg.libXinerama
               libxrandr
+              xorg.libXi
+              xorg.libXScrnSaver
+              xorg.libXtst
+              libxcb
+
+              wayland
 
               pulseaudio
             ] ++ (if system == "aarch64-darwin" then [ ] else [ gdb ]);
+
+            VULKAN_PATH = "${pkgs.lib.getLib pkgs.vulkan-loader}/lib/libvulkan.so";
+            X11XCB_PATH = "${pkgs.lib.getLib pkgs.libx11}/lib/libX11-xcb.so";
+
+            ZENITY_PATH = "${pkgs.lib.getExe pkgs.zenity}";
           };
       });
     };
