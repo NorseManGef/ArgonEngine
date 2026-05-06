@@ -2,22 +2,28 @@ cmake_minimum_required(VERSION 3.20)
 project(argonengine)
 
 find_package(OpenGL REQUIRED)
-if(UNIX AND NOT APPLE)
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(DBUS REQUIRED dbus-1)
+if(UNIX AND NOT APPLE) 
+find_package(PkgConfig REQUIRED) 
+pkg_check_modules(DBUS REQUIRED IMPORTED_TARGET dbus-1)
 pkg_check_modules(UDEV REQUIRED libudev)
-#pkg_check_modules(PULSE REQUIRED pulseaudio) TODO: make pulse audio a requirement for linux
+pkg_check_modules(PULSE REQUIRED libpulse-simple)
+pkg_check_modules(EGL REQUIRED egl)
 endif(UNIX AND NOT APPLE)
+
+set(CMAKE_BUILD_TYPE Debug)
 
 if(WIN32)
 set(INC_OS win)
 endif(WIN32)
 
 if(UNIX AND NOT APPLE)
-set(INC_OS linux)
+set(INC_OS 
+    linux
+)
 endif(UNIX AND NOT APPLE)
 
 set(INC_SDL
+    build/common/SDL3
     common/SDL3
     common/SDL3/dynapi
     common/SDL3/dialog
@@ -42,16 +48,15 @@ set(INC_STB
 
 set(INC_LIBUSB
     common/libusb
-    ${INC_OS}/libusb
-)
+    ${INC_OS}/libusb)
 
 include_directories(
     common
     app
     ${INC_OS}
     ${OPENGL_INCLUDE_DIR}
-    ${DBUS_INCLUDE_DIRS}
     ${UDEV_INCLUDE_DIRS}
+    ${EGL_INCLUDE_DIRS}
     ${INC_SDL}
     ${INC_LIBUSB}
     ${INC_STB}
@@ -920,6 +925,14 @@ if(UNIX AND NOT APPLE)
 set(LIB_OS ${LIB_LINUX})
 endif(UNIX AND NOT APPLE)
 
+if(UNIX AND NOT APPLE)
+set(LIB_VULKAN libvulkan.so)
+endif(UNIX AND NOT APPLE)
+
+if(WIN32)
+message(FATAL_ERROR "add vulkan library for win32")
+endif(WIN32)
+
 set(SOURCES
     ${SRC_COMMON}
     ${SRC_OS}
@@ -937,7 +950,11 @@ target_link_libraries(argonapp
         ${OPENGL_LIBRARIES}
         ${LIB_OS}
         ${UDEV_LIBRARIES}
+        ${EGL_LIBRARIES}
+        ${LIB_VULKAN}
+        PkgConfig::DBUS
 )
+
 target_compile_definitions(argonapp
     PRIVATE
         "_UNICODE"
@@ -947,7 +964,6 @@ target_compile_definitions(argonapp
 if(UNIX AND NOT APPLE)
 add_compile_definitions(argonapp
     PRIVATE
-        "SDL_PLATFORM_LINUX=1"
         "HAVE_STDIO_H"
         "DEFAULT_VISIBILITY=__attribute__ ((visibility(\"default\")))"
         "HAVE_DBUS_DBUS_H"
@@ -961,6 +977,8 @@ add_compile_definitions(argonapp
         "HAVE_GETRESGID"
         "HAVE_CLOCK_GETTIME"
 )
+
+set(HAVE_LIBC 1)
 endif(UNIX AND NOT APPLE)
 
 if(UNIX AND NOT APPLE)
