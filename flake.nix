@@ -49,8 +49,15 @@
               xorg.libXScrnSaver
               xorg.libXtst
               libxcb
+              libxkbcommon
+
+              mesa
 
               wayland
+              wayland-protocols
+              wayland-scanner
+              libffi
+              egl-wayland
 
               pulseaudio
             ] ++ (if system == "aarch64-darwin" then [ ] else [ gdb ]);
