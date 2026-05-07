@@ -7,8 +7,57 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(DBUS REQUIRED IMPORTED_TARGET dbus-1)
 pkg_check_modules(UDEV REQUIRED libudev)
 pkg_check_modules(PULSE REQUIRED libpulse-simple)
-pkg_check_modules(EGL REQUIRED egl)
+pkg_check_modules(XKBCOMMON REQUIRED xkbcommon)
+pkg_check_modules(WAYLAND QUIET wayland-client wayland-protocols)
+if(WAYLAND_FOUND)
+pkg_check_modules(WAYLAND_SCANNER REQUIRED wayland-scanner)
+endif(WAYLAND_FOUND)
+if(NOT WAYLAND_FOUND)
+pkg_check_modules(X11 REQUIRED x11)
+endif(NOT WAYLAND_FOUND)
 endif(UNIX AND NOT APPLE)
+
+set(GENERATED_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated)
+file(MAKE_DIRECTORY ${GENERATED_DIR})
+
+if(WAYLAND_FOUND)
+pkg_get_variable(WAYLAND_PROTOCOLS_DIR
+    wayland-protocols
+    pkgdatadir
+)
+
+set(CM_PROTOCOL_XML ${WAYLAND_PROTOCOLS_DIR}/staging/color-management/color-management-v1.xml)
+
+add_custom_command(
+  OUTPUT
+      ${GENERATED_DIR}/color-management-v1-client-protocol.h
+      ${GENERATED_DIR}/color-management-v1-protocol.c
+  COMMAND wayland-scanner client-header
+      ${CM_PROTOCOL_XML}
+      ${GENERATED_DIR}/color-management-v1-client-protocol.h
+  COMMAND wayland-scanner private-code
+      ${CM_PROTOCOL_XML}
+      ${GENERATED_DIR}/color-management-v1-protocol.c
+  DEPENDS ${PROTOCOl_XML}
+)
+
+set(PRIMARY_SELECTION_XML 
+      ${WAYLAND_PROTOCOLS_DIR}/unstable/primary-selection/primary-selection-unstable-v1.xml
+)
+
+add_custom_command(
+  OUTPUT
+      ${GENERATED_DIR}/primary-selection-unstable-v1-client-protocol.h
+      ${GENERATED_DIR}/primary-selection-unstable-v1-protocol.c
+  COMMAND wayland-scanner client-header
+      ${PRIMARY_SELECTION_XML}
+      ${GENERATED_DIR}/primary-selection-unstable-v1-client-protocol.h
+  COMMAND wayland-scanner private-code
+      ${PRIMARY_SELECTION_XML}
+      ${GENERATED_DIR}/primary-selection-unstable-v1-protocol.c
+  DEPENDS ${PRIMARY_SELECTION_XML}
+)
+endif(WAYLAND_FOUND)
 
 set(CMAKE_BUILD_TYPE Debug)
 
@@ -34,6 +83,7 @@ set(INC_SDL
     common/SDL3/thread
     common/SDL3/tray
     common/SDL3/video
+    common/SDL3/video/khronos
     common/SDL3/time
     common/SDL3/timer
     ${INC_OS}/SDL3
@@ -56,10 +106,11 @@ include_directories(
     ${INC_OS}
     ${OPENGL_INCLUDE_DIR}
     ${UDEV_INCLUDE_DIRS}
-    ${EGL_INCLUDE_DIRS}
+    ${XKBCOMMON_INCLUDE_DIRS}
     ${INC_SDL}
     ${INC_LIBUSB}
     ${INC_STB}
+    ${GENERATED_DIR}
 )
 
 set(SRC_ARGONENGINE
@@ -670,6 +721,8 @@ set(SRC_SDL3
     common/SDL3/video/yuv2rgb/yuv_rgb_lsx.c
     common/SDL3/video/yuv2rgb/yuv_rgb_sse.c
     common/SDL3/video/yuv2rgb/yuv_rgb_std.c
+    ${GENERATED_DIR}/color-management-v1-protocol.c
+    ${GENERATED_DIR}/primary-selection-unstable-v1-protocol.c
 )
 
 set(SRC_LIBUSB
@@ -950,7 +1003,7 @@ target_link_libraries(argonapp
         ${OPENGL_LIBRARIES}
         ${LIB_OS}
         ${UDEV_LIBRARIES}
-        ${EGL_LIBRARIES}
+        ${XKBCOMMON_LIBRARIES}
         ${LIB_VULKAN}
         PkgConfig::DBUS
 )
@@ -977,6 +1030,20 @@ add_compile_definitions(argonapp
         "HAVE_GETRESGID"
         "HAVE_CLOCK_GETTIME"
 )
+
+if(WAYLAND_FOUND)
+add_compile_definitions(argonapp
+    PRIVATE
+        "SDL_VIDEO_DRIVER_WAYLAND"
+)
+elseif(X11_FOUND)
+add_compile_definitions(argonapp
+    PRIVATE
+        "SDL_VIDEO_DRIVER_X11"
+)
+else()
+    message(FATAL_ERROR "No display backend available")
+endif()
 
 set(HAVE_LIBC 1)
 endif(UNIX AND NOT APPLE)
