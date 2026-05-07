@@ -24,7 +24,7 @@
 #ifndef SDL_waylandcolor_h_
 #define SDL_waylandcolor_h_
 
-#include "../SDL_sysvideo.h"
+#include "SDL_sysvideo.h"
 
 struct Wayland_ColorInfoState;
 

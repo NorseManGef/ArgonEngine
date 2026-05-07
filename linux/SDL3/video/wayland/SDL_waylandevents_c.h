@@ -24,9 +24,9 @@
 #ifndef SDL_waylandevents_h_
 #define SDL_waylandevents_h_
 
-#include "../../events/SDL_keymap_c.h"
-#include "../../events/SDL_mouse_c.h"
-#include "../../events/SDL_pen_c.h"
+#include "events/SDL_keymap_c.h"
+#include "events/SDL_mouse_c.h"
+#include "events/SDL_pen_c.h"
 
 #include "SDL_waylandvideo.h"
 #include "SDL_waylandwindow.h"

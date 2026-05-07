@@ -24,8 +24,8 @@
 #ifndef SDL_waylandwindow_h_
 #define SDL_waylandwindow_h_
 
-#include "../SDL_sysvideo.h"
-#include "../../events/SDL_touch_c.h"
+#include "SDL_sysvideo.h"
+#include "events/SDL_touch_c.h"
 
 #include "SDL_waylandvideo.h"
 #include "SDL_waylandshmbuffer.h"
