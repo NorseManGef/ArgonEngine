@@ -8,7 +8,7 @@ pkg_check_modules(DBUS REQUIRED IMPORTED_TARGET dbus-1)
 pkg_check_modules(UDEV REQUIRED libudev)
 pkg_check_modules(PULSE REQUIRED libpulse-simple)
 pkg_check_modules(XKBCOMMON REQUIRED xkbcommon)
-pkg_check_modules(WAYLAND QUIET wayland-client wayland-protocols)
+pkg_check_modules(WAYLAND QUIET wayland-client)
 if(WAYLAND_FOUND)
 pkg_check_modules(WAYLAND_SCANNER REQUIRED wayland-scanner)
 endif(WAYLAND_FOUND)
@@ -20,44 +20,6 @@ endif(UNIX AND NOT APPLE)
 set(GENERATED_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated)
 file(MAKE_DIRECTORY ${GENERATED_DIR})
 
-if(WAYLAND_FOUND)
-pkg_get_variable(WAYLAND_PROTOCOLS_DIR
-    wayland-protocols
-    pkgdatadir
-)
-
-set(CM_PROTOCOL_XML ${WAYLAND_PROTOCOLS_DIR}/staging/color-management/color-management-v1.xml)
-
-add_custom_command(
-  OUTPUT
-      ${GENERATED_DIR}/color-management-v1-client-protocol.h
-      ${GENERATED_DIR}/color-management-v1-protocol.c
-  COMMAND wayland-scanner client-header
-      ${CM_PROTOCOL_XML}
-      ${GENERATED_DIR}/color-management-v1-client-protocol.h
-  COMMAND wayland-scanner private-code
-      ${CM_PROTOCOL_XML}
-      ${GENERATED_DIR}/color-management-v1-protocol.c
-  DEPENDS ${PROTOCOl_XML}
-)
-
-set(PRIMARY_SELECTION_XML 
-      ${WAYLAND_PROTOCOLS_DIR}/unstable/primary-selection/primary-selection-unstable-v1.xml
-)
-
-add_custom_command(
-  OUTPUT
-      ${GENERATED_DIR}/primary-selection-unstable-v1-client-protocol.h
-      ${GENERATED_DIR}/primary-selection-unstable-v1-protocol.c
-  COMMAND wayland-scanner client-header
-      ${PRIMARY_SELECTION_XML}
-      ${GENERATED_DIR}/primary-selection-unstable-v1-client-protocol.h
-  COMMAND wayland-scanner private-code
-      ${PRIMARY_SELECTION_XML}
-      ${GENERATED_DIR}/primary-selection-unstable-v1-protocol.c
-  DEPENDS ${PRIMARY_SELECTION_XML}
-)
-endif(WAYLAND_FOUND)
 
 set(CMAKE_BUILD_TYPE Debug)
 
@@ -721,9 +683,19 @@ set(SRC_SDL3
     common/SDL3/video/yuv2rgb/yuv_rgb_lsx.c
     common/SDL3/video/yuv2rgb/yuv_rgb_sse.c
     common/SDL3/video/yuv2rgb/yuv_rgb_std.c
-    ${GENERATED_DIR}/color-management-v1-protocol.c
-    ${GENERATED_DIR}/primary-selection-unstable-v1-protocol.c
 )
+
+if(WAYLAND_FOUND)
+
+if(NOT EXISTS linux/cmake/waylandProtocolGenerator.cmake)
+    message(FATAL_ERROR
+    "wayland found but no protocol generator found available.\n
+    Please run generate_waylandProtocolGenerator.py.")
+endif(NOT EXISTS linux/cmake/waylandProtocolGenerator.cmake)
+
+include(linux/cmake/waylandProtocolGenerator.cmake)
+
+endif(WAYLAND_FOUND)
 
 set(SRC_LIBUSB
     common/libusb/core.c
@@ -1029,6 +1001,7 @@ add_compile_definitions(argonapp
         "HAVE_GETRESUID"
         "HAVE_GETRESGID"
         "HAVE_CLOCK_GETTIME"
+        "HAVE_SIGTIMEDWAIT"
 )
 
 if(WAYLAND_FOUND)
@@ -1036,6 +1009,7 @@ add_compile_definitions(argonapp
     PRIVATE
         "SDL_VIDEO_DRIVER_WAYLAND"
 )
+
 elseif(X11_FOUND)
 add_compile_definitions(argonapp
     PRIVATE
