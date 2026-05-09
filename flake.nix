@@ -54,12 +54,14 @@
               mesa
 
               wayland
-              wayland-protocols
               wayland-scanner
               libffi
               egl-wayland
 
               pulseaudio
+
+              #for generator scripts
+              python3
             ] ++ (if system == "aarch64-darwin" then [ ] else [ gdb ]);
 
             VULKAN_PATH = "${pkgs.lib.getLib pkgs.vulkan-loader}/lib/libvulkan.so";
