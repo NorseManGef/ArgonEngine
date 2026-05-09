@@ -8,9 +8,11 @@ pkg_check_modules(DBUS REQUIRED IMPORTED_TARGET dbus-1)
 pkg_check_modules(UDEV REQUIRED libudev)
 pkg_check_modules(PULSE REQUIRED libpulse-simple)
 pkg_check_modules(XKBCOMMON REQUIRED xkbcommon)
-pkg_check_modules(WAYLAND QUIET wayland-client)
+pkg_check_modules(WAYLAND QUIET IMPORTED_TARGET wayland-client)
 if(WAYLAND_FOUND)
-pkg_check_modules(WAYLAND_SCANNER REQUIRED wayland-scanner)
+  pkg_check_modules(WAYLAND_SCANNER REQUIRED IMPORTED_TARGET wayland-scanner)
+  pkg_check_modules(WAYLAND_EGL REQUIRED IMPORTED_TARGET wayland-egl)
+  pkg_check_modules(WAYLAND_CURSOR REQUIRED IMPORTED_TARGET wayland-cursor)
 endif(WAYLAND_FOUND)
 if(NOT WAYLAND_FOUND)
 pkg_check_modules(X11 REQUIRED x11)
@@ -977,6 +979,9 @@ target_link_libraries(argonapp
         ${UDEV_LIBRARIES}
         ${XKBCOMMON_LIBRARIES}
         ${LIB_VULKAN}
+        PkgConfig::WAYLAND
+        PkgConfig::WAYLAND_EGL
+        PkgConfig::WAYLAND_CURSOR
         PkgConfig::DBUS
 )
 
