@@ -688,15 +688,7 @@ set(SRC_SDL3
 )
 
 if(WAYLAND_FOUND)
-
-if(NOT EXISTS linux/cmake/waylandProtocolGenerator.cmake)
-    message(FATAL_ERROR
-    "wayland found but no protocol generator found available.\n
-    Please run generate_waylandProtocolGenerator.py.")
-endif(NOT EXISTS linux/cmake/waylandProtocolGenerator.cmake)
-
 include(linux/cmake/waylandProtocolGenerator.cmake)
-
 endif(WAYLAND_FOUND)
 
 set(SRC_LIBUSB
