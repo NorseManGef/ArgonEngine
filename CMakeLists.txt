@@ -7,7 +7,10 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(DBUS REQUIRED IMPORTED_TARGET dbus-1)
 pkg_check_modules(UDEV REQUIRED libudev)
 pkg_check_modules(EVDEV REQUIRED IMPORTED_TARGET libevdev)
-pkg_check_modules(PULSE REQUIRED libpulse-simple)
+pkg_check_modules(PIPEWIRE QUIET IMPORTED_TARGET libpipewire-0.3)
+if(NOT PIPEWIRE_FOUND)
+  pkg_check_modules(PULSE REQUIRED libpulse-simple)
+endif(NOT PIPEWIRE_FOUND)
 pkg_check_modules(XKBCOMMON REQUIRED xkbcommon)
 pkg_check_modules(WAYLAND QUIET IMPORTED_TARGET wayland-client)
 if(WAYLAND_FOUND)
@@ -945,6 +948,14 @@ set(LIB_LINUX
     m
     dl
     rt
+    ${UDEV_LIBRARIES}
+    ${XKBCOMMON_LIBRARIES}
+    PkgConfig::WAYLAND
+    PkgConfig::WAYLAND_EGL
+    PkgConfig::WAYLAND_CURSOR
+    PkgConfig::DBUS
+    PkgConfig::EVDEV
+    PkgConfig::PIPEWIRE
 )
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -981,14 +992,7 @@ target_link_libraries(argonapp
     PRIVATE
         ${OPENGL_LIBRARIES}
         ${LIB_OS}
-        ${UDEV_LIBRARIES}
-        ${XKBCOMMON_LIBRARIES}
         ${LIB_VULKAN}
-        PkgConfig::WAYLAND
-        PkgConfig::WAYLAND_EGL
-        PkgConfig::WAYLAND_CURSOR
-        PkgConfig::DBUS
-        PkgConfig::EVDEV
 )
 
 target_compile_definitions(argonapp

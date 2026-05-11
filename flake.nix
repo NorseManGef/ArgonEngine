@@ -59,6 +59,7 @@
               libffi
               egl-wayland
 
+              pipewire
               pulseaudio
 
               #for generator scripts
