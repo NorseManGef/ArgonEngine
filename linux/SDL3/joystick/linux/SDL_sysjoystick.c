@@ -43,11 +43,11 @@
 
 #include "../../events/SDL_events_c.h"
 #include "../../core/linux/SDL_evdev.h"
-#include "../SDL_sysjoystick.h"
-#include "../SDL_joystick_c.h"
-#include "../usb_ids.h"
+#include "SDL_sysjoystick.h"
+#include "SDL_joystick_c.h"
+#include "usb_ids.h"
 #include "SDL_sysjoystick_c.h"
-#include "../hidapi/SDL_hidapijoystick_c.h"
+#include "hidapi/SDL_hidapijoystick_c.h"
 
 // This isn't defined in older Linux kernel headers
 #ifndef MSC_TIMESTAMP

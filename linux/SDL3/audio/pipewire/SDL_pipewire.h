@@ -24,7 +24,7 @@
 #ifndef SDL_pipewire_h_
 #define SDL_pipewire_h_
 
-#include "../SDL_sysaudio.h"
+#include "audio/SDL_sysaudio.h"
 #include <pipewire/pipewire.h>
 
 struct SDL_PrivateAudioData

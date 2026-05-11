@@ -41,7 +41,7 @@
 #include "../SDL_pixels_c.h"
 #include "../../events/SDL_events_c.h"
 #ifdef SDL_INPUT_LINUXEV
-#include "../../core/linux/SDL_evdev.h"
+#include "../core/linux/SDL_evdev.h"
 #endif
 
 #include "SDL_nullvideo.h"

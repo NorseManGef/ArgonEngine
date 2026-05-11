@@ -31,9 +31,9 @@
 #include <dirent.h>
 #include <fcntl.h>
 
-#include "../SDL_syspower.h"
+#include "SDL_syspower.h"
 
-#include "../../core/linux/SDL_dbus.h"
+#include "../core/linux/SDL_dbus.h"
 
 static const char *proc_apm_path = "/proc/apm";
 static const char *proc_acpi_battery_path = "/proc/acpi/battery";

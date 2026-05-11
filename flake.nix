@@ -36,6 +36,7 @@
               dbus
               pkg-config
               udev
+              libevdev
 
               vulkan-loader
 

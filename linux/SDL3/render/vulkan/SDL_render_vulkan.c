@@ -34,8 +34,8 @@
 #define VK_NO_PROTOTYPES
 #include "../../video/SDL_vulkan_internal.h"
 #include "../../video/SDL_sysvideo.h"
-#include "../SDL_sysrender.h"
-#include "../SDL_d3dmath.h"
+#include "SDL_sysrender.h"
+#include "SDL_d3dmath.h"
 #include "../../video/SDL_pixels_c.h"
 #include "SDL_shaders_vulkan.h"
 

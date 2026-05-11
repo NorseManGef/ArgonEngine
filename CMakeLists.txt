@@ -6,6 +6,7 @@ if(UNIX AND NOT APPLE)
 find_package(PkgConfig REQUIRED) 
 pkg_check_modules(DBUS REQUIRED IMPORTED_TARGET dbus-1)
 pkg_check_modules(UDEV REQUIRED libudev)
+pkg_check_modules(EVDEV REQUIRED IMPORTED_TARGET libevdev)
 pkg_check_modules(PULSE REQUIRED libpulse-simple)
 pkg_check_modules(XKBCOMMON REQUIRED xkbcommon)
 pkg_check_modules(WAYLAND QUIET IMPORTED_TARGET wayland-client)
@@ -22,7 +23,6 @@ endif(UNIX AND NOT APPLE)
 set(GENERATED_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated)
 file(MAKE_DIRECTORY ${GENERATED_DIR})
 
-
 set(CMAKE_BUILD_TYPE Debug)
 
 if(WIN32)
@@ -36,7 +36,7 @@ set(INC_OS
 endif(UNIX AND NOT APPLE)
 
 set(INC_SDL
-    build/common/SDL3
+    ${INC_OS}/SDL3/build_config #must be above common/SDL3/build_config
     common/SDL3
     common/SDL3/dynapi
     common/SDL3/dialog
@@ -50,10 +50,23 @@ set(INC_SDL
     common/SDL3/video/khronos
     common/SDL3/time
     common/SDL3/timer
+    common/SDL3/joystick
+    common/SDL3/camera
+    common/SDL3/filesystem
+    common/SDL3/gpu
+    common/SDL3/haptic
+    common/SDL3/power
+    common/SDL3/process
+    common/SDL3/render
+    common/SDL3/build_config
     ${INC_OS}/SDL3
     ${INC_OS}/SDL3/audio
     ${INC_OS}/SDL3/time
     ${INC_OS}/SDL3/timer
+    ${INC_OS}/SDL3/thread
+    ${INC_OS}/SDL3/hidapi
+    ${INC_OS}/SDL3/video
+    ${INC_OS}/SDL3/camera
 )
 
 set(INC_STB
@@ -975,6 +988,7 @@ target_link_libraries(argonapp
         PkgConfig::WAYLAND_EGL
         PkgConfig::WAYLAND_CURSOR
         PkgConfig::DBUS
+        PkgConfig::EVDEV
 )
 
 target_compile_definitions(argonapp
@@ -999,6 +1013,9 @@ add_compile_definitions(argonapp
         "HAVE_GETRESGID"
         "HAVE_CLOCK_GETTIME"
         "HAVE_SIGTIMEDWAIT"
+        "SDL_JOYSTICK_LINUX"
+        "SDL_INPUT_LINUXEV"
+        "HAVE_LINUX_INPUT_H"
 )
 
 if(WAYLAND_FOUND)
@@ -1015,7 +1032,6 @@ add_compile_definitions(argonapp
 else()
     message(FATAL_ERROR "No display backend available")
 endif()
-
 set(HAVE_LIBC 1)
 endif(UNIX AND NOT APPLE)
 

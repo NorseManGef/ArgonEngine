@@ -33,8 +33,8 @@
 #include <unistd.h>
 #include <sys/wait.h>
 
-#include "../SDL_sysprocess.h"
-#include "../../io/SDL_iostream_c.h"
+#include "SDL_sysprocess.h"
+#include "io/SDL_iostream_c.h"
 
 
 #if defined(HAVE_POSIX_SPAWN_FILE_ACTIONS_ADDCHDIR_NP) && \

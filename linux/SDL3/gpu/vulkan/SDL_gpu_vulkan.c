@@ -31,7 +31,7 @@
 
 #include <SDL3/SDL_vulkan.h>
 
-#include "../SDL_sysgpu.h"
+#include "SDL_sysgpu.h"
 #include "../../events/SDL_windowevents_c.h"
 
 // Global Vulkan Loader Entry Points

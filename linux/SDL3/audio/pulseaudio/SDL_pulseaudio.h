@@ -25,7 +25,7 @@
 
 #include <pulse/pulseaudio.h>
 
-#include "../SDL_sysaudio.h"
+#include "audio/SDL_sysaudio.h"
 
 struct SDL_PrivateAudioData
 {

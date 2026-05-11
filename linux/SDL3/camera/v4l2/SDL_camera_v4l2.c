@@ -41,13 +41,13 @@
 SDL_COMPILE_TIME_ASSERT(v4l2devicecaps, offsetof(struct v4l2_capability,device_caps) == offsetof(struct v4l2_capability,capabilities) + 4);
 #endif
 
-#include "../SDL_syscamera.h"
-#include "../SDL_camera_c.h"
-#include "../../video/SDL_pixels_c.h"
-#include "../../video/SDL_surface_c.h"
-#include "../../thread/SDL_systhread.h"
-#include "../../core/linux/SDL_evdev_capabilities.h"
-#include "../../core/linux/SDL_udev.h"
+#include "SDL_syscamera.h"
+#include "SDL_camera_c.h"
+#include "../video/SDL_pixels_c.h"
+#include "../video/SDL_surface_c.h"
+#include "../thread/SDL_systhread.h"
+#include "../core/linux/SDL_evdev_capabilities.h"
+#include "../core/linux/SDL_udev.h"
 
 #ifndef SDL_USE_LIBUDEV
 #include <dirent.h>

@@ -26,7 +26,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 // System dependent filesystem routines
 
-#include "../SDL_sysfilesystem.h"
+#include "SDL_sysfilesystem.h"
 
 #include <stdio.h>
 #include <string.h>
