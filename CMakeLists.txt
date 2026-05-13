@@ -927,6 +927,16 @@ set(SRC_LINUX
     linux/libusb/threads_posix.c
 )
 
+if(PIPEWIRE_FOUND)
+set(LIB_LINAUDIO
+  PkgConfig::PIPEWIRE
+)
+else()
+set(LIB_LINAUDIO
+  PkgConfig::PULSEAUDIO
+)
+endif(PIPEWIRE_FOUND)
+
 if(WIN32)
 set(SRC_OS ${SRC_WINDOWS})
 endif(WIN32)
@@ -942,8 +952,6 @@ set(LIB_WINDOWS
 )
 
 set(LIB_LINUX
-    pulse-simple
-    pulse
     pthread
     m
     dl
@@ -955,7 +963,7 @@ set(LIB_LINUX
     PkgConfig::WAYLAND_CURSOR
     PkgConfig::DBUS
     PkgConfig::EVDEV
-    PkgConfig::PIPEWIRE
+    ${LIB_LINAUDIO}
 )
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
