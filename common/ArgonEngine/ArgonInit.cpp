@@ -410,22 +410,21 @@ namespace Argon{
     }
     
     void init_audio(){
-        SDL_AudioSpec spec;
-        SDL_zero(spec);
-        spec.freq = Argon::kAudioSampleRate;
-        spec.format = SDL_AUDIO_F32;
-        spec.channels = 2;
-        auto sdlstream = SDL_OpenAudioDeviceStream(
+        SDL_AudioSpec spec = { 
+            SDL_AUDIO_F32, 
+            2, 
+            48000
+        };
+        SDL_AudioStream *stream = SDL_OpenAudioDeviceStream(
             SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK,
             &spec,
             SdlAudioCallback,
             nullptr
         );
-        if (!sdlstream) {
+        if (!stream) {
             printf("Failed to open audio: %s\n", SDL_GetError());
         }
-
-        SDL_ResumeAudioDevice(SDL_GetAudioStreamDevice(sdlstream));
+        SDL_ResumeAudioDevice(SDL_GetAudioStreamDevice(stream));
     }
     void initialize_engine(std::string organization_name, std::string app_name){
         SDL_SetMainReady();
@@ -468,11 +467,19 @@ namespace Argon{
 SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
         //SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
         win = SDL_CreateWindowWithProperties(props);
+        if(!win) {
+            std::cout << "SDL_CreateWindowWithProperties failed: " << SDL_GetError() << std::endl;
+            terminate_engine();
+        }
 
         // Create an OpenGL context associated with the window.
         //SDL_GLContext glcontext = SDL_GL_CreateContext(win);
 
         context=SDL_GL_CreateContext(win);
+        if(!context) {
+            std::cout << "SDL_GL_CreateContext failed: " << SDL_GetError() << std::endl;
+            terminate_engine();
+        }
         SDL_GL_MakeCurrent(win, context);
 #ifdef USE_GLEW
         glewExperimental = GL_TRUE;
