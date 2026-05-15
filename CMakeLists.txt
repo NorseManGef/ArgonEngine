@@ -5,13 +5,13 @@ find_package(OpenGL REQUIRED)
 if(UNIX AND NOT APPLE) 
 find_package(PkgConfig REQUIRED) 
 pkg_check_modules(DBUS REQUIRED IMPORTED_TARGET dbus-1)
-pkg_check_modules(UDEV REQUIRED libudev)
+pkg_check_modules(UDEV REQUIRED IMPORTED_TARGET libudev)
 pkg_check_modules(EVDEV REQUIRED IMPORTED_TARGET libevdev)
 pkg_check_modules(PIPEWIRE QUIET IMPORTED_TARGET libpipewire-0.3)
 if(NOT PIPEWIRE_FOUND)
   pkg_check_modules(PULSE REQUIRED libpulse-simple)
 endif(NOT PIPEWIRE_FOUND)
-pkg_check_modules(XKBCOMMON REQUIRED xkbcommon)
+pkg_check_modules(XKBCOMMON REQUIRED IMPORTED_TARGET xkbcommon)
 pkg_check_modules(WAYLAND QUIET IMPORTED_TARGET wayland-client)
 if(WAYLAND_FOUND)
   pkg_check_modules(WAYLAND_SCANNER REQUIRED IMPORTED_TARGET wayland-scanner)
@@ -23,6 +23,11 @@ pkg_check_modules(X11 REQUIRED x11)
 endif(NOT WAYLAND_FOUND)
 endif(UNIX AND NOT APPLE)
 
+if(APPLE)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(GLEW REQUIRED IMPORTED_TARGET glew)  
+endif(APPLE)
+
 set(GENERATED_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated)
 file(MAKE_DIRECTORY ${GENERATED_DIR})
 
@@ -33,10 +38,12 @@ set(INC_OS win)
 endif(WIN32)
 
 if(UNIX AND NOT APPLE)
-set(INC_OS 
-    linux
-)
+set(INC_OS linux)
 endif(UNIX AND NOT APPLE)
+
+if(APPLE)
+set(INC_OS mac)
+endif(APPLE)
 
 set(INC_SDL
     ${INC_OS}/SDL3/build_config #must be above common/SDL3/build_config
@@ -83,10 +90,8 @@ set(INC_LIBUSB
 include_directories(
     common
     app
-    ${INC_OS}
     ${OPENGL_INCLUDE_DIR}
-    ${UDEV_INCLUDE_DIRS}
-    ${XKBCOMMON_INCLUDE_DIRS}
+    ${INC_OS}
     ${INC_SDL}
     ${INC_LIBUSB}
     ${INC_STB}
@@ -956,14 +961,18 @@ set(LIB_LINUX
     m
     dl
     rt
-    ${UDEV_LIBRARIES}
-    ${XKBCOMMON_LIBRARIES}
     PkgConfig::WAYLAND
     PkgConfig::WAYLAND_EGL
     PkgConfig::WAYLAND_CURSOR
     PkgConfig::DBUS
     PkgConfig::EVDEV
+    PkgConfig::UDEV
+    PkgConfig::XKBCOMMON
     ${LIB_LINAUDIO}
+)
+
+set(LIB_APPLE
+    PkgConfig::GLEW
 )
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -975,6 +984,10 @@ endif(WIN32)
 if(UNIX AND NOT APPLE)
 set(LIB_OS ${LIB_LINUX})
 endif(UNIX AND NOT APPLE)
+
+if(APPLE)
+set(LIB_OS ${LIB_APPLE})
+endif(APPLE)
 
 if(UNIX AND NOT APPLE)
 set(LIB_VULKAN libvulkan.so)
