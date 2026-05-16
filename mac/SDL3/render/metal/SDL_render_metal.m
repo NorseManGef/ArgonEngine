@@ -22,7 +22,7 @@
 
 #ifdef SDL_VIDEO_RENDER_METAL
 
-#include "../SDL_sysrender.h"
+#include "SDL_sysrender.h"
 #include "../../video/SDL_pixels_c.h"
 
 #import <CoreVideo/CoreVideo.h>

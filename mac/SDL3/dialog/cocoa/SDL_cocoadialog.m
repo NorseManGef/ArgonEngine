@@ -20,7 +20,7 @@
 */
 #include "SDL_internal.h"
 #include "../SDL_dialog.h"
-#include "../SDL_dialog_utils.h"
+#include "SDL_dialog_utils.h"
 
 #ifdef SDL_PLATFORM_MACOS
 

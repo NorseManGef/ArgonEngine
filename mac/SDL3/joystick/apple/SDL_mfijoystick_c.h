@@ -23,7 +23,7 @@
 #ifndef SDL_JOYSTICK_IOS_H
 #define SDL_JOYSTICK_IOS_H
 
-#include "../SDL_sysjoystick.h"
+#include "SDL_sysjoystick.h"
 
 #import <CoreFoundation/CoreFoundation.h>
 #import <Foundation/Foundation.h>

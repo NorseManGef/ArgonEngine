@@ -35,6 +35,12 @@
 #include <sys/time.h>
 #endif
 
+#if defined(WIN32)
+# define DEFAULT_VISIBILITY __declspec(dllexport)
+#else
+#define DEFAULT_VISIBILITY __attribute__((visibility("default")))
+#endif
+
 #include "libusb.h"
 
 /* Not all C standard library headers define static_assert in assert.h

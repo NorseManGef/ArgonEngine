@@ -22,7 +22,7 @@
 
 #if defined(SDL_PLATFORM_MACOS)
 
-#include "../SDL_sysurl.h"
+#include "SDL_sysurl.h"
 
 #import <Cocoa/Cocoa.h>
 

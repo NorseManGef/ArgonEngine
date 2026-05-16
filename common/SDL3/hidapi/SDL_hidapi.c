@@ -67,8 +67,8 @@ SDL_ELF_NOTE_DLOPEN(
 #endif
 #endif
 
-#include "../core/linux/SDL_udev.h"
 #ifdef SDL_USE_LIBUDEV
+#include "../core/linux/SDL_udev.h"
 #include <poll.h>
 #endif
 

@@ -22,8 +22,8 @@
 
 #ifdef SDL_CAMERA_DRIVER_COREMEDIA
 
-#include "../SDL_syscamera.h"
-#include "../SDL_camera_c.h"
+#include "SDL_syscamera.h"
+#include "SDL_camera_c.h"
 #include "../../thread/SDL_systhread.h"
 
 #import <AVFoundation/AVFoundation.h>

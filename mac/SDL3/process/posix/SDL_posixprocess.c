@@ -33,7 +33,7 @@
 #include <unistd.h>
 #include <sys/wait.h>
 
-#include "../SDL_sysprocess.h"
+#include "SDL_sysprocess.h"
 #include "../../io/SDL_iostream_c.h"
 
 

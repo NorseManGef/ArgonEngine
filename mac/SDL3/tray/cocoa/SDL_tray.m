@@ -25,7 +25,7 @@
 
 #include <Cocoa/Cocoa.h>
 
-#include "../SDL_tray_utils.h"
+#include "SDL_tray_utils.h"
 #include "../../video/SDL_surface_c.h"
 
 /* applicationDockMenu */

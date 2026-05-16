@@ -29,7 +29,9 @@
 #include "../audio/SDL_audio_c.h"
 #include "../camera/SDL_camera_c.h"
 #include "../timer/SDL_timer_c.h"
+#if defined(HAVE_LIBUDEV_H) && defined(HAVE_LINUX_INPUT_H)
 #include "../core/linux/SDL_udev.h"
+#endif
 #ifndef SDL_JOYSTICK_DISABLED
 #include "../joystick/SDL_joystick_c.h"
 #endif

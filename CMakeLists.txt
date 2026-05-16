@@ -24,6 +24,7 @@ endif(NOT WAYLAND_FOUND)
 endif(UNIX AND NOT APPLE)
 
 if(APPLE)
+find_package(CURL REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(GLEW REQUIRED IMPORTED_TARGET glew)  
 endif(APPLE)
@@ -48,6 +49,7 @@ endif(APPLE)
 set(INC_SDL
     ${INC_OS}/SDL3/build_config #must be above common/SDL3/build_config
     common/SDL3
+    common/SDL3/audio
     common/SDL3/dynapi
     common/SDL3/dialog
     common/SDL3/hidapi
@@ -932,6 +934,56 @@ set(SRC_LINUX
     linux/libusb/threads_posix.c
 )
 
+set(SRC_MAC
+    mac/libusb/events_posix.c
+    mac/libusb/threads_posix.c
+    mac/libusb/os/darwin_usb.c
+    mac/SDL3/audio/coreaudio/SDL_coreaudio.m
+    mac/SDL3/camera/coremedia/SDL_camera_coremedia.m
+    mac/SDL3/core/unix/SDL_appid.c
+    mac/SDL3/core/unix/SDL_poll.c
+    mac/SDL3/dialog/cocoa/SDL_cocoadialog.m
+    mac/SDL3/filesystem/cocoa/SDL_sysfilesystem.m
+    mac/SDL3/filesystem/posix/SDL_sysfsops.c
+    mac/SDL3/filesystem/unix/SDL_sysfilesystem.c
+    mac/SDL3/gpu/metal/SDL_gpu_metal.m
+    mac/SDL3/haptic/darwin/SDL_syshaptic.c
+    #mac/SDL3/hidapi/mac/hid.c
+    mac/SDL3/joystick/darwin/SDL_iokitjoystick.c
+    mac/SDL3/joystick/apple/SDL_mfijoystick.m
+    mac/SDL3/loadso/dlopen/SDL_sysloadso.c
+    mac/SDL3/locale/macos/SDL_syslocale.m
+    mac/SDL3/misc/macos/SDL_sysurl.m
+    mac/SDL3/power/macos/SDL_syspower.c
+    mac/SDL3/process/posix/SDL_posixprocess.c
+    mac/SDL3/render/metal/SDL_render_metal.m
+    mac/SDL3/sensor/coremotion/SDL_coremotionsensor.m
+    mac/SDL3/thread/pthread/SDL_syscond.c
+    mac/SDL3/thread/pthread/SDL_sysmutex.c
+    mac/SDL3/thread/pthread/SDL_sysrwlock.c
+    mac/SDL3/thread/pthread/SDL_syssem.c
+    mac/SDL3/thread/pthread/SDL_systhread.c
+    mac/SDL3/thread/pthread/SDL_systls.c
+    mac/SDL3/time/unix/SDL_systime.c
+    mac/SDL3/timer/unix/SDL_systimer.c
+    mac/SDL3/tray/cocoa/SDL_tray.m
+    mac/SDL3/video/cocoa/SDL_cocoaclipboard.m
+    mac/SDL3/video/cocoa/SDL_cocoaevents.m
+    mac/SDL3/video/cocoa/SDL_cocoakeyboard.m
+    mac/SDL3/video/cocoa/SDL_cocoamessagebox.m
+    mac/SDL3/video/cocoa/SDL_cocoametalview.m
+    mac/SDL3/video/cocoa/SDL_cocoamodes.m
+    mac/SDL3/video/cocoa/SDL_cocoamouse.m
+    mac/SDL3/video/cocoa/SDL_cocoaopengl.m
+    mac/SDL3/video/cocoa/SDL_cocoaopengles.m
+    mac/SDL3/video/cocoa/SDL_cocoapen.m
+    mac/SDL3/video/cocoa/SDL_cocoashape.m
+    mac/SDL3/video/cocoa/SDL_cocoavideo.m
+    mac/SDL3/video/cocoa/SDL_cocoavulkan.m
+    mac/SDL3/video/cocoa/SDL_cocoawindow.m
+    mac/SDL3/gpu/vulkan/SDL_gpu_vulkan.c
+)
+
 if(PIPEWIRE_FOUND)
 set(LIB_LINAUDIO
   PkgConfig::PIPEWIRE
@@ -949,6 +1001,10 @@ endif(WIN32)
 if(UNIX AND NOT APPLE)
 set(SRC_OS ${SRC_LINUX})
 endif(UNIX AND NOT APPLE)
+
+if(APPLE)
+set(SRC_OS ${SRC_MAC})
+endif(APPLE)
 
 set(LIB_WINDOWS
     Imm32
@@ -971,8 +1027,26 @@ set(LIB_LINUX
     ${LIB_LINAUDIO}
 )
 
-set(LIB_APPLE
+set(LIB_MAC
     PkgConfig::GLEW
+    CURL::libcurl
+    "-framework Cocoa"
+    "-framework IOKit"
+    "-framework CoreFoundation"
+    "-framework CoreAudio"
+    "-framework CoreVideo"
+    "-framework CoreMedia"
+    "-framework Metal"
+    "-framework QuartzCore"
+    "-framework ForceFeedback"
+    "-framework GameController"
+    "-framework AVFoundation"
+    "-framework AudioToolbox"
+    "-framework Security"
+    "-framework Carbon"
+    "-framework UniformTypeIdentifiers"
+    "-framework CoreHaptics"
+    "-framework OpenGL"
 )
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -986,7 +1060,7 @@ set(LIB_OS ${LIB_LINUX})
 endif(UNIX AND NOT APPLE)
 
 if(APPLE)
-set(LIB_OS ${LIB_APPLE})
+set(LIB_OS ${LIB_MAC})
 endif(APPLE)
 
 if(UNIX AND NOT APPLE)
@@ -1004,10 +1078,12 @@ set(SOURCES
 
 add_executable(argonapp ${SOURCES} )
 
+if(NOT APPLE)
 target_precompile_headers(argonapp
     PRIVATE
         common/precompiled.h
 )
+endif(NOT APPLE)
 
 target_link_libraries(argonapp
     PRIVATE
@@ -1026,7 +1102,6 @@ if(UNIX AND NOT APPLE)
 add_compile_definitions(argonapp
     PRIVATE
         "HAVE_STDIO_H"
-        "DEFAULT_VISIBILITY=__attribute__ ((visibility(\"default\")))"
         "HAVE_DBUS_DBUS_H"
         "SDL_VIDEO_DRIVER_X11_SUPPORTS_GENERIC_EVENTS"
         "SDL_SYSTIME_UNIX"
@@ -1078,6 +1153,14 @@ endif(UNIX AND NOT APPLE)
 if(APPLE)
 set_source_files_properties(${SRC_BULLET} PROPERTIES
     COMPILE_OPTIONS "-Wno-error=c++11-narrowing"
+)
+set_source_files_properties(${SRC_MAC} PROPERTIES
+    COMPILE_FLAGS "-fobjc-arc"
+)
+add_compile_definitions(argonapp
+    PRIVATE
+        "SDL_PLATFORM_MACOS"
+        "SDL_VIDEO_OPENGL"
 )
 endif(APPLE)
 

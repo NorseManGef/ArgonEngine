@@ -23,7 +23,7 @@
 #ifndef SDL_coreaudio_h_
 #define SDL_coreaudio_h_
 
-#include "../SDL_sysaudio.h"
+#include "SDL_sysaudio.h"
 
 #ifndef SDL_PLATFORM_IOS
 #define MACOSX_COREAUDIO

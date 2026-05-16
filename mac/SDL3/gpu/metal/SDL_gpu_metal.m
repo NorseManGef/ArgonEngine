@@ -26,7 +26,7 @@
 #include <Metal/Metal.h>
 #include <QuartzCore/CoreAnimation.h>
 
-#include "../SDL_sysgpu.h"
+#include "SDL_sysgpu.h"
 
 // Defines
 

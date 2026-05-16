@@ -30,7 +30,7 @@
 
 #if defined(SDL_PLATFORM_MACOS) || defined(SDL_PLATFORM_IOS)
 // macOS doesn't support sem_getvalue() as of version 10.4
-#include "../generic/SDL_syssem.c"
+#include "generic/SDL_syssem.c"
 #else
 
 struct SDL_Semaphore

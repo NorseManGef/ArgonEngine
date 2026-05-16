@@ -22,12 +22,12 @@
 
 #ifdef SDL_JOYSTICK_IOKIT
 
-#include "../SDL_sysjoystick.h"
-#include "../SDL_joystick_c.h"
+#include "SDL_sysjoystick.h"
+#include "SDL_joystick_c.h"
 #include "SDL_iokitjoystick_c.h"
-#include "../hidapi/SDL_hidapijoystick_c.h"
+#include "hidapi/SDL_hidapijoystick_c.h"
 #include "../../haptic/darwin/SDL_syshaptic_c.h" // For haptic hot plugging
-#include "../usb_ids.h"
+#include "usb_ids.h"
 
 #define SDL_JOYSTICK_RUNLOOP_MODE CFSTR("SDLJoystick")
 
