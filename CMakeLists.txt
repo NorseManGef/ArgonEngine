@@ -1075,6 +1075,12 @@ set_source_files_properties(${SRC_OS} PROPERTIES
 )
 endif(UNIX AND NOT APPLE)
 
+if(APPLE)
+set_source_files_properties(${SRC_BULLET} PROPERTIES
+    COMPILE_OPTIONS "-Wno-error=c++11-narrowing"
+)
+endif(APPLE)
+
 add_custom_command(TARGET argonapp POST_BUILD
     COMMAND "${CMAKE_COMMAND}" -E copy_directory "${PROJECT_SOURCE_DIR}/resources" "$<TARGET_FILE_DIR:argonapp>/resources"
     COMMAND "${CMAKE_COMMAND}" -E copy_directory "${PROJECT_SOURCE_DIR}/shaders" "$<TARGET_FILE_DIR:argonapp>/shaders"
