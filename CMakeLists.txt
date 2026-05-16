@@ -60,9 +60,11 @@ set(INC_SDL
     common/SDL3/tray
     common/SDL3/video
     common/SDL3/video/khronos
+    common/SDL3/sensor
     common/SDL3/time
     common/SDL3/timer
     common/SDL3/joystick
+    common/SDL3/main
     common/SDL3/camera
     common/SDL3/filesystem
     common/SDL3/gpu
@@ -70,6 +72,8 @@ set(INC_SDL
     common/SDL3/power
     common/SDL3/process
     common/SDL3/render
+    common/SDL3/hidapi/hidapi
+    common/SDL3/io
     common/SDL3/build_config
     ${INC_OS}/SDL3
     ${INC_OS}/SDL3/audio
@@ -77,6 +81,7 @@ set(INC_SDL
     ${INC_OS}/SDL3/timer
     ${INC_OS}/SDL3/thread
     ${INC_OS}/SDL3/hidapi
+    ${INC_OS}/SDL3/joystick
     ${INC_OS}/SDL3/video
     ${INC_OS}/SDL3/camera
 )
@@ -1067,10 +1072,6 @@ if(UNIX AND NOT APPLE)
 set(LIB_VULKAN libvulkan.so)
 endif(UNIX AND NOT APPLE)
 
-if(WIN32)
-message(FATAL_ERROR "add vulkan library for win32")
-endif(WIN32)
-
 set(SOURCES
     ${SRC_COMMON}
     ${SRC_OS}
@@ -1097,6 +1098,14 @@ target_compile_definitions(argonapp
         "_UNICODE"
         "UNICODE"
 )
+
+if(WIN32)
+add_compile_definitions(argonapp
+    HAVE_STRUCT_TIMESPEC=1
+    _TIMESPEC_DEFINED=1
+    _WIN32
+)
+endif(WIN32)
 
 if(UNIX AND NOT APPLE)
 add_compile_definitions(argonapp

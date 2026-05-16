@@ -29,14 +29,14 @@
 // this seems to be a bug in mfidl.h, just define this to avoid the problem section.
 #define __IMFVideoProcessorControl3_INTERFACE_DEFINED__
 
-#include "../../core/windows/SDL_windows.h"
+#include "core/windows/SDL_windows.h"
 
 #include <mfapi.h>
 #include <mfidl.h>
 #include <mfreadwrite.h>
 
-#include "../SDL_syscamera.h"
-#include "../SDL_camera_c.h"
+#include "SDL_syscamera.h"
+#include "SDL_camera_c.h"
 
 static const IID SDL_IID_IMFMediaSource = { 0x279a808d, 0xaec7, 0x40c8, { 0x9c, 0x6b, 0xa6, 0xb4, 0x92, 0xc7, 0x8a, 0x66 } };
 static const IID SDL_IID_IMF2DBuffer = { 0x7dc9d5f9, 0x9ed9, 0x44ec, { 0x9b, 0xbf, 0x06, 0x00, 0xbb, 0x58, 0x9f, 0xbb } };

@@ -3,8 +3,8 @@
 	#define __USE_MINGW_ANSI_STDIO 1
 #endif
 
-#include <hid.c>
-#include <../windows/hidapi_descriptor_reconstruct.h>
+#include <windows/hid.c>
+#include <windows/hidapi_descriptor_reconstruct.h>
 
 #include <hidapi.h>
 

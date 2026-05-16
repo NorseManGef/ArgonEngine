@@ -21,8 +21,8 @@
 
 #include "SDL_internal.h"
 
-#include "../SDL_tray_utils.h"
-#include "../../core/windows/SDL_windows.h"
+#include "SDL_tray_utils.h"
+#include "core/windows/SDL_windows.h"
 
 #include <windowsx.h>
 #include <shellapi.h>

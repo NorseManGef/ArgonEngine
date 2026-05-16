@@ -27,7 +27,7 @@
 extern "C" {
 #endif
 
-#include "../SDL_sysaudio.h"
+#include "SDL_sysaudio.h"
 
 struct SDL_PrivateAudioData
 {

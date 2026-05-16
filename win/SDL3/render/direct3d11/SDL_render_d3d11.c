@@ -23,11 +23,11 @@
 #ifdef SDL_VIDEO_RENDER_D3D11
 
 #define COBJMACROS
-#include "../../core/windows/SDL_windows.h"
-#include "../../video/windows/SDL_windowswindow.h"
-#include "../SDL_sysrender.h"
-#include "../SDL_d3dmath.h"
-#include "../../video/SDL_pixels_c.h"
+#include "core/windows/SDL_windows.h"
+#include "video/windows/SDL_windowswindow.h"
+#include "SDL_sysrender.h"
+#include "SDL_d3dmath.h"
+#include "video/SDL_pixels_c.h"
 
 #include <d3d11_1.h>
 #ifdef HAVE_DXGI1_5_H

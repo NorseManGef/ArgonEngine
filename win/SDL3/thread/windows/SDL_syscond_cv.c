@@ -20,7 +20,7 @@
 */
 #include "SDL_internal.h"
 
-#include "../generic/SDL_syscond_c.h"
+#include "generic/SDL_syscond_c.h"
 #include "SDL_sysmutex_c.h"
 
 typedef SDL_Condition *(*pfnSDL_CreateCondition)(void);

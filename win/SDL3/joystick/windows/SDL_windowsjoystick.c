@@ -32,10 +32,10 @@
  * with polled devices, and it's fine to call IDirectInputDevice8_GetDeviceData and
  * let it return 0 events. */
 
-#include "../SDL_sysjoystick.h"
-#include "../../thread/SDL_systhread.h"
-#include "../../core/windows/SDL_windows.h"
-#include "../../core/windows/SDL_hid.h"
+#include "SDL_sysjoystick.h"
+#include "thread/SDL_systhread.h"
+#include "core/windows/SDL_windows.h"
+#include "core/windows/SDL_hid.h"
 #if !defined(SDL_PLATFORM_XBOXONE) && !defined(SDL_PLATFORM_XBOXSERIES)
 #include <dbt.h>
 #endif

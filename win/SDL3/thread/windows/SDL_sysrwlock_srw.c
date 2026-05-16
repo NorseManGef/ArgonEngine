@@ -141,7 +141,7 @@ static const SDL_rwlock_impl_t SDL_rwlock_impl_srw = {
 };
 
 
-#include "../generic/SDL_sysrwlock_c.h"
+#include "generic/SDL_sysrwlock_c.h"
 
 // Generic rwlock implementation using SDL_Mutex, SDL_Condition, and SDL_AtomicInt
 static const SDL_rwlock_impl_t SDL_rwlock_impl_generic = {

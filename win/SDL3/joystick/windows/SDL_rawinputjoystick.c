@@ -33,11 +33,11 @@
 
 #ifdef SDL_JOYSTICK_RAWINPUT
 
-#include "../usb_ids.h"
-#include "../SDL_sysjoystick.h"
-#include "../../core/windows/SDL_windows.h"
-#include "../../core/windows/SDL_hid.h"
-#include "../hidapi/SDL_hidapijoystick_c.h"
+#include "usb_ids.h"
+#include "SDL_sysjoystick.h"
+#include "core/windows/SDL_windows.h"
+#include "core/windows/SDL_hid.h"
+#include "hidapi/SDL_hidapijoystick_c.h"
 
 /* SDL_JOYSTICK_RAWINPUT_XINPUT is disabled because using XInput at the same time as
    raw input will turn off the Xbox Series X controller when it is connected via the

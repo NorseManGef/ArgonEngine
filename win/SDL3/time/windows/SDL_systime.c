@@ -22,9 +22,9 @@
 
 #ifdef SDL_TIME_WINDOWS
 
-#include "../../core/windows/SDL_windows.h"
+#include "core/windows/SDL_windows.h"
 
-#include "../SDL_time_c.h"
+#include "SDL_time_c.h"
 
 #define NS_PER_WINDOWS_TICK   100ULL
 #define WINDOWS_TICK          10000000ULL

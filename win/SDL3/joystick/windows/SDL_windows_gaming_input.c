@@ -23,10 +23,10 @@
 #ifdef SDL_JOYSTICK_WGI
 
 #include "SDL_sysjoystick.h"
-#include "../hidapi/SDL_hidapijoystick_c.h"
+#include "hidapi/SDL_hidapijoystick_c.h"
 #include "SDL_rawinputjoystick_c.h"
 
-#include "../../core/windows/SDL_windows.h"
+#include "core/windows/SDL_windows.h"
 #define COBJMACROS
 #include "windows.gaming.input.h"
 #include <cfgmgr32.h>

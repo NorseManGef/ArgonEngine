@@ -23,9 +23,9 @@
 
 #ifdef SDL_THREAD_WINDOWS
 
-#include "../../core/windows/SDL_windows.h"
+#include "core/windows/SDL_windows.h"
 
-#include "../SDL_thread_c.h"
+#include "SDL_thread_c.h"
 
 static DWORD thread_local_storage = TLS_OUT_OF_INDEXES;
 static bool generic_local_storage = false;

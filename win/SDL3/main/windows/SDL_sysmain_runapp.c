@@ -22,8 +22,8 @@
 
 #ifdef SDL_PLATFORM_WIN32
 
-#include "../../core/windows/SDL_windows.h"
-#include "../SDL_main_callbacks.h"
+#include "core/windows/SDL_windows.h"
+#include "SDL_main_callbacks.h"
 
 /* Win32-specific SDL_RunApp(), which does most of the SDL_main work,
   based on SDL_windows_main.c, placed in the public domain by Sam Lantinga  4/13/98 */
