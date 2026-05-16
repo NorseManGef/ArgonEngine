@@ -28,7 +28,9 @@
 #endif
 
 // this checks for HAVE_DBUS_DBUS_H internally.
+#if defined(HAVE_DBUS_H)
 #include "core/linux/SDL_dbus.h"
+#endif
 
 #if defined(SDL_PLATFORM_UNIX) && !defined(SDL_PLATFORM_ANDROID)
 #include "core/unix/SDL_gtk.h"
