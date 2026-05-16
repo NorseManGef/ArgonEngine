@@ -453,8 +453,10 @@ namespace Argon{
         //SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
         //SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES,1);
         //SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+        #ifndef OPENGL_AUTO_VERSIONING
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
+        #endif
 
         SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 
@@ -476,6 +478,7 @@ SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, SDL_WINDOW_OPE
         //SDL_GLContext glcontext = SDL_GL_CreateContext(win);
 
         context=SDL_GL_CreateContext(win);
+        printf("%s\n", glGetString(GL_VERSION));
         if(!context) {
             std::cout << "SDL_GL_CreateContext failed: " << SDL_GetError() << std::endl;
             terminate_engine();

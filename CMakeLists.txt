@@ -1161,6 +1161,7 @@ add_compile_definitions(argonapp
     PRIVATE
         "SDL_PLATFORM_MACOS"
         "SDL_VIDEO_OPENGL"
+        "OPENGL_AUTO_VERSIONING"
 )
 endif(APPLE)
 
