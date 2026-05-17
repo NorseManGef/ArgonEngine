@@ -2,6 +2,7 @@
 
 #include "ArgonInit.h"
 #include "SDL3/SDL_video.h"
+#include "SDL_events.h"
 #define  GLFW_USE_CHDIR 1
 #include <stdlib.h>
 #include "Utility.h"
@@ -412,7 +413,7 @@ namespace Argon{
     void init_audio(){
         SDL_AudioSpec spec = { 
             SDL_AUDIO_F32, 
-            2, 
+            Argon::kAudioNumberOfChannels, 
             48000
         };
         SDL_AudioStream *stream = SDL_OpenAudioDeviceStream(
@@ -623,6 +624,11 @@ SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, SDL_WINDOW_OPE
             case SDL_EVENT_WINDOW_FOCUS_LOST:
                 Argon::Input::push_update(kInputIDWindowInactive, 1);
 
+                break;
+            case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
+                // TODO: Create an API to terminate conditionally based on 
+                //       further user input.
+                Argon::terminate_engine();
                 break;
 
             default:
