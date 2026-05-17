@@ -626,8 +626,6 @@ SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, SDL_WINDOW_OPE
 
                 break;
             case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
-                // TODO: Create an API to terminate conditionally based on 
-                //       further user input.
                 Argon::terminate_engine();
                 break;
 
