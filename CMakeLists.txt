@@ -719,7 +719,6 @@ set(SRC_LIBUSB
     common/libusb/hotplug.c
     common/libusb/descriptor.c
     common/libusb/io.c
-    #common/libusb/null_usb.c
     common/libusb/strerror.c
     common/libusb/sync.c
 )
@@ -832,11 +831,12 @@ set(SRC_WINDOWS
     win/SDL3/video/windows/SDL_windowsvideo.c
     win/SDL3/video/windows/SDL_windowsvulkan.c
     win/SDL3/video/windows/SDL_windowswindow.c
-    win/libusb/events_windows.c
-    win/libusb/threads_windows.c
+    win/libusb/os/events_windows.c
+    win/libusb/os/threads_windows.c
     win/libusb/windows_common.c
     win/libusb/windows_usbdk.c
     win/libusb/windows_winusb.c
+    win/libusb/windows_hotplug.c
 )
 
 set(SRC_LINUX
@@ -927,17 +927,17 @@ set(SRC_LINUX
     linux/SDL3/video/x11/SDL_x11xtest.c
     linux/SDL3/video/x11/edid-parse.c
     linux/SDL3/video/x11/xsettings-client.c
-    linux/libusb/events_posix.c
+    linux/libusb/os/events_posix.c
     linux/libusb/linux_netlink.c
     linux/libusb/linux_udev.c
     linux/libusb/linux_usbfs.c
-    linux/libusb/threads_posix.c
+    linux/libusb/os/threads_posix.c
 )
 
 set(SRC_MAC
-    mac/libusb/events_posix.c
-    mac/libusb/threads_posix.c
-    mac/libusb/os/darwin_usb.c
+    mac/libusb/os/events_posix.c
+    mac/libusb/os/threads_posix.c
+    mac/libusb/darwin_usb.c
     mac/SDL3/audio/coreaudio/SDL_coreaudio.m
     mac/SDL3/camera/coremedia/SDL_camera_coremedia.m
     mac/SDL3/core/unix/SDL_appid.c
@@ -1067,10 +1067,6 @@ if(UNIX AND NOT APPLE)
 set(LIB_VULKAN libvulkan.so)
 endif(UNIX AND NOT APPLE)
 
-if(WIN32)
-message(FATAL_ERROR "add vulkan library for win32")
-endif(WIN32)
-
 set(SOURCES
     ${SRC_COMMON}
     ${SRC_OS}
@@ -1097,6 +1093,16 @@ target_compile_definitions(argonapp
         "_UNICODE"
         "UNICODE"
 )
+
+if(WIN32)
+add_compile_definitions(argonapp
+    HAVE_STRUCT_TIMESPEC=1
+    _TIMESPEC_DEFINED=1
+    LIBUSB_WINDOWS_HOTPLUG
+    DEFAULT_VISIBILITY=
+    PLATFORM_WINDOWS=1
+    )
+endif(WIN32)
 
 if(UNIX AND NOT APPLE)
 add_compile_definitions(argonapp
