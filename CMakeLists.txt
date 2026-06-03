@@ -2,30 +2,8 @@ cmake_minimum_required(VERSION 3.20)
 project(argonengine)
 
 find_package(OpenGL REQUIRED)
-if(UNIX AND NOT APPLE) 
-find_package(PkgConfig REQUIRED) 
-pkg_check_modules(DBUS REQUIRED IMPORTED_TARGET dbus-1)
-pkg_check_modules(UDEV REQUIRED IMPORTED_TARGET libudev)
-pkg_check_modules(EVDEV REQUIRED IMPORTED_TARGET libevdev)
-pkg_check_modules(PIPEWIRE QUIET IMPORTED_TARGET libpipewire-0.3)
-if(NOT PIPEWIRE_FOUND)
-  pkg_check_modules(PULSE REQUIRED libpulse-simple)
-endif(NOT PIPEWIRE_FOUND)
-pkg_check_modules(XKBCOMMON REQUIRED IMPORTED_TARGET xkbcommon)
-pkg_check_modules(WAYLAND QUIET IMPORTED_TARGET wayland-client)
-if(WAYLAND_FOUND)
-  pkg_check_modules(WAYLAND_SCANNER REQUIRED IMPORTED_TARGET wayland-scanner)
-  pkg_check_modules(WAYLAND_EGL REQUIRED IMPORTED_TARGET wayland-egl)
-  pkg_check_modules(WAYLAND_CURSOR REQUIRED IMPORTED_TARGET wayland-cursor)
-endif(WAYLAND_FOUND)
-if(NOT WAYLAND_FOUND)
-pkg_check_modules(X11 REQUIRED x11)
-endif(NOT WAYLAND_FOUND)
-endif(UNIX AND NOT APPLE)
-
 if(APPLE)
 find_package(CURL REQUIRED)
-find_package(PkgConfig REQUIRED)
 pkg_check_modules(GLEW REQUIRED IMPORTED_TARGET glew)  
 endif(APPLE)
 
@@ -47,7 +25,6 @@ set(INC_OS mac)
 endif(APPLE)
 
 set(INC_SDL
-    ${INC_OS}/SDL3/build_config #must be above common/SDL3/build_config
     common/SDL3
     common/SDL3/audio
     common/SDL3/dynapi
@@ -99,6 +76,7 @@ include_directories(
     ${INC_STB}
     ${GENERATED_DIR}
 )
+
 
 set(SRC_ARGONENGINE
     common/ArgonEngine/ArgonInit.cpp
@@ -532,11 +510,11 @@ set(SRC_SDL3
     common/SDL3/events/SDL_windowevents.c
     common/SDL3/events/imKStoUCS.c
     common/SDL3/filesystem/SDL_filesystem.c
-    common/SDL3/filesystem/dummy/SDL_sysfilesystem.c
-    common/SDL3/filesystem/dummy/SDL_sysfsops.c
+    #common/SDL3/filesystem/dummy/SDL_sysfilesystem.c
+    #common/SDL3/filesystem/dummy/SDL_sysfsops.c
     common/SDL3/gpu/SDL_gpu.c
     common/SDL3/haptic/SDL_haptic.c
-    common/SDL3/haptic/dummy/SDL_syshaptic.c
+    #common/SDL3/haptic/dummy/SDL_syshaptic.c
     common/SDL3/haptic/hidapi/SDL_hidapihaptic.c
     common/SDL3/haptic/hidapi/SDL_hidapihaptic_lg4ff.c
     common/SDL3/hidapi/SDL_hidapi.c
@@ -602,7 +580,7 @@ set(SRC_SDL3
     common/SDL3/libm/s_scalbn.c
     common/SDL3/libm/s_sin.c
     common/SDL3/libm/s_tan.c
-    common/SDL3/loadso/dummy/SDL_sysloadso.c
+    #common/SDL3/loadso/dummy/SDL_sysloadso.c
     common/SDL3/locale/SDL_locale.c
     # common/SDL3/locale/dummy/SDL_syslocale.c
     common/SDL3/main/SDL_main_callbacks.c
@@ -613,7 +591,7 @@ set(SRC_SDL3
     #common/SDL3/misc/dummy/SDL_sysurl.c
     common/SDL3/power/SDL_power.c
     common/SDL3/process/SDL_process.c
-    common/SDL3/process/dummy/SDL_dummyprocess.c
+    #common/SDL3/process/dummy/SDL_dummyprocess.c
     common/SDL3/render/SDL_render.c
     common/SDL3/render/SDL_render_unsupported.c
     common/SDL3/render/SDL_yuv_sw.c
@@ -710,9 +688,9 @@ set(SRC_SDL3
     common/SDL3/video/yuv2rgb/yuv_rgb_std.c
 )
 
-if(WAYLAND_FOUND)
-include(linux/cmake/waylandProtocolGenerator.cmake)
-endif(WAYLAND_FOUND)
+if(UNIX AND NOT APPLE)
+  include(linux/cmake/defines.cmake)
+endif(UNIX AND NOT APPLE)
 
 set(SRC_LIBUSB
     common/libusb/core.c
@@ -984,16 +962,6 @@ set(SRC_MAC
     mac/SDL3/gpu/vulkan/SDL_gpu_vulkan.c
 )
 
-if(PIPEWIRE_FOUND)
-set(LIB_LINAUDIO
-  PkgConfig::PIPEWIRE
-)
-else()
-set(LIB_LINAUDIO
-  PkgConfig::PULSEAUDIO
-)
-endif(PIPEWIRE_FOUND)
-
 if(WIN32)
 set(SRC_OS ${SRC_WINDOWS})
 endif(WIN32)
@@ -1012,19 +980,10 @@ set(LIB_WINDOWS
     WinMM
 )
 
-set(LIB_LINUX
-    pthread
+list(APPEND LIB_LINUX
     m
     dl
     rt
-    PkgConfig::WAYLAND
-    PkgConfig::WAYLAND_EGL
-    PkgConfig::WAYLAND_CURSOR
-    PkgConfig::DBUS
-    PkgConfig::EVDEV
-    PkgConfig::UDEV
-    PkgConfig::XKBCOMMON
-    ${LIB_LINAUDIO}
 )
 
 set(LIB_MAC
@@ -1098,24 +1057,12 @@ target_compile_definitions(argonapp
         "UNICODE"
 )
 
+
 if(UNIX AND NOT APPLE)
 add_compile_definitions(argonapp
     PRIVATE
-        "HAVE_STDIO_H"
-        "HAVE_DBUS_DBUS_H"
-        "SDL_VIDEO_DRIVER_X11_SUPPORTS_GENERIC_EVENTS"
-        "SDL_SYSTIME_UNIX"
-        "SDL_SYSTIMER_UNIX"
-        "SDL_TIMER_UNIX"
-        "SDL_TIME_UNIX"
-        "_GNU_SOURCE"
-        "HAVE_GETRESUID"
-        "HAVE_GETRESGID"
-        "HAVE_CLOCK_GETTIME"
-        "HAVE_SIGTIMEDWAIT"
-        "SDL_JOYSTICK_LINUX"
-        "SDL_INPUT_LINUXEV"
-        "HAVE_LINUX_INPUT_H"
+    ${CONSTANT_DEFINES}
+    ${CONDITIONAL_DEFINES}
 )
 
 if(WAYLAND_FOUND)
@@ -1146,7 +1093,10 @@ set_source_files_properties(${SRC_SDL3} PROPERTIES
                     #"-w" commented out until port is complete
 )
 set_source_files_properties(${SRC_OS} PROPERTIES
-    COMPILE_OPTIONS "-Wno-error=incompatible-pointer-types"
+    COMPILE_OPTIONS "-Wno-error=incompatible-pointer-types;-Wno-error=int-conversion"
+)
+set_source_files_properties(${SRC_LIBUSB} PROPERTIES
+    COMPILE_OPTIONS "-Wno-error=int-conversion"
 )
 endif(UNIX AND NOT APPLE)
 

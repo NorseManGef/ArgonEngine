@@ -23,7 +23,7 @@
 
 #ifdef SDL_CAMERA_DRIVER_PIPEWIRE
 
-#include "../SDL_syscamera.h"
+#include "SDL_syscamera.h"
 
 #ifdef HAVE_DBUS_DBUS_H
 #include "../../core/linux/SDL_dbus.h"
