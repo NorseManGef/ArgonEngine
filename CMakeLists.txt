@@ -9,6 +9,7 @@ endif(APPLE)
 
 set(GENERATED_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated)
 file(MAKE_DIRECTORY ${GENERATED_DIR})
+file(MAKE_DIRECTORY ${GENERATED_DIR}/build_config)
 
 set(CMAKE_BUILD_TYPE Debug)
 
@@ -25,6 +26,7 @@ set(INC_OS mac)
 endif(APPLE)
 
 set(INC_SDL
+    ${GENERATED_DIR}/build_config
     common/SDL3
     common/SDL3/audio
     common/SDL3/dynapi
@@ -690,6 +692,13 @@ set(SRC_SDL3
 
 if(UNIX AND NOT APPLE)
   include(linux/cmake/defines.cmake)
+  configure_file("common/SDL3/build_config/SDL_build_config.h.cmake"
+    "${GENERATED_DIR}/SDL_build_config.h.intermediate")
+  # 2. generate SDL_build_config.h in an build_type-dependent folder (which should be first in the include search path)
+  file(GENERATE
+    OUTPUT "${GENERATED_DIR}/build_config/SDL_build_config.h"
+    INPUT "${GENERATED_DIR}/SDL_build_config.h.intermediate"
+  )
 endif(UNIX AND NOT APPLE)
 
 set(SRC_LIBUSB
@@ -745,7 +754,7 @@ set(SRC_COMMON
     ${SRC_MINICL}
     ${SRC_STB}
     ${SRC_SDL3}
-    ${SRC_LIBUSB}
+#${SRC_LIBUSB}
     ${SRC_VORBIS}
 )
 
@@ -905,11 +914,11 @@ set(SRC_LINUX
     linux/SDL3/video/x11/SDL_x11xtest.c
     linux/SDL3/video/x11/edid-parse.c
     linux/SDL3/video/x11/xsettings-client.c
-    linux/libusb/events_posix.c
-    linux/libusb/linux_netlink.c
-    linux/libusb/linux_udev.c
-    linux/libusb/linux_usbfs.c
-    linux/libusb/threads_posix.c
+#linux/libusb/events_posix.c
+#linux/libusb/linux_netlink.c
+#linux/libusb/linux_udev.c
+#linux/libusb/linux_usbfs.c
+#linux/libusb/threads_posix.c
 )
 
 set(SRC_MAC
@@ -1061,8 +1070,7 @@ target_compile_definitions(argonapp
 if(UNIX AND NOT APPLE)
 add_compile_definitions(argonapp
     PRIVATE
-    ${CONSTANT_DEFINES}
-    ${CONDITIONAL_DEFINES}
+    _GNU_SOURCE
 )
 
 if(WAYLAND_FOUND)
