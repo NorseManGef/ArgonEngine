@@ -753,7 +753,7 @@ set(SRC_COMMON
     ${SRC_MINICL}
     ${SRC_STB}
     ${SRC_SDL3}
-#${SRC_LIBUSB}
+    ${SRC_LIBUSB}
     ${SRC_VORBIS}
 )
 
@@ -1077,6 +1077,8 @@ if(UNIX AND NOT APPLE)
 add_compile_definitions(argonapp
     PRIVATE
         DEFAULT_VISIBILITY=
+        _GNU_SOURCE
+        HAVE_CLOCK_GETTIME
 )
 
 if(WAYLAND_FOUND)
