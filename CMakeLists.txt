@@ -1096,11 +1096,12 @@ target_compile_definitions(argonapp
 
 if(WIN32)
 add_compile_definitions(argonapp
-    HAVE_STRUCT_TIMESPEC=1
-    _TIMESPEC_DEFINED=1
-    LIBUSB_WINDOWS_HOTPLUG
-    DEFAULT_VISIBILITY=
-    PLATFORM_WINDOWS=1
+    PRIVATE
+        HAVE_STRUCT_TIMESPEC=1
+        _TIMESPEC_DEFINED=1
+        LIBUSB_WINDOWS_HOTPLUG
+        DEFAULT_VISIBILITY=
+        PLATFORM_WINDOWS=1
     )
 endif(WIN32)
 
@@ -1122,6 +1123,7 @@ add_compile_definitions(argonapp
         "SDL_JOYSTICK_LINUX"
         "SDL_INPUT_LINUXEV"
         "HAVE_LINUX_INPUT_H"
+        DEFAULT_VISIBILITY=
 )
 
 if(WAYLAND_FOUND)
