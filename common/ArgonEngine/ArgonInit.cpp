@@ -439,6 +439,7 @@ namespace Argon{
         if( !SDL_SetHint( SDL_HINT_RENDER_VSYNC, "1" ) )
         {
             printf( "Warning: VSync not enabled!" );
+            std::cout << SDL_GetError() << std::endl;
         }
 
         InitVirtual(organization_name, app_name);
@@ -499,9 +500,12 @@ SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, SDL_WINDOW_OPE
         };
 #endif
         //SDL_AddEventWatch(handle_event, NULL);
-        if (!SDL_GL_SetSwapInterval(-1)){}
-        else if (!SDL_GL_SetSwapInterval(1)){}
-        else std::cout << "Could not enable VSync.\n";
+        if (SDL_GL_SetSwapInterval(-1)){}
+        else if (SDL_GL_SetSwapInterval(1)){}
+        else {
+            std::cout << "Could not enable VSync.\n";
+            std::cout << SDL_GetError() << std::endl;
+        }
 
         SDL_SetEventFilter(handle_event, NULL);
 
@@ -604,6 +608,7 @@ SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, SDL_WINDOW_OPE
                 Argon::Input::push_update(kInputIDWindowMinimized, 1);
                 break;
 
+            case SDL_EVENT_WINDOW_MAXIMIZED:
             case SDL_EVENT_WINDOW_RESTORED:
                 Argon::Input::push_update(kInputIDWindowMinimized, 0);
                 break;
@@ -627,6 +632,10 @@ SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, SDL_WINDOW_OPE
                 break;
             case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
                 Argon::terminate_engine();
+                break;
+
+            case SDL_EVENT_WINDOW_DISPLAY_CHANGED:
+                //Do nothing
                 break;
 
             default:
