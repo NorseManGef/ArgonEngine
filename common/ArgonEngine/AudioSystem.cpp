@@ -83,8 +83,7 @@ void Resample::render(float * buffer){
         }
         int index = sample_pos;
         float v= interopolate(index?sample_buffer[index-1]:last,sample_buffer[index],sample_pos-index);
-        low_pass = low_pass*0.3+v*0.7;
-        (*buffer++)+=low_pass;
+        (*buffer++)+=v;
         sample_pos+=rate;
     }
 }
