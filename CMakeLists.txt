@@ -15,14 +15,23 @@ set(CMAKE_BUILD_TYPE Debug)
 
 if(WIN32)
 set(INC_OS win)
+set(INC_OS_ADD
+    win/SDL3/hidapi/windows
+)
 endif(WIN32)
 
 if(UNIX AND NOT APPLE)
 set(INC_OS linux)
+set(INC_OS_ADD
+    # nothing
+)
 endif(UNIX AND NOT APPLE)
 
 if(APPLE)
 set(INC_OS mac)
+set(INC_OS_ADD
+    # nothing
+)
 endif(APPLE)
 
 set(INC_SDL
@@ -49,6 +58,10 @@ set(INC_SDL
     common/SDL3/power
     common/SDL3/process
     common/SDL3/render
+    common/SDL3/sensor
+    common/SDL3/main
+    common/SDL3/io
+    common/SDL3/hidapi/hidapi
     common/SDL3/build_config
     ${INC_OS}/SDL3
     ${INC_OS}/SDL3/audio
@@ -56,6 +69,8 @@ set(INC_SDL
     ${INC_OS}/SDL3/timer
     ${INC_OS}/SDL3/thread
     ${INC_OS}/SDL3/hidapi
+    ${INC_OS}/SDL3/hidapi/${INC_OS}
+    ${INC_OS}/SDL3/joystick
     ${INC_OS}/SDL3/video
     ${INC_OS}/SDL3/camera
 )
@@ -73,6 +88,7 @@ include_directories(
     app
     ${OPENGL_INCLUDE_DIR}
     ${INC_OS}
+    ${INC_OS_ADD}
     ${INC_SDL}
     ${INC_LIBUSB}
     ${INC_STB}
@@ -772,16 +788,18 @@ set(SRC_WINDOWS
     win/SDL3/gpu/d3d12/SDL_gpu_d3d12.c
     win/SDL3/haptic/windows/SDL_dinputhaptic.c
     win/SDL3/haptic/windows/SDL_windowshaptic.c
-    win/SDL3/hidapi/windows/hid.c
+    #win/SDL3/hidapi/windows/hid.c
     win/SDL3/hidapi/windows/hidapi_descriptor_reconstruct.c
-    win/SDL3/hidapi/windows/pp_data_dump/pp_data_dump.c
-    win/SDL3/hidapi/windows/test/hid_report_reconstructor_test.c
+    #win/SDL3/hidapi/windows/pp_data_dump/pp_data_dump.c
+    #win/SDL3/hidapi/windows/test/hid_report_reconstructor_test.c
     win/SDL3/io/windows/SDL_asyncio_windows_ioring.c
     win/SDL3/joystick/windows/SDL_dinputjoystick.c
     win/SDL3/joystick/windows/SDL_rawinputjoystick.c
     win/SDL3/joystick/windows/SDL_windows_gaming_input.c
     win/SDL3/joystick/windows/SDL_windowsjoystick.c
     win/SDL3/joystick/windows/SDL_xinputjoystick.c
+    win/SDL3/joystick/gdk/SDL_gameinputjoystick.cpp
+    win/SDL3/core/windows/SDL_gameinput.cpp
     win/SDL3/loadso/windows/SDL_sysloadso.c
     win/SDL3/locale/windows/SDL_syslocale.c
     win/SDL3/main/windows/SDL_sysmain_runapp.c
@@ -1070,6 +1088,10 @@ add_compile_definitions(argonapp
         LIBUSB_WINDOWS_HOTPLUG
         DEFAULT_VISIBILITY=
         PLATFORM_WINDOWS=1
+        SDL_STATIC_LIB
+        SDL_MAIN_USE_CALLBACKS
+        SDL_MAIN_NOIMPL
+        SDL_AUDIO_DRIVER_WASAPI
     )
 endif(WIN32)
 

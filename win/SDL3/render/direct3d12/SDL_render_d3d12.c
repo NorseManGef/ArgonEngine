@@ -27,11 +27,11 @@
 #define SDL_D3D12_MAX_NUM_TEXTURES   16384
 #define SDL_D3D12_NUM_UPLOAD_BUFFERS 32
 
-#include "../../core/windows/SDL_windows.h"
-#include "../../video/windows/SDL_windowswindow.h"
-#include "../SDL_sysrender.h"
-#include "../SDL_d3dmath.h"
-#include "../../video/directx/SDL_d3d12.h"
+#include "core/windows/SDL_windows.h"
+#include "video/windows/SDL_windowswindow.h"
+#include "SDL_sysrender.h"
+#include "SDL_d3dmath.h"
+#include "video/directx/SDL_d3d12.h"
 
 #if defined(SDL_PLATFORM_XBOXONE) || defined(SDL_PLATFORM_XBOXSERIES)
 #include "SDL_render_d3d12_xbox.h"

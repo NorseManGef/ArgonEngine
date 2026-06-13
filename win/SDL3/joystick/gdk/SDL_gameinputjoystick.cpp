@@ -22,10 +22,10 @@
 
 #ifdef SDL_JOYSTICK_GAMEINPUT
 
-#include "../SDL_sysjoystick.h"
-#include "../usb_ids.h"
-#include "../../core/windows/SDL_windows.h"
-#include "../../core/windows/SDL_gameinput.h"
+#include "SDL_sysjoystick.h"
+#include "usb_ids.h"
+#include "core/windows/SDL_windows.h"
+#include "core/windows/SDL_gameinput.h"
 
 // Default value for SDL_HINT_JOYSTICK_GAMEINPUT
 #if defined(SDL_PLATFORM_GDK)

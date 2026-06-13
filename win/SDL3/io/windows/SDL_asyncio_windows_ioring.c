@@ -24,11 +24,11 @@
 // fails for some other reason. IoRing was introduced in Windows 11.
 
 #include "SDL_internal.h"
-#include "../SDL_sysasyncio.h"
+#include "SDL_sysasyncio.h"
 
 #ifdef HAVE_IORINGAPI_H
 
-#include "../../core/windows/SDL_windows.h"
+#include "core/windows/SDL_windows.h"
 #include <ioringapi.h>
 
 // Don't know what the lowest usable version is, but this seems safe.
