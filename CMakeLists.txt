@@ -23,7 +23,8 @@ endif(WIN32)
 if(UNIX AND NOT APPLE)
 set(INC_OS linux)
 set(INC_OS_ADD
-    # nothing
+    # for SDL
+    ${GENERATED_DIR}/build_config
 )
 endif(UNIX AND NOT APPLE)
 
@@ -35,7 +36,6 @@ set(INC_OS_ADD
 endif(APPLE)
 
 set(INC_SDL
-    ${GENERATED_DIR}/build_config
     common/SDL3
     common/SDL3/audio
     common/SDL3/dynapi
@@ -814,6 +814,8 @@ set(SRC_WINDOWS
     win/SDL3/render/direct3d12/SDL_shaders_d3d12.c
     win/SDL3/sensor/windows/SDL_windowssensor.c
     win/SDL3/thread/windows/SDL_syscond_cv.c
+    common/SDL3/thread/generic/SDL_sysrwlock.c
+    common/SDL3/thread/generic/SDL_syscond.c
     win/SDL3/thread/windows/SDL_sysmutex.c
     win/SDL3/thread/windows/SDL_sysrwlock_srw.c
     win/SDL3/thread/windows/SDL_syssem.c
@@ -836,6 +838,7 @@ set(SRC_WINDOWS
     win/SDL3/video/windows/SDL_windowsvideo.c
     win/SDL3/video/windows/SDL_windowsvulkan.c
     win/SDL3/video/windows/SDL_windowswindow.c
+    win/SDL3/video/windows/SDL_windowsgameinput.cpp
     win/libusb/os/events_windows.c
     win/libusb/os/threads_windows.c
     win/libusb/windows_common.c
@@ -1088,10 +1091,11 @@ add_compile_definitions(argonapp
         LIBUSB_WINDOWS_HOTPLUG
         DEFAULT_VISIBILITY=
         PLATFORM_WINDOWS=1
+        SDL_PLATFORM_WIN32
         SDL_STATIC_LIB
         SDL_MAIN_USE_CALLBACKS
         SDL_MAIN_NOIMPL
-        SDL_AUDIO_DRIVER_WASAPI
+        #SDL_AUDIO_DRIVER_WASAPI
     )
 endif(WIN32)
 
