@@ -22,12 +22,12 @@
 
 #ifdef SDL_VIDEO_RENDER_D3D
 
-#include "../../core/windows/SDL_windows.h"
+#include "core/windows/SDL_windows.h"
 
-#include "../SDL_sysrender.h"
-#include "../SDL_d3dmath.h"
-#include "../../video/windows/SDL_windowsvideo.h"
-#include "../../video/SDL_pixels_c.h"
+#include "SDL_sysrender.h"
+#include "SDL_d3dmath.h"
+#include "video/windows/SDL_windowsvideo.h"
+#include "video/SDL_pixels_c.h"
 
 #define D3D_DEBUG_INFO
 #include <d3d9.h>

@@ -81,7 +81,7 @@ typedef unsigned int uintptr_t;
 
 #define HAVE_DDRAW_H 1
 #define HAVE_DINPUT_H 1
-#define HAVE_DSOUND_H 1
+//#define HAVE_DSOUND_H 1
 #define HAVE_DXGI_H 1
 #define HAVE_XINPUT_H 1
 #if defined(_WIN32_MAXVER) && _WIN32_MAXVER >= 0x0A00  /* Windows 10 SDK */
@@ -219,7 +219,7 @@ typedef unsigned int uintptr_t;
 #if defined(HAVE_MMDEVICEAPI_H) && defined(HAVE_AUDIOCLIENT_H)
 #define SDL_AUDIO_DRIVER_WASAPI 1
 #endif
-#define SDL_AUDIO_DRIVER_DSOUND 1
+//#define SDL_AUDIO_DRIVER_DSOUND 1
 #define SDL_AUDIO_DRIVER_DISK 1
 #define SDL_AUDIO_DRIVER_DUMMY 1
 

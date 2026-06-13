@@ -26,8 +26,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 // System dependent filesystem routines
 
-#include "../../core/windows/SDL_windows.h"
-#include "../SDL_sysfilesystem.h"
+#include "core/windows/SDL_windows.h"
+#include "SDL_sysfilesystem.h"
 
 #ifndef COPY_FILE_NO_BUFFERING
 #define COPY_FILE_NO_BUFFERING 0x00001000

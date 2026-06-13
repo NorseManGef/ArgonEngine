@@ -20,13 +20,13 @@
 */
 #include "SDL_internal.h"
 
-#include "../SDL_syshaptic.h"
+#include "SDL_syshaptic.h"
 
 #ifdef SDL_HAPTIC_DINPUT
 
 #include "SDL_windowshaptic_c.h"
 #include "SDL_dinputhaptic_c.h"
-#include "../../joystick/windows/SDL_windowsjoystick_c.h"
+#include "joystick/windows/SDL_windowsjoystick_c.h"
 
 /*
  * External stuff.

@@ -15,18 +15,27 @@ set(CMAKE_BUILD_TYPE Debug)
 
 if(WIN32)
 set(INC_OS win)
+set(INC_OS_ADD
+    win/SDL3/hidapi/windows
+)
 endif(WIN32)
 
 if(UNIX AND NOT APPLE)
 set(INC_OS linux)
+set(INC_OS_ADD
+    # for SDL
+    ${GENERATED_DIR}/build_config
+)
 endif(UNIX AND NOT APPLE)
 
 if(APPLE)
 set(INC_OS mac)
+set(INC_OS_ADD
+    # nothing
+)
 endif(APPLE)
 
 set(INC_SDL
-    ${GENERATED_DIR}/build_config
     common/SDL3
     common/SDL3/audio
     common/SDL3/dynapi
@@ -49,6 +58,10 @@ set(INC_SDL
     common/SDL3/power
     common/SDL3/process
     common/SDL3/render
+    common/SDL3/sensor
+    common/SDL3/main
+    common/SDL3/io
+    common/SDL3/hidapi/hidapi
     common/SDL3/build_config
     ${INC_OS}/SDL3
     ${INC_OS}/SDL3/audio
@@ -56,6 +69,8 @@ set(INC_SDL
     ${INC_OS}/SDL3/timer
     ${INC_OS}/SDL3/thread
     ${INC_OS}/SDL3/hidapi
+    ${INC_OS}/SDL3/hidapi/${INC_OS}
+    ${INC_OS}/SDL3/joystick
     ${INC_OS}/SDL3/video
     ${INC_OS}/SDL3/camera
 )
@@ -73,6 +88,7 @@ include_directories(
     app
     ${OPENGL_INCLUDE_DIR}
     ${INC_OS}
+    ${INC_OS_ADD}
     ${INC_SDL}
     ${INC_LIBUSB}
     ${INC_STB}
@@ -515,6 +531,7 @@ set(SRC_SDL3
     #common/SDL3/filesystem/dummy/SDL_sysfilesystem.c
     #common/SDL3/filesystem/dummy/SDL_sysfsops.c
     common/SDL3/gpu/SDL_gpu.c
+    common/SDL3/gpu/vulkan/SDL_gpu_vulkan.c
     common/SDL3/haptic/SDL_haptic.c
     #common/SDL3/haptic/dummy/SDL_syshaptic.c
     common/SDL3/haptic/hidapi/SDL_hidapihaptic.c
@@ -611,6 +628,8 @@ set(SRC_SDL3
     common/SDL3/render/software/SDL_drawpoint.c
     common/SDL3/render/software/SDL_render_sw.c
     common/SDL3/render/software/SDL_triangle.c
+    common/SDL3/render/vulkan/SDL_render_vulkan.c
+    common/SDL3/render/vulkan/SDL_shaders_vulkan.c
     common/SDL3/sensor/SDL_sensor.c
     common/SDL3/sensor/dummy/SDL_dummysensor.c
     common/SDL3/stdlib/SDL_crc16.c
@@ -772,16 +791,18 @@ set(SRC_WINDOWS
     win/SDL3/gpu/d3d12/SDL_gpu_d3d12.c
     win/SDL3/haptic/windows/SDL_dinputhaptic.c
     win/SDL3/haptic/windows/SDL_windowshaptic.c
-    win/SDL3/hidapi/windows/hid.c
+    #win/SDL3/hidapi/windows/hid.c
     win/SDL3/hidapi/windows/hidapi_descriptor_reconstruct.c
-    win/SDL3/hidapi/windows/pp_data_dump/pp_data_dump.c
-    win/SDL3/hidapi/windows/test/hid_report_reconstructor_test.c
+    #win/SDL3/hidapi/windows/pp_data_dump/pp_data_dump.c
+    #win/SDL3/hidapi/windows/test/hid_report_reconstructor_test.c
     win/SDL3/io/windows/SDL_asyncio_windows_ioring.c
     win/SDL3/joystick/windows/SDL_dinputjoystick.c
     win/SDL3/joystick/windows/SDL_rawinputjoystick.c
     win/SDL3/joystick/windows/SDL_windows_gaming_input.c
     win/SDL3/joystick/windows/SDL_windowsjoystick.c
     win/SDL3/joystick/windows/SDL_xinputjoystick.c
+    win/SDL3/joystick/gdk/SDL_gameinputjoystick.cpp
+    win/SDL3/core/windows/SDL_gameinput.cpp
     win/SDL3/loadso/windows/SDL_sysloadso.c
     win/SDL3/locale/windows/SDL_syslocale.c
     win/SDL3/main/windows/SDL_sysmain_runapp.c
@@ -796,6 +817,8 @@ set(SRC_WINDOWS
     win/SDL3/render/direct3d12/SDL_shaders_d3d12.c
     win/SDL3/sensor/windows/SDL_windowssensor.c
     win/SDL3/thread/windows/SDL_syscond_cv.c
+    common/SDL3/thread/generic/SDL_sysrwlock.c
+    common/SDL3/thread/generic/SDL_syscond.c
     win/SDL3/thread/windows/SDL_sysmutex.c
     win/SDL3/thread/windows/SDL_sysrwlock_srw.c
     win/SDL3/thread/windows/SDL_syssem.c
@@ -818,6 +841,7 @@ set(SRC_WINDOWS
     win/SDL3/video/windows/SDL_windowsvideo.c
     win/SDL3/video/windows/SDL_windowsvulkan.c
     win/SDL3/video/windows/SDL_windowswindow.c
+    win/SDL3/video/windows/SDL_windowsgameinput.cpp
     win/libusb/os/events_windows.c
     win/libusb/os/threads_windows.c
     win/libusb/windows_common.c
@@ -856,7 +880,6 @@ set(SRC_LINUX
     linux/SDL3/dialog/unix/SDL_zenitymessagebox.c
     linux/SDL3/filesystem/posix/SDL_sysfsops.c
     linux/SDL3/filesystem/unix/SDL_sysfilesystem.c
-    linux/SDL3/gpu/vulkan/SDL_gpu_vulkan.c
     linux/SDL3/haptic/linux/SDL_syshaptic.c
     linux/SDL3/hidapi/linux/hid.c
     linux/SDL3/io/io_uring/SDL_asyncio_liburing.c
@@ -866,8 +889,6 @@ set(SRC_LINUX
     linux/SDL3/misc/unix/SDL_sysurl.c
     linux/SDL3/power/linux/SDL_syspower.c
     linux/SDL3/process/posix/SDL_posixprocess.c
-    linux/SDL3/render/vulkan/SDL_render_vulkan.c
-    linux/SDL3/render/vulkan/SDL_shaders_vulkan.c
     linux/SDL3/thread/pthread/SDL_syscond.c
     linux/SDL3/thread/pthread/SDL_sysmutex.c
     linux/SDL3/thread/pthread/SDL_sysrwlock.c
@@ -968,7 +989,6 @@ set(SRC_MAC
     mac/SDL3/video/cocoa/SDL_cocoavideo.m
     mac/SDL3/video/cocoa/SDL_cocoavulkan.m
     mac/SDL3/video/cocoa/SDL_cocoawindow.m
-    mac/SDL3/gpu/vulkan/SDL_gpu_vulkan.c
 )
 
 if(WIN32)
@@ -1070,6 +1090,11 @@ add_compile_definitions(argonapp
         LIBUSB_WINDOWS_HOTPLUG
         DEFAULT_VISIBILITY=
         PLATFORM_WINDOWS=1
+        SDL_PLATFORM_WIN32
+        SDL_STATIC_LIB
+        SDL_MAIN_USE_CALLBACKS
+        SDL_MAIN_NOIMPL
+        #SDL_AUDIO_DRIVER_WASAPI
     )
 endif(WIN32)
 

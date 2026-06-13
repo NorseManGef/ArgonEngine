@@ -23,8 +23,8 @@
 #ifdef SDL_SENSOR_WINDOWS
 
 #include "SDL_windowssensor.h"
-#include "../SDL_syssensor.h"
-#include "../../core/windows/SDL_windows.h"
+#include "SDL_syssensor.h"
+#include "core/windows/SDL_windows.h"
 
 #define COBJMACROS
 #include <initguid.h>

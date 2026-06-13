@@ -22,10 +22,10 @@
 
 #ifdef SDL_HAPTIC_DINPUT
 
-#include "../SDL_syshaptic.h"
-#include "../../joystick/SDL_sysjoystick.h"               // For the real SDL_Joystick
-#include "../../joystick/windows/SDL_windowsjoystick_c.h" // For joystick hwdata
-#include "../../joystick/windows/SDL_xinputjoystick_c.h"  // For xinput rumble
+#include "SDL_syshaptic.h"
+#include "joystick/SDL_sysjoystick.h"               // For the real SDL_Joystick
+#include "joystick/windows/SDL_windowsjoystick_c.h" // For joystick hwdata
+#include "joystick/windows/SDL_xinputjoystick_c.h"  // For xinput rumble
 
 #include "SDL_windowshaptic_c.h"
 #include "SDL_dinputhaptic_c.h"
