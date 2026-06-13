@@ -531,6 +531,7 @@ set(SRC_SDL3
     #common/SDL3/filesystem/dummy/SDL_sysfilesystem.c
     #common/SDL3/filesystem/dummy/SDL_sysfsops.c
     common/SDL3/gpu/SDL_gpu.c
+    common/SDL3/gpu/vulkan/SDL_gpu_vulkan.c
     common/SDL3/haptic/SDL_haptic.c
     #common/SDL3/haptic/dummy/SDL_syshaptic.c
     common/SDL3/haptic/hidapi/SDL_hidapihaptic.c
@@ -627,6 +628,8 @@ set(SRC_SDL3
     common/SDL3/render/software/SDL_drawpoint.c
     common/SDL3/render/software/SDL_render_sw.c
     common/SDL3/render/software/SDL_triangle.c
+    common/SDL3/render/vulkan/SDL_render_vulkan.c
+    common/SDL3/render/vulkan/SDL_shaders_vulkan.c
     common/SDL3/sensor/SDL_sensor.c
     common/SDL3/sensor/dummy/SDL_dummysensor.c
     common/SDL3/stdlib/SDL_crc16.c
@@ -877,7 +880,6 @@ set(SRC_LINUX
     linux/SDL3/dialog/unix/SDL_zenitymessagebox.c
     linux/SDL3/filesystem/posix/SDL_sysfsops.c
     linux/SDL3/filesystem/unix/SDL_sysfilesystem.c
-    linux/SDL3/gpu/vulkan/SDL_gpu_vulkan.c
     linux/SDL3/haptic/linux/SDL_syshaptic.c
     linux/SDL3/hidapi/linux/hid.c
     linux/SDL3/io/io_uring/SDL_asyncio_liburing.c
@@ -887,8 +889,6 @@ set(SRC_LINUX
     linux/SDL3/misc/unix/SDL_sysurl.c
     linux/SDL3/power/linux/SDL_syspower.c
     linux/SDL3/process/posix/SDL_posixprocess.c
-    linux/SDL3/render/vulkan/SDL_render_vulkan.c
-    linux/SDL3/render/vulkan/SDL_shaders_vulkan.c
     linux/SDL3/thread/pthread/SDL_syscond.c
     linux/SDL3/thread/pthread/SDL_sysmutex.c
     linux/SDL3/thread/pthread/SDL_sysrwlock.c
@@ -989,7 +989,6 @@ set(SRC_MAC
     mac/SDL3/video/cocoa/SDL_cocoavideo.m
     mac/SDL3/video/cocoa/SDL_cocoavulkan.m
     mac/SDL3/video/cocoa/SDL_cocoawindow.m
-    mac/SDL3/gpu/vulkan/SDL_gpu_vulkan.c
 )
 
 if(WIN32)
