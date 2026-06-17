@@ -1098,6 +1098,13 @@ add_compile_definitions(argonapp
     )
 endif(WIN32)
 
+if(APPLE)
+add_compile_definitions(argonapp
+    PRIVATE
+        DEFAULT_VISIBILITY=
+)
+endif(APPLE)
+
 if(UNIX AND NOT APPLE)
 add_compile_definitions(argonapp
     PRIVATE
