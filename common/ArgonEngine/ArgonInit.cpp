@@ -459,9 +459,6 @@ namespace Argon{
         Argon::Screen::actual_size=Vector2f(r.w,r.h);
         last_full_screen=Screen::full_screen;
         last_screen=Screen::size;
-        //SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
-        //SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES,1);
-        //SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
         #ifndef OPENGL_AUTO_VERSIONING
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
@@ -475,8 +472,12 @@ namespace Argon{
     SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_Y_NUMBER, Argon::Screen::position[1]);
     SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, Argon::Screen::size[0]);
     SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, Argon::Screen::size[1]);
+#ifdef ARGON_WINDOW_HIGH_PIXEL_DENSITY
 SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
-        //SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
+#else
+// FIXME Apple systems break when using high pixel density due to the frame buffer being larger than the window size
+SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+#endif
         win = SDL_CreateWindowWithProperties(props);
         if(!win) {
             std::cout << "SDL_CreateWindowWithProperties failed: " << SDL_GetError() << std::endl;

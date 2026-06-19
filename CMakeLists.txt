@@ -1072,6 +1072,7 @@ add_compile_definitions(argonapp
         SDL_STATIC_LIB
         SDL_MAIN_USE_CALLBACKS
         SDL_MAIN_NOIMPL
+        ARGON_WINDOW_HIGH_PIXEL_DENSITY
     )
 endif(WIN32)
 
@@ -1088,6 +1089,7 @@ add_compile_definitions(argonapp
         DEFAULT_VISIBILITY=
         _GNU_SOURCE
         HAVE_CLOCK_GETTIME
+        ARGON_WINDOW_HIGH_PIXEL_DENSITY
 )
 
 if(WAYLAND_FOUND)
