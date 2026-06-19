@@ -376,7 +376,7 @@ namespace Argon{
     int audio_buffer_index=0;
     static float audio_buffer[Argon::kAudioNumberOfChannels][Argon::kAudioBufferSize];
 
-    void argon_sdl_audio_callback(void *userdata, Uint8 * stream,int len){
+    void audio_callback(void *userdata, Uint8 * stream,int len){
         float *buffer = (float *) stream;
         len = len/4;
         for(int o=0;o<len;){
@@ -403,7 +403,7 @@ namespace Argon{
         if (additional_amount > 0) {
             Uint8 *data = SDL_stack_alloc(Uint8, additional_amount);
             if (data) {
-                argon_sdl_audio_callback(userdata, data, additional_amount);
+                audio_callback(userdata, data, additional_amount);
                 SDL_PutAudioStreamData(stream, data, additional_amount);
                 SDL_stack_free(data);
             }
