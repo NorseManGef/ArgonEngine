@@ -119,7 +119,6 @@ set(SRC_ARGONENGINE
     common/ArgonEngine/VirtualResource.cpp
     common/ArgonEngine/VirtualResourceImage.cpp
     common/ArgonEngine/Curves.cpp
-    common/ArgonEngine/Addons/BorderedLabel.cpp
 )
 
 set(SRC_ARGONAPP
@@ -1116,8 +1115,7 @@ set_source_files_properties(${SRC_OPUS} PROPERTIES
 set_source_files_properties(${SRC_SDL3} PROPERTIES
     COMPILE_OPTIONS "-Wno-error=implicit-function-declaration"
                     "-Wno-error=incompatible-pointer-types"
-                    "-Wno-error=int-conversion"
-                    "-w"
+                    "-Wno-error=int-conversion;-w"
 )
 set_source_files_properties(${SRC_OS} PROPERTIES
     COMPILE_OPTIONS "-Wno-error=incompatible-pointer-types;-Wno-error=int-conversion"
