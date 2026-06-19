@@ -423,7 +423,7 @@ namespace Argon{
             nullptr
         );
         if (!stream) {
-            printf("Failed to open audio: %s\n", SDL_GetError());
+            std::cout << "Failed to open audio: %s\n" << SDL_GetError() << std::endl;
         }
         SDL_ResumeAudioDevice(SDL_GetAudioStreamDevice(stream));
     }
@@ -445,7 +445,7 @@ namespace Argon{
         //Enable VSync
         if( !SDL_SetHint( SDL_HINT_RENDER_VSYNC, "1" ) )
         {
-            printf( "Warning: VSync not enabled!" );
+            std::cout << "Warning: VSync not enabled!" << std::endl;
             std::cout << SDL_GetError() << std::endl;
         }
 
@@ -487,7 +487,7 @@ SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, SDL_WINDOW_OPE
         //SDL_GLContext glcontext = SDL_GL_CreateContext(win);
 
         context=SDL_GL_CreateContext(win);
-        printf("%s\n", glGetString(GL_VERSION));
+        std::cout << glGetString(GL_VERSION) << std::endl;
         if(!context) {
             std::cout << "SDL_GL_CreateContext failed: " << SDL_GetError() << std::endl;
             terminate_engine();
