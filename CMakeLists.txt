@@ -100,6 +100,7 @@ set(SRC_ARGONENGINE
     common/ArgonEngine/AudioSystem.cpp
     common/ArgonEngine/BasicShape.cpp
     common/ArgonEngine/BoundingCube.cpp
+    common/ArgonEngine/Curves.cpp
     common/ArgonEngine/Collision.cpp
     common/ArgonEngine/Hardware.cpp
     common/ArgonEngine/MeshFormat.cpp
@@ -117,7 +118,6 @@ set(SRC_ARGONENGINE
     common/ArgonEngine/Utility.cpp
     common/ArgonEngine/VirtualResource.cpp
     common/ArgonEngine/VirtualResourceImage.cpp
-    common/ArgonEngine/Curves.cpp
 )
 
 set(SRC_ARGONAPP
