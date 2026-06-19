@@ -508,7 +508,6 @@ set(SRC_SDL3
     common/SDL3/cpuinfo/SDL_cpuinfo.c
     common/SDL3/dialog/SDL_dialog.c
     common/SDL3/dialog/SDL_dialog_utils.c
-    #common/SDL3/dialog/dummy/SDL_dummydialog.c
     common/SDL3/dynapi/SDL_dynapi.c
     common/SDL3/events/SDL_categories.c
     common/SDL3/events/SDL_clipboardevents.c
@@ -528,16 +527,12 @@ set(SRC_SDL3
     common/SDL3/events/SDL_windowevents.c
     common/SDL3/events/imKStoUCS.c
     common/SDL3/filesystem/SDL_filesystem.c
-    #common/SDL3/filesystem/dummy/SDL_sysfilesystem.c
-    #common/SDL3/filesystem/dummy/SDL_sysfsops.c
     common/SDL3/gpu/SDL_gpu.c
     common/SDL3/gpu/vulkan/SDL_gpu_vulkan.c
     common/SDL3/haptic/SDL_haptic.c
-    #common/SDL3/haptic/dummy/SDL_syshaptic.c
     common/SDL3/haptic/hidapi/SDL_hidapihaptic.c
     common/SDL3/haptic/hidapi/SDL_hidapihaptic_lg4ff.c
     common/SDL3/hidapi/SDL_hidapi.c
-    #common/SDL3/hidapi/libusb/hid.c
     common/SDL3/io/SDL_asyncio.c
     common/SDL3/io/SDL_iostream.c
     common/SDL3/io/generic/SDL_asyncio_generic.c
@@ -599,18 +594,14 @@ set(SRC_SDL3
     common/SDL3/libm/s_scalbn.c
     common/SDL3/libm/s_sin.c
     common/SDL3/libm/s_tan.c
-    #common/SDL3/loadso/dummy/SDL_sysloadso.c
     common/SDL3/locale/SDL_locale.c
-    # common/SDL3/locale/dummy/SDL_syslocale.c
     common/SDL3/main/SDL_main_callbacks.c
     common/SDL3/main/SDL_runapp.c
     common/SDL3/main/generic/SDL_sysmain_callbacks.c
     common/SDL3/misc/SDL_libusb.c
     common/SDL3/misc/SDL_url.c
-    #common/SDL3/misc/dummy/SDL_sysurl.c
     common/SDL3/power/SDL_power.c
     common/SDL3/process/SDL_process.c
-    #common/SDL3/process/dummy/SDL_dummyprocess.c
     common/SDL3/render/SDL_render.c
     common/SDL3/render/SDL_render_unsupported.c
     common/SDL3/render/SDL_yuv_sw.c
@@ -661,16 +652,9 @@ set(SRC_SDL3
     common/SDL3/test/SDL_test_md5.c
     common/SDL3/test/SDL_test_memory.c
     common/SDL3/thread/SDL_thread.c
-    #common/SDL3/thread/generic/SDL_syscond.c
-    #common/SDL3/thread/generic/SDL_sysmutex.c
-    #common/SDL3/thread/generic/SDL_sysrwlock.c
-    #common/SDL3/thread/generic/SDL_syssem.c
-    #common/SDL3/thread/generic/SDL_systhread.c
-    #common/SDL3/thread/generic/SDL_systls.c
     common/SDL3/time/SDL_time.c
     common/SDL3/timer/SDL_timer.c
     common/SDL3/tray/SDL_tray_utils.c
-    #common/SDL3/tray/dummy/SDL_tray.c
     common/SDL3/video/SDL_RLEaccel.c
     common/SDL3/video/SDL_blit.c
     common/SDL3/video/SDL_blit_0.c
@@ -791,10 +775,7 @@ set(SRC_WINDOWS
     win/SDL3/gpu/d3d12/SDL_gpu_d3d12.c
     win/SDL3/haptic/windows/SDL_dinputhaptic.c
     win/SDL3/haptic/windows/SDL_windowshaptic.c
-    #win/SDL3/hidapi/windows/hid.c
     win/SDL3/hidapi/windows/hidapi_descriptor_reconstruct.c
-    #win/SDL3/hidapi/windows/pp_data_dump/pp_data_dump.c
-    #win/SDL3/hidapi/windows/test/hid_report_reconstructor_test.c
     win/SDL3/io/windows/SDL_asyncio_windows_ioring.c
     win/SDL3/joystick/windows/SDL_dinputjoystick.c
     win/SDL3/joystick/windows/SDL_rawinputjoystick.c
@@ -943,9 +924,6 @@ set(SRC_LINUX
 )
 
 set(SRC_MAC
-    mac/libusb/os/events_posix.c
-    mac/libusb/os/threads_posix.c
-    mac/libusb/darwin_usb.c
     mac/SDL3/audio/coreaudio/SDL_coreaudio.m
     mac/SDL3/camera/coremedia/SDL_camera_coremedia.m
     mac/SDL3/core/unix/SDL_appid.c
@@ -956,7 +934,6 @@ set(SRC_MAC
     mac/SDL3/filesystem/unix/SDL_sysfilesystem.c
     mac/SDL3/gpu/metal/SDL_gpu_metal.m
     mac/SDL3/haptic/darwin/SDL_syshaptic.c
-    #mac/SDL3/hidapi/mac/hid.c
     mac/SDL3/joystick/darwin/SDL_iokitjoystick.c
     mac/SDL3/joystick/apple/SDL_mfijoystick.m
     mac/SDL3/loadso/dlopen/SDL_sysloadso.c
@@ -989,6 +966,9 @@ set(SRC_MAC
     mac/SDL3/video/cocoa/SDL_cocoavideo.m
     mac/SDL3/video/cocoa/SDL_cocoavulkan.m
     mac/SDL3/video/cocoa/SDL_cocoawindow.m
+    mac/libusb/os/events_posix.c
+    mac/libusb/os/threads_posix.c
+    mac/libusb/darwin_usb.c
 )
 
 if(WIN32)
@@ -1094,7 +1074,6 @@ add_compile_definitions(argonapp
         SDL_STATIC_LIB
         SDL_MAIN_USE_CALLBACKS
         SDL_MAIN_NOIMPL
-        #SDL_AUDIO_DRIVER_WASAPI
     )
 endif(WIN32)
 
@@ -1138,7 +1117,7 @@ set_source_files_properties(${SRC_SDL3} PROPERTIES
     COMPILE_OPTIONS "-Wno-error=implicit-function-declaration"
                     "-Wno-error=incompatible-pointer-types"
                     "-Wno-error=int-conversion"
-                    #"-w" commented out until port is complete
+                    "-w"
 )
 set_source_files_properties(${SRC_OS} PROPERTIES
     COMPILE_OPTIONS "-Wno-error=incompatible-pointer-types;-Wno-error=int-conversion"
