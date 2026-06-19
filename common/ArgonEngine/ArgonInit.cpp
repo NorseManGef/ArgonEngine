@@ -429,11 +429,18 @@ namespace Argon{
     }
     void initialize_engine(std::string organization_name, std::string app_name){
         SDL_SetMainReady();
-
+        
+        #ifdef ARGON_INIT_GAMEPAD
         if (!SDL_Init(SDL_INIT_AUDIO | SDL_INIT_VIDEO | SDL_INIT_GAMEPAD)){
             std::cout << SDL_GetError() << std::endl;
             terminate_engine();
         }
+        #else
+        if (!SDL_Init(SDL_INIT_AUDIO | SDL_INIT_VIDEO)){
+            std::cout << SDL_GetError() << std::endl;
+            terminate_engine();
+        }
+        #endif
 
         //Enable VSync
         if( !SDL_SetHint( SDL_HINT_RENDER_VSYNC, "1" ) )
