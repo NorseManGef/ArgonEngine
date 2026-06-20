@@ -100,8 +100,8 @@ set(SRC_ARGONENGINE
     common/ArgonEngine/AudioSystem.cpp
     common/ArgonEngine/BasicShape.cpp
     common/ArgonEngine/BoundingCube.cpp
-    common/ArgonEngine/Curves.cpp
     common/ArgonEngine/Collision.cpp
+    common/ArgonEngine/Curves.cpp
     common/ArgonEngine/Hardware.cpp
     common/ArgonEngine/MeshFormat.cpp
     common/ArgonEngine/Node.cpp
