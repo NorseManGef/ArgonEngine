@@ -423,7 +423,7 @@ namespace Argon{
             nullptr
         );
         if (!stream) {
-            std::cout << "Failed to open audio: %s\n" << SDL_GetError() << std::endl;
+            std::cout << "Failed to open audio: " << SDL_GetError() << std::endl;
         }
         SDL_ResumeAudioDevice(SDL_GetAudioStreamDevice(stream));
     }
