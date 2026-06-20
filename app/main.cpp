@@ -1,7 +1,7 @@
 
 #include "ArgonAppFlowControl.h"
 #include <ArgonEngine/ArgonInit.h>
-#include <SDL2/SDL.h>
+#include <SDL3/SDL.h>
 ArgonAppFlowControl* controller;
 void manual_redraw(){
     if(controller->draw())Argon::swap_buffers();

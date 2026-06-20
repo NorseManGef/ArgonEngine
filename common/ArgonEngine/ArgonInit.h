@@ -7,6 +7,8 @@
  **/
 #ifndef ARGON_INIT_H
 #define ARGON_INIT_H
+#include <string>
+
 namespace Argon{
     /// Initialize the engine and HAL.
     void initialize_engine(std::string organization_name, std::string app_name);

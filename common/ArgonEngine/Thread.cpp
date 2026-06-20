@@ -13,7 +13,7 @@
 	#endif
 	#ifdef USE_SDL
 		#define SDL_TIME
-		#include <SDL2/SDL.h>
+		#include <SDL3/SDL.h>
 	#endif
 #endif
 #ifdef PLATFORM_WINDOWS

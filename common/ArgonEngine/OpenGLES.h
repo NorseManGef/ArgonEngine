@@ -46,14 +46,14 @@
 #endif
 #ifdef USE_SDL
 #ifndef USE_OPENGLES
-    #include "SDL2/SDL_opengl.h"
+    #include <SDL3/SDL_opengl.h>
 #endif
 #ifdef USE_OPENGLES
 #ifdef PLATFORM_ANDROID
     #include <GLES2/gl2.h>
     #include <GLES2/gl2ext.h>
 #endif
-    #include "SDL2/SDL_opengles2.h"
+    #include <SDL3/SDL_opengles2.h>
 #endif
 #endif
 #ifdef PLATFORM_WINDOWS

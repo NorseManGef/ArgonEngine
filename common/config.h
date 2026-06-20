@@ -39,7 +39,7 @@
 #define USE_SDL 1
 //#define SDL_RENDER_DISABLED 1
 #define GRAPHICS_DEBUG_LEVEL 0
-#define HAVE_LIBC
+#define HAVE_LIBC 1
 #ifdef __ANDROID__
     #define PLATFORM_ANDROID
 
@@ -66,7 +66,6 @@
 #ifndef PLATFORM_POSIX
 #endif
 #ifdef PLATFORM_WINDOWS
-    #define __MINGW32__ 1
     #define USE_ALLOCA 1
 #ifndef NOMINMAX
     #define NOMINMAX

@@ -83,8 +83,7 @@ void Resample::render(float * buffer){
         }
         int index = sample_pos;
         float v= interopolate(index?sample_buffer[index-1]:last,sample_buffer[index],sample_pos-index);
-        low_pass = low_pass*0.3+v*0.7;
-        (*buffer++)+=low_pass;
+        (*buffer++)+=v;
         sample_pos+=rate;
     }
 }
@@ -218,8 +217,7 @@ void Listener::update(){
 
         Vector3f last_direction = normalize(curr->last_position2-last_position);
         Vector3f curr_direction = normalize(curr->last_position-position);
-
-
+        
         float last_direction_scale = (dot(direction,last_direction)+1.0)*direction_factor+1.0-direction_factor;
         float curr_direction_scale = (dot(direction,curr_direction)+1.0)*direction_factor+1.0-direction_factor;
         float direction_incr = (curr_direction_scale-last_direction_scale)/float(kAudioBufferSize);
@@ -280,8 +278,9 @@ void Listener::render(float * buffer){
     if(low_pass!=low_pass)low_pass = 0.;
     while(buffer!=be){
         float v= delay_buffer[delay_index];
-        low_pass = v*0.7+low_pass*0.3;
-        (*buffer++)+=low_pass;
+        //low_pass = v*0.7+low_pass*0.3;
+        //(*buffer++)+=low_pass;
+        (*buffer++)+=v;
         delay_buffer[delay_index]=0.0;
         ++delay_index;
     }
