@@ -90,7 +90,7 @@ public:
     }
     bool draw(){
         static Argon::OpenGLES render_api;
-        render.viewport=Argon::Screen::logical_size;
+        render.viewport=Argon::Screen::framebuffer_size;
         animate();
         if(input[' '])opus->playback_position=0.95;
 

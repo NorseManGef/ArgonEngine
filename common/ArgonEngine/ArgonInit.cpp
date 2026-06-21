@@ -606,6 +606,9 @@ SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, SDL_WINDOW_OPE
                 break;
             case SDL_EVENT_WINDOW_RESIZED:
                 Argon::Screen::logical_size=Vector2f(e.window.data1,e.window.data2);
+                int w, h;
+                SDL_GetWindowSizeInPixels(win, &w, &h);
+                Argon::Screen::framebuffer_size=Vector2f(w,h);
                 last_full_screen=Screen::full_screen;
                 last_screen=Screen::logical_size;
                 if(manual_redraw){
