@@ -16,7 +16,7 @@
 namespace Argon {
 
 
-    Vector2f Screen::size(1,1);
+    Vector2f Screen::logical_size(1,1);
     Vector2f Screen::position(1,1);
     Vector2f Screen::actual_size(1,1);
     Vector2f Screen::minimum_size(256,256);

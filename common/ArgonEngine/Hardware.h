@@ -39,7 +39,8 @@ namespace Argon {
 
     /// This class contains the static properties of the screen/window being rendered.
     struct Screen {
-        static Vector2f size; /// Size of the virtual screen in pixels.
+        static Vector2f logical_size; /// Size of the virtual screen in pixels.
+        static Vector2f framebuffer_size; /// Size of the framebuffer in pixels.
         static Vector2f actual_size; /// The actual hardware screen size.
         static Vector2f minimum_size;
         static Vector2f position;
@@ -47,7 +48,7 @@ namespace Argon {
         static bool full_screen;
         static std::string title;
         static float ratio(){
-            return size[1]/size[0];
+            return logical_size[1]/logical_size[0];
         }
         static float actual_ratio(){
             return actual_size[1]/actual_size[0];

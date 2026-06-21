@@ -94,8 +94,8 @@ namespace Argon {
         std::vector<std::shared_ptr<BoundingCubeNode>> bounds;
         void draw(RenderAPI& api){
 
-            viewport=Vector2f(Argon::Screen::size[0],Argon::Screen::size[1] );
-            pixel_size=Vector2f(1./Argon::Screen::size[0],1./Argon::Screen::size[1]);
+            viewport=Vector2f(Argon::Screen::logical_size[0],Argon::Screen::logical_size[1] );
+            pixel_size=Vector2f(1./Argon::Screen::logical_size[0],1./Argon::Screen::logical_size[1]);
             if(!Camera::get_main_camera())return;
             api.update_resources();
             Light* current_light=Light::get_root();

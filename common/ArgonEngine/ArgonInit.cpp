@@ -454,11 +454,11 @@ namespace Argon{
 
         SDL_Rect r;
         SDL_GetDisplayBounds(0, &r);
-        Argon::Screen::size=Vector2f(512, 512);
+        Argon::Screen::logical_size=Vector2f(512, 512);
         Argon::Screen::position=Vector2f(100, 100);
         Argon::Screen::actual_size=Vector2f(r.w,r.h);
         last_full_screen=Screen::full_screen;
-        last_screen=Screen::size;
+        last_screen=Screen::logical_size;
         #ifndef OPENGL_AUTO_VERSIONING
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
@@ -470,8 +470,8 @@ namespace Argon{
     SDL_SetStringProperty(props, SDL_PROP_WINDOW_CREATE_TITLE_STRING, "test");
     SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X_NUMBER, Argon::Screen::position[0]);
     SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_Y_NUMBER, Argon::Screen::position[1]);
-    SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, Argon::Screen::size[0]);
-    SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, Argon::Screen::size[1]);
+    SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, Argon::Screen::logical_size[0]);
+    SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, Argon::Screen::logical_size[1]);
 #ifdef ARGON_WINDOW_HIGH_PIXEL_DENSITY
 SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
 #else
@@ -494,6 +494,11 @@ SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, SDL_WINDOW_OPE
             terminate_engine();
         }
         SDL_GL_MakeCurrent(win, context);
+
+        int w, h;
+        SDL_GetWindowSizeInPixels(win, &w, &h);
+        Argon::Screen::framebuffer_size=Vector2f(w,h);
+
 #ifdef USE_GLEW
         glewExperimental = GL_TRUE;
         //SDL_GL_MakeCurrent(win, glcontext);
@@ -600,9 +605,9 @@ SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, SDL_WINDOW_OPE
                 last_position=Argon::Screen::position;
                 break;
             case SDL_EVENT_WINDOW_RESIZED:
-                Argon::Screen::size=Vector2f(e.window.data1,e.window.data2);
+                Argon::Screen::logical_size=Vector2f(e.window.data1,e.window.data2);
                 last_full_screen=Screen::full_screen;
-                last_screen=Screen::size;
+                last_screen=Screen::logical_size;
                 if(manual_redraw){
                     //Redraw twice to fully update deffered state.
                     manual_redraw();
@@ -698,11 +703,11 @@ SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, SDL_WINDOW_OPE
                 if(j) SDL_CloseJoystick(j);
                 j=NULL;
             }else if (e.type==SDL_EVENT_MOUSE_MOTION){
-                Argon::Input::push_update(kInputIDMouseX, e.motion.x/Argon::Screen::size[0]*2.-1.);
-                Argon::Input::push_update(kInputIDMouseY, e.motion.y/Argon::Screen::size[1]*-2.+1.);
+                Argon::Input::push_update(kInputIDMouseX, e.motion.x/Argon::Screen::logical_size[0]*2.-1.);
+                Argon::Input::push_update(kInputIDMouseY, e.motion.y/Argon::Screen::logical_size[1]*-2.+1.);
             }else if(e.type==SDL_EVENT_MOUSE_BUTTON_UP||e.type==SDL_EVENT_MOUSE_BUTTON_DOWN){
-                Argon::Input::push_update(kInputIDMouseX, e.button.x/Argon::Screen::size[0]*2.-1.);
-                Argon::Input::push_update(kInputIDMouseY, e.button.y/Argon::Screen::size[1]*-2.+1.);
+                Argon::Input::push_update(kInputIDMouseX, e.button.x/Argon::Screen::logical_size[0]*2.-1.);
+                Argon::Input::push_update(kInputIDMouseY, e.button.y/Argon::Screen::logical_size[1]*-2.+1.);
                 Argon::Input::push_update(kInputMouse|e.button.button, SDL_EVENT_MOUSE_BUTTON_DOWN==e.type);
 
 
@@ -757,10 +762,10 @@ SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, SDL_WINDOW_OPE
         while( SDL_PollEvent( &e ) != 0 ){
 
         }
-        if(last_screen!=Screen::size){
+        if(last_screen!=Screen::logical_size){
 
-            SDL_SetWindowSize(win, Screen::size[0], Screen::size[1]);
-            last_screen=Screen::size;
+            SDL_SetWindowSize(win, Screen::logical_size[0], Screen::logical_size[1]);
+            last_screen=Screen::logical_size;
 
             manual_redraw();
             manual_redraw();
@@ -777,7 +782,7 @@ SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, SDL_WINDOW_OPE
         if(last_full_screen!=Screen::full_screen){
             SDL_SetWindowFullscreen(win, Screen::full_screen?SDL_GetWindowFullscreenMode(win):0);
             last_full_screen=Screen::full_screen;
-            last_screen=Screen::size;
+            last_screen=Screen::logical_size;
 
             manual_redraw();
             manual_redraw();
