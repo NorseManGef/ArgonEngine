@@ -44,11 +44,11 @@
               libx11
               libxcursor
               libxext
-              xorg.libXinerama
+              libXinerama
               libxrandr
-              xorg.libXi
-              xorg.libXScrnSaver
-              xorg.libXtst
+              libXi
+              libXScrnSaver
+              libXtst
               libxcb
               libxkbcommon
 
