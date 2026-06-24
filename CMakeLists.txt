@@ -1135,9 +1135,10 @@ set_source_files_properties(${SRC_MAC} PROPERTIES
 )
 add_compile_definitions(argonapp
     PRIVATE
-        "SDL_PLATFORM_MACOS"
-        "SDL_VIDEO_OPENGL"
-        "OPENGL_AUTO_VERSIONING"
+        SDL_PLATFORM_MACOS
+        SDL_VIDEO_OPENGL
+        OPENGL_AUTO_VERSIONING
+        ARGON_WINDOW_HIGH_PIXEL_DENSITY
 )
 endif(APPLE)
 

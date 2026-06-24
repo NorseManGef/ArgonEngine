@@ -242,10 +242,10 @@ struct DevConsoleTest : public Argon::Node {
         //if(!context.should_layout()){
         //Argon::Screen::position.set(500+300*sin(total_time),300);
         context.reset();
-        scale=Vector3f(20.,20.,20.)/Argon::Screen::size[1];
+        scale=Vector3f(20.,20.,20.)/Argon::Screen::logical_size[1];
         position=Vector3f(-10./Argon::Screen::ratio(), -10.,0.);
-        main.minimum_content_size=main.minimum_size=Argon::Screen::size;
-        right.size[0]=Argon::Screen::size[0]/3.;
+        main.minimum_content_size=main.minimum_size=Argon::Screen::logical_size;
+        right.size[0]=Argon::Screen::logical_size[0]/3.;
         bottom.size=Vector2f(40,40);
         left.size=Vector2f(20,20);
         top_right.size=Vector2f(64,56);
