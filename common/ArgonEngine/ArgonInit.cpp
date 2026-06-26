@@ -517,6 +517,8 @@ SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, SDL_WINDOW_OPE
             std::cout << "Could not enable VSync.\n";
             std::cout << SDL_GetError() << std::endl;
         }
+        
+        SDL_SetEventFilter(handle_event, NULL);
     }
     uint32_t sdl_key_to_argon(SDL_Keycode key){
         if(key>=SDLK_F1&&key<=SDLK_F12)return kInputIDF1+key-SDLK_F1;
@@ -594,37 +596,12 @@ SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, SDL_WINDOW_OPE
     }
 
     void handle_resize(SDL_Event &e){
-        SDL_Event next_event[500];
-        int num_events;
-        num_events = SDL_PeepEvents(
-            next_event,
-            500,
-            SDL_GETEVENT,
-            SDL_EVENT_WINDOW_RESIZED,
-            SDL_EVENT_WINDOW_RESIZED
-        );
-
-        if(num_events < 0) {
-            std::cout << "SDL_PeepEvents failed in function handle_resize(): ";
-            std::cout << SDL_GetError() << std::endl;
-        }
-        
-        if(num_events > 0)
-            e = next_event[num_events-1];
-
         Argon::Screen::logical_size=Vector2f(e.window.data1,e.window.data2);
         int w, h;
         SDL_GetWindowSizeInPixels(win, &w, &h);
         Argon::Screen::framebuffer_size=Vector2f(w,h);
         last_full_screen=Screen::full_screen;
         last_screen=Screen::logical_size;
-        if(manual_redraw){
-            //Redraw twice to fully update deffered state.
-            manual_redraw();
-            manual_redraw();
-        }
-
-        swap_buffers();
     } 
 
     void handle_window_event(SDL_Event &e){
@@ -707,7 +684,7 @@ SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, SDL_WINDOW_OPE
         static float mousex = 0;
         static float mousey = 0;
         SDL_Event e=*event;
-        //Handle events on queue
+        //Handle events
         {
             //User requests quit
             if( e.type == SDL_EVENT_QUIT )
@@ -778,15 +755,18 @@ SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, SDL_WINDOW_OPE
     bool poll_events(){
         SDL_Event e;
         while( SDL_PollEvent( &e ) != 0 ){
-            handle_event(nullptr, &e);
+            // used for heavier processing if need be
         }
         if(last_screen!=Screen::logical_size){
 
             SDL_SetWindowSize(win, Screen::logical_size[0], Screen::logical_size[1]);
             last_screen=Screen::logical_size;
 
+            //Redraw twice to fully update deffered state.
             manual_redraw();
             manual_redraw();
+
+            swap_buffers();
 
             SDL_GL_MakeCurrent(win, context);
             SDL_GL_SwapWindow(win);
