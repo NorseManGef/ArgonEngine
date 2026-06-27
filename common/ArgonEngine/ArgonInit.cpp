@@ -5,7 +5,6 @@
 #include "SDL_events.h"
 #define  GLFW_USE_CHDIR 1
 #include <stdlib.h>
-#include "Utility.h"
 #include "Hardware.h"
 #include "VirtualResource.h"
 #ifdef USE_GLEW
@@ -762,8 +761,6 @@ SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, SDL_WINDOW_OPE
             SDL_SetWindowSize(win, Screen::logical_size[0], Screen::logical_size[1]);
             last_screen=Screen::logical_size;
 
-            //Redraw twice to fully update deffered state.
-            manual_redraw();
             manual_redraw();
 
             swap_buffers();
@@ -782,7 +779,6 @@ SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, SDL_WINDOW_OPE
             last_full_screen=Screen::full_screen;
             last_screen=Screen::logical_size;
 
-            manual_redraw();
             manual_redraw();
 
             SDL_GL_MakeCurrent(win, context);
