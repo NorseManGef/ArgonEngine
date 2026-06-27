@@ -5,7 +5,6 @@
 #include "SDL_events.h"
 #define  GLFW_USE_CHDIR 1
 #include <stdlib.h>
-#include "Utility.h"
 #include "Hardware.h"
 #include "VirtualResource.h"
 #ifdef USE_GLEW
@@ -475,7 +474,6 @@ namespace Argon{
 #ifdef ARGON_WINDOW_HIGH_PIXEL_DENSITY
 SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
 #else
-// FIXME Apple systems break when using high pixel density due to the frame buffer being larger than the window size
 SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
 #endif
         win = SDL_CreateWindowWithProperties(props);
@@ -512,16 +510,14 @@ SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, SDL_WINDOW_OPE
             std::cout<<"OpenGL 2.0 is required\n";
         };
 #endif
-        //SDL_AddEventWatch(handle_event, NULL);
         if (SDL_GL_SetSwapInterval(-1)){}
         else if (SDL_GL_SetSwapInterval(1)){}
         else {
             std::cout << "Could not enable VSync.\n";
             std::cout << SDL_GetError() << std::endl;
         }
-
+        
         SDL_SetEventFilter(handle_event, NULL);
-
     }
     uint32_t sdl_key_to_argon(SDL_Keycode key){
         if(key>=SDLK_F1&&key<=SDLK_F12)return kInputIDF1+key-SDLK_F1;
@@ -598,6 +594,15 @@ SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, SDL_WINDOW_OPE
         Argon::Input::push_update(id, e.jhat.value);
     }
 
+    void handle_resize(SDL_Event &e){
+        Argon::Screen::logical_size=Vector2f(e.window.data1,e.window.data2);
+        int w, h;
+        SDL_GetWindowSizeInPixels(win, &w, &h);
+        Argon::Screen::framebuffer_size=Vector2f(w,h);
+        last_full_screen=Screen::full_screen;
+        last_screen=Screen::logical_size;
+    } 
+
     void handle_window_event(SDL_Event &e){
         switch (e.window.type) {
             case SDL_EVENT_WINDOW_MOVED:
@@ -605,20 +610,7 @@ SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, SDL_WINDOW_OPE
                 last_position=Argon::Screen::position;
                 break;
             case SDL_EVENT_WINDOW_RESIZED:
-                Argon::Screen::logical_size=Vector2f(e.window.data1,e.window.data2);
-                int w, h;
-                SDL_GetWindowSizeInPixels(win, &w, &h);
-                Argon::Screen::framebuffer_size=Vector2f(w,h);
-                last_full_screen=Screen::full_screen;
-                last_screen=Screen::logical_size;
-                if(manual_redraw){
-                    //Redraw twice to fully update deffered state.
-                    manual_redraw();
-                    manual_redraw();
-                }
-
-                swap_buffers();
-
+                handle_resize(e);
                 break;
             case SDL_EVENT_WINDOW_MINIMIZED:
                 Argon::Input::push_update(kInputIDWindowMinimized, 1);
@@ -691,8 +683,7 @@ SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, SDL_WINDOW_OPE
         static float mousex = 0;
         static float mousey = 0;
         SDL_Event e=*event;
-        //Handle events on queue
-       // while( SDL_PollEvent( &e ) != 0 )
+        //Handle events
         {
             //User requests quit
             if( e.type == SDL_EVENT_QUIT )
@@ -763,7 +754,7 @@ SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, SDL_WINDOW_OPE
     bool poll_events(){
         SDL_Event e;
         while( SDL_PollEvent( &e ) != 0 ){
-
+            // used for heavier processing if need be
         }
         if(last_screen!=Screen::logical_size){
 
@@ -771,7 +762,8 @@ SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, SDL_WINDOW_OPE
             last_screen=Screen::logical_size;
 
             manual_redraw();
-            manual_redraw();
+
+            swap_buffers();
 
             SDL_GL_MakeCurrent(win, context);
             SDL_GL_SwapWindow(win);
@@ -787,7 +779,6 @@ SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, SDL_WINDOW_OPE
             last_full_screen=Screen::full_screen;
             last_screen=Screen::logical_size;
 
-            manual_redraw();
             manual_redraw();
 
             SDL_GL_MakeCurrent(win, context);
