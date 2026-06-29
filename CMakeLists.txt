@@ -11,6 +11,8 @@ set(GENERATED_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated)
 file(MAKE_DIRECTORY ${GENERATED_DIR})
 file(MAKE_DIRECTORY ${GENERATED_DIR}/build_config)
 
+add_subdirectory(common/bullet3)
+
 set(CMAKE_BUILD_TYPE Debug)
 
 if(WIN32)
@@ -126,175 +128,10 @@ set(SRC_ARGONAPP
     app/main.cpp
 )
 
-set(SRC_BULLET
-    common/BulletCollision/BroadphaseCollision/btAxisSweep3.cpp
-    common/BulletCollision/BroadphaseCollision/btBroadphaseProxy.cpp
-    common/BulletCollision/BroadphaseCollision/btCollisionAlgorithm.cpp
-    common/BulletCollision/BroadphaseCollision/btDbvt.cpp
-    common/BulletCollision/BroadphaseCollision/btDbvtBroadphase.cpp
-    common/BulletCollision/BroadphaseCollision/btDispatcher.cpp
-    common/BulletCollision/BroadphaseCollision/btMultiSapBroadphase.cpp
-    common/BulletCollision/BroadphaseCollision/btOverlappingPairCache.cpp
-    common/BulletCollision/BroadphaseCollision/btQuantizedBvh.cpp
-    common/BulletCollision/BroadphaseCollision/btSimpleBroadphase.cpp
-    common/BulletCollision/CollisionDispatch/btActivatingCollisionAlgorithm.cpp
-    common/BulletCollision/CollisionDispatch/btBox2dBox2dCollisionAlgorithm.cpp
-    common/BulletCollision/CollisionDispatch/btBoxBoxCollisionAlgorithm.cpp
-    common/BulletCollision/CollisionDispatch/btBoxBoxDetector.cpp
-    common/BulletCollision/CollisionDispatch/btCollisionDispatcher.cpp
-    common/BulletCollision/CollisionDispatch/btCollisionObject.cpp
-    common/BulletCollision/CollisionDispatch/btCollisionWorld.cpp
-    common/BulletCollision/CollisionDispatch/btCompoundCollisionAlgorithm.cpp
-    common/BulletCollision/CollisionDispatch/btConvex2dConvex2dAlgorithm.cpp
-    common/BulletCollision/CollisionDispatch/btConvexConcaveCollisionAlgorithm.cpp
-    common/BulletCollision/CollisionDispatch/btConvexConvexAlgorithm.cpp
-    common/BulletCollision/CollisionDispatch/btConvexPlaneCollisionAlgorithm.cpp
-    common/BulletCollision/CollisionDispatch/btDefaultCollisionConfiguration.cpp
-    common/BulletCollision/CollisionDispatch/btEmptyCollisionAlgorithm.cpp
-    common/BulletCollision/CollisionDispatch/btGhostObject.cpp
-    common/BulletCollision/CollisionDispatch/btInternalEdgeUtility.cpp
-    common/BulletCollision/CollisionDispatch/btManifoldResult.cpp
-    common/BulletCollision/CollisionDispatch/btSimulationIslandManager.cpp
-    common/BulletCollision/CollisionDispatch/btSphereBoxCollisionAlgorithm.cpp
-    common/BulletCollision/CollisionDispatch/btSphereSphereCollisionAlgorithm.cpp
-    common/BulletCollision/CollisionDispatch/btSphereTriangleCollisionAlgorithm.cpp
-    common/BulletCollision/CollisionDispatch/btUnionFind.cpp
-    common/BulletCollision/CollisionDispatch/SphereTriangleDetector.cpp
-    common/BulletCollision/CollisionShapes/btBox2dShape.cpp
-    common/BulletCollision/CollisionShapes/btBoxShape.cpp
-    common/BulletCollision/CollisionShapes/btBvhTriangleMeshShape.cpp
-    common/BulletCollision/CollisionShapes/btCapsuleShape.cpp
-    common/BulletCollision/CollisionShapes/btCollisionShape.cpp
-    common/BulletCollision/CollisionShapes/btCompoundShape.cpp
-    common/BulletCollision/CollisionShapes/btConcaveShape.cpp
-    common/BulletCollision/CollisionShapes/btConeShape.cpp
-    common/BulletCollision/CollisionShapes/btConvex2dShape.cpp
-    common/BulletCollision/CollisionShapes/btConvexHullShape.cpp
-    common/BulletCollision/CollisionShapes/btConvexInternalShape.cpp
-    common/BulletCollision/CollisionShapes/btConvexPointCloudShape.cpp
-    common/BulletCollision/CollisionShapes/btConvexPolyhedron.cpp
-    common/BulletCollision/CollisionShapes/btConvexShape.cpp
-    common/BulletCollision/CollisionShapes/btConvexTriangleMeshShape.cpp
-    common/BulletCollision/CollisionShapes/btCylinderShape.cpp
-    common/BulletCollision/CollisionShapes/btEmptyShape.cpp
-    common/BulletCollision/CollisionShapes/btHeightfieldTerrainShape.cpp
-    common/BulletCollision/CollisionShapes/btMinkowskiSumShape.cpp
-    common/BulletCollision/CollisionShapes/btMultimaterialTriangleMeshShape.cpp
-    common/BulletCollision/CollisionShapes/btMultiSphereShape.cpp
-    common/BulletCollision/CollisionShapes/btOptimizedBvh.cpp
-    common/BulletCollision/CollisionShapes/btPolyhedralConvexShape.cpp
-    common/BulletCollision/CollisionShapes/btScaledBvhTriangleMeshShape.cpp
-    common/BulletCollision/CollisionShapes/btShapeHull.cpp
-    common/BulletCollision/CollisionShapes/btSphereShape.cpp
-    common/BulletCollision/CollisionShapes/btStaticPlaneShape.cpp
-    common/BulletCollision/CollisionShapes/btStridingMeshInterface.cpp
-    common/BulletCollision/CollisionShapes/btTetrahedronShape.cpp
-    common/BulletCollision/CollisionShapes/btTriangleBuffer.cpp
-    common/BulletCollision/CollisionShapes/btTriangleCallback.cpp
-    common/BulletCollision/CollisionShapes/btTriangleIndexVertexArray.cpp
-    common/BulletCollision/CollisionShapes/btTriangleIndexVertexMaterialArray.cpp
-    common/BulletCollision/CollisionShapes/btTriangleMesh.cpp
-    common/BulletCollision/CollisionShapes/btTriangleMeshShape.cpp
-    common/BulletCollision/CollisionShapes/btUniformScalingShape.cpp
-    common/BulletCollision/Gimpact/btContactProcessing.cpp
-    common/BulletCollision/Gimpact/btGenericPoolAllocator.cpp
-    common/BulletCollision/Gimpact/btGImpactBvh.cpp
-    common/BulletCollision/Gimpact/btGImpactCollisionAlgorithm.cpp
-    common/BulletCollision/Gimpact/btGImpactQuantizedBvh.cpp
-    common/BulletCollision/Gimpact/btGImpactShape.cpp
-    common/BulletCollision/Gimpact/btTriangleShapeEx.cpp
-    common/BulletCollision/Gimpact/gim_box_set.cpp
-    common/BulletCollision/Gimpact/gim_contact.cpp
-    common/BulletCollision/Gimpact/gim_memory.cpp
-    common/BulletCollision/Gimpact/gim_tri_collision.cpp
-    common/BulletCollision/NarrowPhaseCollision/btContinuousConvexCollision.cpp
-    common/BulletCollision/NarrowPhaseCollision/btConvexCast.cpp
-    common/BulletCollision/NarrowPhaseCollision/btGjkConvexCast.cpp
-    common/BulletCollision/NarrowPhaseCollision/btGjkEpa2.cpp
-    common/BulletCollision/NarrowPhaseCollision/btGjkEpaPenetrationDepthSolver.cpp
-    common/BulletCollision/NarrowPhaseCollision/btGjkPairDetector.cpp
-    common/BulletCollision/NarrowPhaseCollision/btMinkowskiPenetrationDepthSolver.cpp
-    common/BulletCollision/NarrowPhaseCollision/btPersistentManifold.cpp
-    common/BulletCollision/NarrowPhaseCollision/btPolyhedralContactClipping.cpp
-    common/BulletCollision/NarrowPhaseCollision/btRaycastCallback.cpp
-    common/BulletCollision/NarrowPhaseCollision/btSubSimplexConvexCast.cpp
-    common/BulletCollision/NarrowPhaseCollision/btVoronoiSimplexSolver.cpp
-    common/BulletDynamics/Character/btKinematicCharacterController.cpp
-    common/BulletDynamics/ConstraintSolver/btConeTwistConstraint.cpp
-    common/BulletDynamics/ConstraintSolver/btContactConstraint.cpp
-    common/BulletDynamics/ConstraintSolver/btGearConstraint.cpp
-    common/BulletDynamics/ConstraintSolver/btGeneric6DofConstraint.cpp
-    common/BulletDynamics/ConstraintSolver/btGeneric6DofSpringConstraint.cpp
-    common/BulletDynamics/ConstraintSolver/btHinge2Constraint.cpp
-    common/BulletDynamics/ConstraintSolver/btHingeConstraint.cpp
-    common/BulletDynamics/ConstraintSolver/btPoint2PointConstraint.cpp
-    common/BulletDynamics/ConstraintSolver/btSequentialImpulseConstraintSolver.cpp
-    common/BulletDynamics/ConstraintSolver/btSliderConstraint.cpp
-    common/BulletDynamics/ConstraintSolver/btSolve2LinearConstraint.cpp
-    common/BulletDynamics/ConstraintSolver/btTypedConstraint.cpp
-    common/BulletDynamics/ConstraintSolver/btUniversalConstraint.cpp
-    common/BulletDynamics/Dynamics/btDiscreteDynamicsWorld.cpp
-    common/BulletDynamics/Dynamics/btRigidBody.cpp
-    common/BulletDynamics/Dynamics/btSimpleDynamicsWorld.cpp
-    common/BulletDynamics/Dynamics/Bullet-C-API.cpp
-    common/BulletDynamics/Vehicle/btRaycastVehicle.cpp
-    common/BulletDynamics/Vehicle/btWheelInfo.cpp
-    common/BulletMultiThreaded/btGpu3DGridBroadphase.cpp
-    common/BulletMultiThreaded/btParallelConstraintSolver.cpp
-    common/BulletMultiThreaded/btThreadSupportInterface.cpp
-    common/BulletMultiThreaded/GpuSoftBodySolvers/DX11/btSoftBodySolver_DX11.cpp
-    common/BulletMultiThreaded/GpuSoftBodySolvers/DX11/btSoftBodySolver_DX11SIMDAware.cpp
-    common/BulletMultiThreaded/GpuSoftBodySolvers/OpenCL/btSoftBodySolver_OpenCL.cpp
-    common/BulletMultiThreaded/GpuSoftBodySolvers/OpenCL/btSoftBodySolver_OpenCLSIMDAware.cpp
-    common/BulletMultiThreaded/GpuSoftBodySolvers/OpenCL/btSoftBodySolverOutputCLtoGL.cpp
-    common/BulletMultiThreaded/GpuSoftBodySolvers/OpenCL/MiniCL/MiniCLTaskWrap.cpp
-    common/BulletMultiThreaded/PosixThreadSupport.cpp
-    common/BulletMultiThreaded/SequentialThreadSupport.cpp
-    common/BulletMultiThreaded/SpuCollisionObjectWrapper.cpp
-    common/BulletMultiThreaded/SpuCollisionTaskProcess.cpp
-    common/BulletMultiThreaded/SpuContactManifoldCollisionAlgorithm.cpp
-    common/BulletMultiThreaded/SpuFakeDma.cpp
-    common/BulletMultiThreaded/SpuGatheringCollisionDispatcher.cpp
-    common/BulletMultiThreaded/SpuLibspe2Support.cpp
-    common/BulletMultiThreaded/SpuNarrowPhaseCollisionTask/boxBoxDistance.cpp
-    common/BulletMultiThreaded/SpuNarrowPhaseCollisionTask/SpuCollisionShapes.cpp
-    common/BulletMultiThreaded/SpuNarrowPhaseCollisionTask/SpuContactResult.cpp
-    common/BulletMultiThreaded/SpuNarrowPhaseCollisionTask/SpuGatheringCollisionTask.cpp
-    common/BulletMultiThreaded/SpuNarrowPhaseCollisionTask/SpuMinkowskiPenetrationDepthSolver.cpp
-    common/BulletMultiThreaded/SpuSampleTask/SpuSampleTask.cpp
-    common/BulletMultiThreaded/SpuSampleTaskProcess.cpp
-    common/BulletMultiThreaded/Win32ThreadSupport.cpp
-    common/BulletSoftBody/btDefaultSoftBodySolver.cpp
-    common/BulletSoftBody/btSoftBody.cpp
-    common/BulletSoftBody/btSoftBodyConcaveCollisionAlgorithm.cpp
-    common/BulletSoftBody/btSoftBodyHelpers.cpp
-    common/BulletSoftBody/btSoftBodyRigidBodyCollisionConfiguration.cpp
-    common/BulletSoftBody/btSoftRigidCollisionAlgorithm.cpp
-    common/BulletSoftBody/btSoftRigidDynamicsWorld.cpp
-    common/BulletSoftBody/btSoftSoftCollisionAlgorithm.cpp
-)
-
 set(SRC_JSON
     common/json/json_reader.cpp
     common/json/json_value.cpp
     common/json/json_writer.cpp
-)
-
-set(SRC_LNEARMATH
-    common/LinearMath/btAlignedAllocator.cpp
-    common/LinearMath/btConvexHull.cpp
-    common/LinearMath/btConvexHullComputer.cpp
-    common/LinearMath/btGeometryUtil.cpp
-    common/LinearMath/btPolarDecomposition.cpp
-    common/LinearMath/btQuickprof.cpp
-    common/LinearMath/btSerializer.cpp
-    common/LinearMath/btVector3.cpp
-)
-
-set(SRC_MINICL
-    common/MiniCL/MiniCL.cpp
-    common/MiniCL/MiniCLTask/MiniCLTask.cpp
-    common/MiniCL/MiniCLTaskScheduler.cpp
 )
 
 set(SRC_OGG
@@ -750,8 +587,6 @@ set(SRC_COMMON
     ${SRC_OPUS}
     ${SRC_OPUSFILE}
     ${SRC_JSON}
-    ${SRC_LNEARMATH}
-    ${SRC_MINICL}
     ${SRC_STB}
     ${SRC_SDL3}
     ${SRC_LIBUSB}
@@ -1038,7 +873,21 @@ set(SOURCES
     ${SRC_OS}
 )
 
-add_executable(argonapp ${SOURCES} )
+add_executable(argonapp ${SOURCES} ) 
+target_link_libraries(argonapp 
+    PRIVATE 
+    BulletInverseDynamics
+    BulletDynamics
+    Bullet3Common
+    BulletCollision
+    BulletSoftBody
+    LinearMath
+)
+add_compile_definitions(
+    BT_ENABLE_PROFILE=1
+)
+
+include(common/bullet3/UseBullet.cmake)
 
 if(NOT APPLE)
 target_precompile_headers(argonapp
