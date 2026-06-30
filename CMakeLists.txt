@@ -80,6 +80,22 @@ set(INC_STB
     common/stb
 )
 
+set(INC_BULLET
+    common/bullet3/src
+    common/bullet3/src/Bullet3Collision
+    common/bullet3/src/Bullet3Common
+    common/bullet3/src/Bullet3Dynamics
+    common/bullet3/src/Bullet3Geometry
+    common/bullet3/src/Bullet3OpenCL
+    common/bullet3/src/Bullet3Serialize
+    common/bullet3/src/BulletCollision
+    common/bullet3/src/BulletDynamics
+    common/bullet3/src/BulletInverseDynamics
+    common/bullet3/src/BulletSoftBody
+    common/bullet3/src/LinearMath
+    common/bullet3/src/clew
+)
+
 set(INC_LIBUSB
     common/libusb
     ${INC_OS}/libusb)
@@ -91,6 +107,7 @@ include_directories(
     ${INC_OS}
     ${INC_OS_ADD}
     ${INC_SDL}
+    ${INC_BULLET}
     ${INC_LIBUSB}
     ${INC_STB}
     ${GENERATED_DIR}
@@ -887,7 +904,7 @@ add_compile_definitions(
     BT_ENABLE_PROFILE=1
 )
 
-include(common/bullet3/UseBullet.cmake)
+#include(common/bullet3/UseBullet.cmake)
 
 if(NOT APPLE)
 target_precompile_headers(argonapp
