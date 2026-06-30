@@ -11,6 +11,12 @@ set(GENERATED_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated)
 file(MAKE_DIRECTORY ${GENERATED_DIR})
 file(MAKE_DIRECTORY ${GENERATED_DIR}/build_config)
 
+
+set(BUILD_BULLET2_DEMOS OFF CACHE BOOL "" FORCE)
+set(BUILD_OPENGL3_DEMOS OFF CACHE BOOL "" FORCE)
+set(BUILD_EXTRAS OFF CACHE BOOL "" FORCE)
+set(BUILD_UNIT_TESTS OFF CACHE BOOL "" FORCE)
+set(BUILD_PYBULLET OFF CACHE BOOL "" FORCE)
 add_subdirectory(common/bullet3)
 
 set(CMAKE_BUILD_TYPE Debug)
@@ -900,11 +906,6 @@ target_link_libraries(argonapp
     BulletSoftBody
     LinearMath
 )
-add_compile_definitions(
-    BT_ENABLE_PROFILE=1
-)
-
-#include(common/bullet3/UseBullet.cmake)
 
 if(NOT APPLE)
 target_precompile_headers(argonapp
