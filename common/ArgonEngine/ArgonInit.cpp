@@ -164,8 +164,8 @@ namespace Argon{
             std::cout<<"Couldn't create window\n";
             Terminate(-1);
         }
-        Argon::Screen::width=800;
-        Argon::Screen::height=600;
+        Screen::width=800;
+        Screen::height=600;
         last_full_screen=Screen::full_screen;
         last_screen=Vector2f(Screen::width,Screen::height);
         glfwMakeContextCurrent(main_window);
@@ -196,13 +196,13 @@ namespace Argon{
 
     void resize(GLFWwindow* window, int x, int y)
     {
-        Argon::Screen::width=x;
-        Argon::Screen::height=y;
+        Screen::width=x;
+        Screen::height=y;
     }
     void MouseCallback(GLFWwindow* window, double x,double y){
-        if(Argon::Screen::height&&Argon::Screen::width){
-            Argon::Input::push_update(kInputIDMouseX, x/Argon::Screen::width*2.-1.);
-            Argon::Input::push_update(kInputIDMouseY, y/Argon::Screen::height*-2.+1.);
+        if(Screen::height&&Screen::width){
+            Argon::Input::push_update(kInputIDMouseX, x/Screen::width*2.-1.);
+            Argon::Input::push_update(kInputIDMouseY, y/Screen::height*-2.+1.);
         }
     }
     static void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
@@ -453,9 +453,9 @@ namespace Argon{
 
         SDL_Rect r;
         SDL_GetDisplayBounds(0, &r);
-        Argon::Screen::logical_size=Vector2f(512, 512);
-        Argon::Screen::position=Vector2f(100, 100);
-        Argon::Screen::actual_size=Vector2f(r.w,r.h);
+        Screen::logical_size=Vector2f(512, 512);
+        Screen::position=Vector2f(100, 100);
+        Screen::actual_size=Vector2f(r.w,r.h);
         last_full_screen=Screen::full_screen;
         last_screen=Screen::logical_size;
         #ifndef OPENGL_AUTO_VERSIONING
@@ -467,10 +467,10 @@ namespace Argon{
 
         SDL_PropertiesID props = SDL_CreateProperties();
     SDL_SetStringProperty(props, SDL_PROP_WINDOW_CREATE_TITLE_STRING, "test");
-    SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X_NUMBER, Argon::Screen::position[0]);
-    SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_Y_NUMBER, Argon::Screen::position[1]);
-    SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, Argon::Screen::logical_size[0]);
-    SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, Argon::Screen::logical_size[1]);
+    SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X_NUMBER, Screen::position[0]);
+    SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_Y_NUMBER, Screen::position[1]);
+    SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, Screen::logical_size[0]);
+    SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, Screen::logical_size[1]);
 #ifdef ARGON_WINDOW_HIGH_PIXEL_DENSITY
 SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
 #else
@@ -495,7 +495,7 @@ SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, SDL_WINDOW_OPE
 
         int w, h;
         SDL_GetWindowSizeInPixels(win, &w, &h);
-        Argon::Screen::framebuffer_size=Vector2f(w,h);
+        Screen::framebuffer_size=Vector2f(w,h);
 
 #ifdef USE_GLEW
         glewExperimental = GL_TRUE;
@@ -595,10 +595,10 @@ SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, SDL_WINDOW_OPE
     }
 
     void handle_resize(SDL_Event &e){
-        Argon::Screen::logical_size=Vector2f(e.window.data1,e.window.data2);
+        Screen::logical_size=Vector2f(e.window.data1,e.window.data2);
         int w, h;
         SDL_GetWindowSizeInPixels(win, &w, &h);
-        Argon::Screen::framebuffer_size=Vector2f(w,h);
+        Screen::framebuffer_size=Vector2f(w,h);
         last_full_screen=Screen::full_screen;
         last_screen=Screen::logical_size;
     } 
@@ -606,8 +606,8 @@ SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, SDL_WINDOW_OPE
     void handle_window_event(SDL_Event &e){
         switch (e.window.type) {
             case SDL_EVENT_WINDOW_MOVED:
-                Argon::Screen::position=Vector2f(e.window.data1,e.window.data2);
-                last_position=Argon::Screen::position;
+                Screen::position=Vector2f(e.window.data1,e.window.data2);
+                last_position=Screen::position;
                 break;
             case SDL_EVENT_WINDOW_RESIZED:
                 handle_resize(e);
@@ -697,11 +697,11 @@ SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, SDL_WINDOW_OPE
                 if(j) SDL_CloseJoystick(j);
                 j=NULL;
             }else if (e.type==SDL_EVENT_MOUSE_MOTION){
-                Argon::Input::push_update(kInputIDMouseX, e.motion.x/Argon::Screen::logical_size[0]*2.-1.);
-                Argon::Input::push_update(kInputIDMouseY, e.motion.y/Argon::Screen::logical_size[1]*-2.+1.);
+                Argon::Input::push_update(kInputIDMouseX, e.motion.x/Screen::logical_size[0]*2.-1.);
+                Argon::Input::push_update(kInputIDMouseY, e.motion.y/Screen::logical_size[1]*-2.+1.);
             }else if(e.type==SDL_EVENT_MOUSE_BUTTON_UP||e.type==SDL_EVENT_MOUSE_BUTTON_DOWN){
-                Argon::Input::push_update(kInputIDMouseX, e.button.x/Argon::Screen::logical_size[0]*2.-1.);
-                Argon::Input::push_update(kInputIDMouseY, e.button.y/Argon::Screen::logical_size[1]*-2.+1.);
+                Argon::Input::push_update(kInputIDMouseX, e.button.x/Screen::logical_size[0]*2.-1.);
+                Argon::Input::push_update(kInputIDMouseY, e.button.y/Screen::logical_size[1]*-2.+1.);
                 Argon::Input::push_update(kInputMouse|e.button.button, SDL_EVENT_MOUSE_BUTTON_DOWN==e.type);
 
 
