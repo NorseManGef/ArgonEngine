@@ -41,8 +41,6 @@
 #ifdef USE_GLEW
 #include "GL/glew.h"
 #endif
-#ifdef USE_GLFW
-#include "GLFW/glfw3.h"
 #endif
 #ifdef USE_SDL
 #ifndef USE_OPENGLES
@@ -356,4 +354,3 @@ public:
 };
 
 #endif //USE_OPENGL
-#endif
