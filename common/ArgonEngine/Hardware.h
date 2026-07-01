@@ -436,11 +436,6 @@ namespace Argon {
         InputState& operator[](uint32_t input_id){
 
             uint32_t inp =input_id;
-#ifdef USE_GLFW
-            if(inp>96&&inp<123){
-                inp-=32;
-            }
-#endif
 #ifdef USE_SDL
             if(inp>=65&&inp<=90){
                 inp+=32;

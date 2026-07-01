@@ -6,15 +6,9 @@
 #if PLATFORM_UNIX==1
 	#define USE_SYSTIME
 	#include <sys/time.h>
-#else
-	#ifdef USE_GLFW
-		#define GLFW_TIME
-		#include <GLFW/glfw3.h>
-	#endif
-	#ifdef USE_SDL
-		#define SDL_TIME
-		#include <SDL3/SDL.h>
-	#endif
+#elif USE_SDL
+	#define SDL_TIME
+	#include <SDL3/SDL.h>
 #endif
 #ifdef PLATFORM_WINDOWS
 #define WIN32_LEAN_AND_MEAN
@@ -133,17 +127,6 @@ namespace Argon
         double current =(double)(v.tv_sec-timeA)+(double)(v.tv_usec-timeB)*0.000001;
         return current;
     }
-#endif
-#ifdef GLFW_TIME
-    Timer::Timer(){
-        
-        delta_time_=time();
-    }
-    double Timer::time(){
-        double current =glfwGetTime();
-        return current;
-    }
-    
 #endif
 #ifdef SDL_TIME
 	Timer::Timer(){

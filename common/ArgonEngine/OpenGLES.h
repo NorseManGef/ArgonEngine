@@ -41,8 +41,6 @@
 #ifdef USE_GLEW
 #include "GL/glew.h"
 #endif
-#ifdef USE_GLFW
-#include "GLFW/glfw3.h"
 #endif
 #ifdef USE_SDL
 #ifndef USE_OPENGLES
@@ -54,7 +52,6 @@
     #include <GLES2/gl2ext.h>
 #endif
     #include <SDL3/SDL_opengles2.h>
-#endif
 #endif
 #ifdef PLATFORM_WINDOWS
 #undef near
