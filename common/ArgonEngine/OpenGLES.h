@@ -53,7 +53,6 @@
 #endif
     #include <SDL3/SDL_opengles2.h>
 #endif
-#endif
 #ifdef PLATFORM_WINDOWS
 #undef near
 #undef far
@@ -354,3 +353,4 @@ public:
 };
 
 #endif //USE_OPENGL
+#endif
