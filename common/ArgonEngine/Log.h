@@ -54,15 +54,15 @@ public:
     SILS log_debug(bool cond = true) {return Log(Severity::debug, cond);}
     SILS log_verbose(bool cond = true) {return Log(Severity::verbose, cond);}
 
-    inline void file_init(Severity maxSeverity, 
-                          const char* fileName, 
-                          size_t maxFileSize = 0, 
-                          int maxFiles = 0) {
+    static inline void file_init(Severity maxSeverity, 
+                                 const char* fileName, 
+                                 size_t maxFileSize = 0, 
+                                 int maxFiles = 0) {
         plog::init(maxSeverity, fileName, maxFileSize, maxFiles);
     }
 
-    inline void console_init(Severity maxSeverity,
-                             OutputStream outputStream) {
+    static inline void console_init(Severity maxSeverity,
+                                    OutputStream outputStream) {
         plog::init<plog::TxtFormatter>(maxSeverity, outputStream);
     }
 };
