@@ -19,6 +19,8 @@ set(BUILD_UNIT_TESTS OFF CACHE BOOL "" FORCE)
 set(BUILD_PYBULLET OFF CACHE BOOL "" FORCE)
 add_subdirectory(common/bullet3)
 
+add_subdirectory(common/plog)
+
 set(CMAKE_BUILD_TYPE Debug)
 
 if(WIN32)
@@ -102,6 +104,10 @@ set(INC_BULLET
     common/bullet3/src/clew
 )
 
+set(INC_PLOG
+    common/plog/include
+)
+
 set(INC_LIBUSB
     common/libusb
     ${INC_OS}/libusb)
@@ -114,6 +120,7 @@ include_directories(
     ${INC_OS_ADD}
     ${INC_SDL}
     ${INC_BULLET}
+    ${INC_PLOG}
     ${INC_LIBUSB}
     ${INC_STB}
     ${GENERATED_DIR}
@@ -905,6 +912,7 @@ target_link_libraries(argonapp
     BulletCollision
     BulletSoftBody
     LinearMath
+    plog::plog
 )
 
 if(NOT APPLE)
