@@ -13,7 +13,9 @@
 #include <type_traits>
 #include <map>
 #include <iostream>
+#include <sstream>
 #include "Thread.h"
+#include "Log.h"
 /**
  * @brief This macro allows you to quickly define the TypeInfo of most structs.
  * @details
@@ -183,28 +185,29 @@ struct ReflectionBase{
     }
     static void print_registered_factories(){
         mutex().lock();
-        std::cout<< "There are "<< factory_map().size()<<" registered factories, that the reflection system can spawn:\n";
+        std::stringstream stream;
+        stream<< "There are "<< factory_map().size()<<" registered factories, that the reflection system can spawn:\n";
         size_t max=0;
         for (auto &a : factory_map()){
             if(max<a.first.size()+1)max=a.first.size()+1;
         }
         size_t indent = (max/4+1)*4;
         size_t pos =0;
-        std::cout<<"|| ";
+        stream<<"|| ";
         for (auto &a : factory_map()){
             if(pos>=80){
-                std::cout<<"\n|| ";
+                stream<<"\n|| ";
                 pos=0;
             }
-            std::cout<<a.first;
+            stream<<a.first;
             pos+=a.first.size();
             while((pos%indent)&&pos<80){
-                std::cout<<" ";
+                stream<<" ";
                 ++pos;
             }
 
         }
-        std::cout<<std::endl;
+        Log::logi()<<stream.str();
         mutex().unlock();
     }
 

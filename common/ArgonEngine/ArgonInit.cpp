@@ -264,7 +264,7 @@ SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, SDL_WINDOW_OPE
         //SDL_GLContext glcontext = SDL_GL_CreateContext(win);
 
         context=SDL_GL_CreateContext(win);
-        std::cout << glGetString(GL_VERSION) << std::endl;
+        Log::logi() << "OpenGL Version: " << glGetString(GL_VERSION);
         if(!context) {
             Log::logf() << "SDL_GL_CreateContext failed: " << SDL_GetError();
             terminate_engine();

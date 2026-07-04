@@ -9,11 +9,11 @@
 //
 
 #include "VirtualResource.h"
+#include "Log.h"
 #ifdef USE_CURL
 #include <curl/curl.h>
 #endif
 #include "VirtualResourceImage.h"
-#include <iostream>
 #include "Reflection.h"
 #include "Text.h"
 #include <fstream>
@@ -245,7 +245,7 @@ struct VirtualResourceAppended:public VirtualResourceIMPL::Source{
         VirtualResourceIMPL::Source *sor = all_sources()[s2];
         if(sor){
             sor=sor->create_source(path,args);
-        }else std::cout<<"Warning no source handler found for source: "<<s2<<" in path: "<<s<<"\n";
+        }else Log::logw()<<"Warning no source handler found for source: "<<s2<<" in path: "<<s;
 
 
         p_node->set_source(sor, reload);
@@ -290,54 +290,55 @@ struct VirtualResourceAppended:public VirtualResourceIMPL::Source{
 
         VirtualResource::all_data()[".ahf"]=new AHFResource;
     {
-        std::cout<< "The Virtual Resource System has "<<VirtualResource::all_sources().size()<<" available sources to load from:\n";
+        std::stringstream stream;
+        stream<< "The Virtual Resource System has "<<VirtualResource::all_sources().size()<<" available sources to load from:\n";
         size_t max=0;
         for (auto &a : VirtualResource::all_sources()){
             if(max<a.first.size()+1)max=a.first.size()+1;
         }
         size_t indent = (max/4+1)*4;
         size_t pos =0;
-        std::cout<<"|| ";
+        stream<<"|| ";
         for (auto &a : VirtualResource::all_sources()){
             if(pos>=80){
-                std::cout<<"\n|| ";
+                stream<<"\n|| ";
                 pos=0;
             }
-            std::cout<<a.first;
+            stream<<a.first;
             pos+=a.first.size();
             while((pos%indent)&&pos<80){
-                std::cout<<" ";
+                stream<<" ";
                 ++pos;
             }
 
         }
-        std::cout<<"\n";
-
-        }
+        Log::logn() << stream.str();
+    }
         {
-            std::cout<< "The Virtual Resource System has "<<VirtualResource::all_data().size()<<" known data types:\n";
+            std::stringstream stream;
+            stream<< "The Virtual Resource System has "<<VirtualResource::all_data().size()<<" known data types:\n";
             size_t max=0;
             for (auto &a : VirtualResource::all_data()){
                 if(max<a.first.size()+1)max=a.first.size()+1;
             }
             size_t indent = (max/4+1)*4;
             size_t pos =0;
-            std::cout<<"|| ";
+            stream<<"|| ";
             for (auto &a : VirtualResource::all_data()){
                 if(pos>=80){
-                    std::cout<<"\n|| ";
+                    stream<<"\n|| ";
                     pos=0;
                 }
-                std::cout<<a.first;
+                stream<<a.first;
                 pos+=a.first.size();
                 while((pos%indent)&&pos<80){
-                    std::cout<<" ";
+                    stream<<" ";
                     ++pos;
                 }
 
             }
-            }
-        std::cout<<"\n";
+            Log::logn() << stream.str();
+        }
 
         ReflectionBase::print_registered_factories();
     }
@@ -473,7 +474,7 @@ struct VirtualResourceAppended:public VirtualResourceIMPL::Source{
         if(!allow_write)return false;
         std::fstream str(path.c_str(),(std::ios::in | std::ios::out|std::ios::binary|std::ios::trunc));
         str.write(&data[0],data.size());
-        std::cout<<"Save "<<path<<std::endl;
+        Log::logi()<<"Save "<<path;
         return true;
     }
 
@@ -671,7 +672,7 @@ struct VirtualResourceAppended:public VirtualResourceIMPL::Source{
                 if(args[i]==';'){
                     for(auto &a:arguments)arg_map[a]=value;
                     if(value.size()==0)
-                        std::cout<< "Expected a value before character #"<<i+1<<"in "<<args<<"\n";
+                        Log::loge()<< "Expected a value before character #"<<i+1<<"in "<<args;
                     state=0;
                 }
                 else if(args[i]=='='){

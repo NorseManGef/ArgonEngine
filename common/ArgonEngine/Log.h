@@ -4,6 +4,7 @@
 #include <plog/Log.h>
 #include <plog/Initializers/ConsoleInitializer.h>
 #include <plog/Initializers/RollingFileInitializer.h>
+#include <plog/Formatters/MessageOnlyFormatter.h>
 
 #define ILS inline Log
 #define SILS static ILS
@@ -63,7 +64,7 @@ public:
 
     static inline void console_init(Severity maxSeverity,
                                     OutputStream outputStream) {
-        plog::init<plog::TxtFormatter>(maxSeverity, outputStream);
+        plog::init<plog::MessageOnlyFormatter>(maxSeverity, outputStream);
     }
 };
 
