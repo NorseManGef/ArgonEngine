@@ -4,7 +4,54 @@
 #include <plog/Log.h>
 #include <plog/Initializers/ConsoleInitializer.h>
 #include <plog/Initializers/RollingFileInitializer.h>
-#include <plog/Formatters/MessageOnlyFormatter.h>
+
+namespace plog {
+
+class ArgonFormatter {
+public:
+    static util::nstring header() {
+        return util::nstring();
+    }    
+
+    static util::nstring format(const Record& record) {
+        util::nostringstream ss;
+
+        tm t;
+        util::localtime_s(&t, &record.getTime().time);
+
+        std::string tss = std::to_string(t.tm_hour) + ":" +
+                          std::to_string(t.tm_min) + ":" +
+                          std::to_string(t.tm_sec);
+
+        switch(record.getSeverity()) {
+            case Severity::none:
+                ss << record.getMessage() << "\n";
+                break;
+            case Severity::fatal:
+                ss << tss << " FATAL: " << record.getMessage() << "\n";
+                break;
+            case Severity::error:
+                ss << tss << " ERROR: " << record.getMessage() << "\n"; 
+                break;
+            case Severity::warning:
+                ss << tss << " WARNING: " << record.getMessage() << "\n"; 
+                break;
+            case Severity::info:
+                ss << record.getMessage() << "\n";
+                break;
+            case Severity::debug:
+                ss << tss << " DEBUG: " << record.getMessage() << "\n";
+                break;
+            case Severity::verbose:
+                ss << tss << " " << record.getMessage() << "\n";
+                break;
+        }
+
+        return ss.str();
+    }
+};
+
+}
 
 #define ILS inline Log
 #define SILS static ILS
@@ -59,12 +106,12 @@ public:
                                  const char* fileName, 
                                  size_t maxFileSize = 0, 
                                  int maxFiles = 0) {
-        plog::init(maxSeverity, fileName, maxFileSize, maxFiles);
+        plog::init<plog::ArgonFormatter>(maxSeverity, fileName, maxFileSize, maxFiles);
     }
 
     static inline void console_init(Severity maxSeverity,
                                     OutputStream outputStream) {
-        plog::init<plog::MessageOnlyFormatter>(maxSeverity, outputStream);
+        plog::init<plog::ArgonFormatter>(maxSeverity, outputStream);
     }
 };
 
