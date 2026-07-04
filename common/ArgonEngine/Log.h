@@ -74,8 +74,6 @@ public:
 
 private:
     Log() = default;
-    Log(const Log&) = delete;
-    Log& operator=(const Log&) = delete;
 
     Log(Severity s, bool enabled = true):
         _s(s),
