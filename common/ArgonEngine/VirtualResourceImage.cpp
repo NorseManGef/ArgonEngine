@@ -133,7 +133,7 @@ namespace Argon{
 
         else if(f=="S8")format =kTextureStencil8;
         else if(f=="DS")format =kTextureDepthStencil;
-        else std::cout<<"Unknown tex format: "<<f<<"\n";
+        else PLOGE<<"Unknown tex format: "<<f;
 
 
 

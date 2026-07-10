@@ -68,8 +68,8 @@ namespace Argon{
     void set_manual_redraw(void (*draw)()){manual_redraw=draw;}
 
     static void InitVirtual(std::string organization_name, std::string app_name){
-        Log::logn()<<"Argon Engine";
-        Log::logn()<<"------------";
+        PLOGN<<"Argon Engine";
+        PLOGN<<"------------";
 
 #ifdef USE_SDL
         std::string base = SDL_GetBasePath();
@@ -88,10 +88,10 @@ namespace Argon{
         }
         doc_dir=home;
 
-        Log::logn()<<"Home directory is "<<home;
+        PLOGN<<"Home directory is "<<home;
         if(getenv("TMPDIR"))
             tmp_dir = getenv("TMPDIR");
-        Log::logn()<<"TMP directory is "<<tmp_dir;
+        PLOGN<<"TMP directory is "<<tmp_dir;
 #endif
 #endif
 #ifdef PLATFORM_MAC
@@ -107,7 +107,7 @@ namespace Argon{
         SHGetFolderPathA(NULL,CSIDL_LOCAL_APPDATA,NULL,CSIDL_FLAG_NO_ALIAS,output);
         pref_dir = output;
 #endif
-        Log::logn()<< "Save files are stored in "<<doc_dir;
+        PLOGN<< "Save files are stored in "<<doc_dir;
 
         VirtualResource::all_sources()["document:"]=new VirtualResourceIO(doc_dir,true);
         VirtualResource::all_sources()["resource:"]=new VirtualResourceIO(base+"resources",false);
@@ -146,7 +146,7 @@ namespace Argon{
         }
         SDL_Quit();
 
-        Log::logn() << "Process Terminated";
+        PLOGN << "Process Terminated";
 
         exit(0);
     }
@@ -201,7 +201,7 @@ namespace Argon{
             nullptr
         );
         if (!stream) {
-            Log::loge() << "Failed to open audio: " << SDL_GetError();
+            PLOGE << "Failed to open audio: " << SDL_GetError();
         }
         SDL_ResumeAudioDevice(SDL_GetAudioStreamDevice(stream));
     }
@@ -215,7 +215,7 @@ namespace Argon{
         }
         #else
         if (!SDL_Init(SDL_INIT_AUDIO | SDL_INIT_VIDEO)){
-            Log::logf() << SDL_GetError();
+            PLOGF << SDL_GetError();
             terminate_engine();
         }
         #endif
@@ -223,7 +223,7 @@ namespace Argon{
         //Enable VSync
         if( !SDL_SetHint( SDL_HINT_RENDER_VSYNC, "1" ) )
         {
-            Log::logw() << "Warning: VSync not enabled!\n" << SDL_GetError();
+            PLOGE << "Warning: VSync not enabled!\n" << SDL_GetError();
         }
 
         InitVirtual(organization_name, app_name);
@@ -256,7 +256,7 @@ SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, SDL_WINDOW_OPE
 #endif
         win = SDL_CreateWindowWithProperties(props);
         if(!win) {
-            Log::logf() << "SDL_CreateWindowWithProperties failed: " << SDL_GetError();
+            PLOGF << "SDL_CreateWindowWithProperties failed: " << SDL_GetError();
             terminate_engine();
         }
 
@@ -264,9 +264,9 @@ SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, SDL_WINDOW_OPE
         //SDL_GLContext glcontext = SDL_GL_CreateContext(win);
 
         context=SDL_GL_CreateContext(win);
-        Log::logi() << "OpenGL Version: " << glGetString(GL_VERSION);
+        PLOGI << "OpenGL Version: " << glGetString(GL_VERSION);
         if(!context) {
-            Log::logf() << "SDL_GL_CreateContext failed: " << SDL_GetError();
+            PLOGF << "SDL_GL_CreateContext failed: " << SDL_GetError();
             terminate_engine();
         }
         SDL_GL_MakeCurrent(win, context);
@@ -281,16 +281,16 @@ SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, SDL_WINDOW_OPE
 
         int code = 0;
         if(GLEW_OK!=(code=glewInit())){
-            Log::loge() << glewGetErrorString(code) << "\n" <<"GLEW Failed to init: "<< code;
+            PLOGE << glewGetErrorString(code) << "\n" <<"GLEW Failed to init: "<< code;
         };
         if(!GLEW_VERSION_2_0){
-            Log::logw() <<"OpenGL 2.0 is required";
+            PLOGW <<"OpenGL 2.0 is required";
         };
 #endif
         if (SDL_GL_SetSwapInterval(-1)){}
         else if (SDL_GL_SetSwapInterval(1)){}
         else {
-            Log::logw() << "Could not enable VSync: " << SDL_GetError();
+            PLOGE << "Could not enable VSync: " << SDL_GetError();
         }
         
         SDL_SetEventFilter(handle_event, NULL);
@@ -423,7 +423,7 @@ SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, SDL_WINDOW_OPE
                 break;
 
             default:
-                Log::logw() << "In function handle_window_event(): invalid SDL_Event type (not of SDL_EVENT_WINDOW variety). Event: " << e.window.type;
+                PLOGW << "In function handle_window_event(): invalid SDL_Event type (not of SDL_EVENT_WINDOW variety). Event: " << e.window.type;
                 break;
 
         }

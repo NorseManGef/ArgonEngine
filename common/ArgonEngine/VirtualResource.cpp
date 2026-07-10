@@ -10,6 +10,7 @@
 
 #include "VirtualResource.h"
 #include "Log.h"
+#include "plog/Log.h"
 #ifdef USE_CURL
 #include <curl/curl.h>
 #endif
@@ -245,7 +246,7 @@ struct VirtualResourceAppended:public VirtualResourceIMPL::Source{
         VirtualResourceIMPL::Source *sor = all_sources()[s2];
         if(sor){
             sor=sor->create_source(path,args);
-        }else Log::logw()<<"Warning no source handler found for source: "<<s2<<" in path: "<<s;
+        }else PLOGW<<"No source handler found for source: "<<s2<<" in path: "<<s;
 
 
         p_node->set_source(sor, reload);
@@ -290,41 +291,17 @@ struct VirtualResourceAppended:public VirtualResourceIMPL::Source{
 
         VirtualResource::all_data()[".ahf"]=new AHFResource;
     {
-        std::stringstream stream;
-        stream<< "The Virtual Resource System has "<<VirtualResource::all_sources().size()<<" available sources to load from:\n";
-        size_t max=0;
-        for (auto &a : VirtualResource::all_sources()){
-            if(max<a.first.size()+1)max=a.first.size()+1;
-        }
-        size_t indent = (max/4+1)*4;
-        size_t pos =0;
-        stream<<"|| ";
-        for (auto &a : VirtualResource::all_sources()){
-            if(pos>=80){
-                stream<<"\n|| ";
-                pos=0;
-            }
-            stream<<a.first;
-            pos+=a.first.size();
-            while((pos%indent)&&pos<80){
-                stream<<" ";
-                ++pos;
-            }
-
-        }
-        Log::logn() << stream.str();
-    }
-        {
+        IF_PLOG(plog::info){
             std::stringstream stream;
-            stream<< "The Virtual Resource System has "<<VirtualResource::all_data().size()<<" known data types:\n";
+            stream<< "The Virtual Resource System has "<<VirtualResource::all_sources().size()<<" available sources to load from:\n";
             size_t max=0;
-            for (auto &a : VirtualResource::all_data()){
+            for (auto &a : VirtualResource::all_sources()){
                 if(max<a.first.size()+1)max=a.first.size()+1;
             }
             size_t indent = (max/4+1)*4;
             size_t pos =0;
             stream<<"|| ";
-            for (auto &a : VirtualResource::all_data()){
+            for (auto &a : VirtualResource::all_sources()){
                 if(pos>=80){
                     stream<<"\n|| ";
                     pos=0;
@@ -337,7 +314,35 @@ struct VirtualResourceAppended:public VirtualResourceIMPL::Source{
                 }
 
             }
-            Log::logn() << stream.str();
+            PLOGI << stream.str();
+        }
+    }
+        {
+            IF_PLOG(plog::info){
+                std::stringstream stream;
+                stream<< "The Virtual Resource System has "<<VirtualResource::all_data().size()<<" known data types:\n";
+                size_t max=0;
+                for (auto &a : VirtualResource::all_data()){
+                    if(max<a.first.size()+1)max=a.first.size()+1;
+                }
+                size_t indent = (max/4+1)*4;
+                size_t pos =0;
+                stream<<"|| ";
+                for (auto &a : VirtualResource::all_data()){
+                    if(pos>=80){
+                        stream<<"\n|| ";
+                        pos=0;
+                    }
+                    stream<<a.first;
+                    pos+=a.first.size();
+                    while((pos%indent)&&pos<80){
+                        stream<<" ";
+                        ++pos;
+                    }
+
+                }
+                PLOGI << stream.str();
+            }
         }
 
         ReflectionBase::print_registered_factories();
@@ -474,7 +479,7 @@ struct VirtualResourceAppended:public VirtualResourceIMPL::Source{
         if(!allow_write)return false;
         std::fstream str(path.c_str(),(std::ios::in | std::ios::out|std::ios::binary|std::ios::trunc));
         str.write(&data[0],data.size());
-        Log::logi()<<"Save "<<path;
+        PLOGV<<"Save "<<path;
         return true;
     }
 
@@ -672,7 +677,7 @@ struct VirtualResourceAppended:public VirtualResourceIMPL::Source{
                 if(args[i]==';'){
                     for(auto &a:arguments)arg_map[a]=value;
                     if(value.size()==0)
-                        Log::loge()<< "Expected a value before character #"<<i+1<<"in "<<args;
+                        PLOGW<< "Expected a value before character #"<<i+1<<"in "<<args;
                     state=0;
                 }
                 else if(args[i]=='='){

@@ -38,7 +38,7 @@ namespace Argon{
 void ReflectionBase::read(VirtualResource res){
     VisitableResource *r = res.get_data<VisitableResource*>();
     if(!r){
-        Log::logw()<<"Virtual Resource "<<res.get_path_string()<<" is not visitable";
+        PLOGE<<"Virtual Resource "<<res.get_path_string()<<" is not visitable";
         return;
     }
 
@@ -50,7 +50,7 @@ void ReflectionBase::read(VirtualResource res){
 void ReflectionBase::write(VirtualResource res){
     VisitableResource *r = res.get_data<VisitableResource*>();
     if(!r){
-        Log::logw()<<"Virtual Resource "<<res.get_path_string()<<" is not visitable";
+        PLOGE<<"Virtual Resource "<<res.get_path_string()<<" is not visitable";
         return;
     }
     auto write_vis = r->write_visitor();
@@ -259,7 +259,7 @@ void ReflectionBase::write(VirtualResource res){
 
         bool success = r.parse(data,stack.back().map_value,false);
         if(!success){
-            Log::loge() << "Failed to parse JSON from string. ERROR: " <<
+            PLOGE << "Failed to parse JSON from string. ERROR: " <<
             r.getFormatedErrorMessages();
         }
         stack.back().value = stack.back().map_value;
@@ -270,7 +270,7 @@ void ReflectionBase::write(VirtualResource res){
         Json::Reader r;
         bool success = r.parse(res.get_data_as_string(),stack.back().map_value,false);
         if(!success){
-            Log::loge() << "Failed to parse JSON from Resource: "<< res <<
+            PLOGE << "Failed to parse JSON from Resource: "<< res <<
             "\nError: "<<r.getFormatedErrorMessages();
         }
         return success&&!stack.back().map_value.isNull();
@@ -453,7 +453,7 @@ void ReflectionBase::write(VirtualResource res){
         source->read(&str[0], str.size(),0);
 
         if(!json_read->read(str)){
-            Log::loge()<<"Failed to parse json file";
+            PLOGE<<"Failed to parse json file";
 
         }
         return json_read;

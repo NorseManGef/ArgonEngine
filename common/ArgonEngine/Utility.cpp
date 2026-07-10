@@ -66,9 +66,10 @@ void StringIntern::print(StringIntern::TrieNode* s,const std::string &partial,in
 
     if(s){
         std::string p = partial+s->letter;
+        std::string space;
         print(s->less,partial,indent);
-        for(int i=0;i<indent;++i)std::cout<<" ";
-        std::cout<<p<<"\n";
+        for(int i=0;i<indent;++i)space.append(" ");
+        PLOGN<<space<<p<<"\n";
         print(s->equal,p,indent+2);
         print(s->greater,partial,indent);
 

@@ -94,7 +94,7 @@ void TTFFont::get_font_size_ratio(float &w_r, float & h_r){
 
     bool TTFFont::reload(Argon::VirtualResourceIMPL::Source* s){
         if(s->size()==0){
-            std::cout<<"Error: Font Resource is empty\n";
+            PLOGE<<"Font Resource is empty";
             return false;
         }
         if(uint8_t*d =s->get_pointer())stbtt_InitFont(&font, (const unsigned char*)d, 0);
@@ -212,7 +212,7 @@ void TTFFont::get_font_size_ratio(float &w_r, float & h_r){
     Glyph* GlyphCache::get_glyph(Argon::VirtualResource font, int glyph){
         Font* f = font.get_data<Font*>();
         if(!f){
-            std::cout<<font.get_path_string()<<" is not a valid ttf.\n";
+            PLOGE<<font.get_path_string()<<" is not a valid ttf.";
             return NULL;
         }
         GlyphKey k;
