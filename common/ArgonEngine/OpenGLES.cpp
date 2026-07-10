@@ -598,7 +598,6 @@ void OpenGLES::update_resources(){
         if(it2->second.last_frame>30){
             glDeleteBuffers(1,&it2->second.index_buffer);
             glDeleteBuffers(1,&it2->second.vert_buffer);
-            PLOGV<<"DELETE";
             it2= vertex_arrays.erase(it2);
         }else ++it2;
     }
