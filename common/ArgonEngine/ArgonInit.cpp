@@ -12,7 +12,6 @@
 #include <args.hxx>
 #include <iostream>
 #include <string>
-#include <unordered_map>
 
 #ifdef USE_GLEW
 #include "GL/glew.h"
