@@ -19,10 +19,6 @@ public:
         tm t;
         util::localtime_s(&t, &record.getTime().time);
 
-        std::string tss = std::to_string(t.tm_hour) + ":" +
-                          std::to_string(t.tm_min) + ":" +
-                          std::to_string(t.tm_sec);
-
         auto sev = record.getSeverity();
 
         if(sev == Severity::none || sev == Severity::info) {
@@ -30,7 +26,7 @@ public:
                 return ss.str();
         }
 
-        ss << tss;
+        ss << t.tm_hour << ":" << t.tm_min << ":" << t.tm_sec;
         ss << PLOG_NSTR(" [") << record.getFunc() << PLOG_NSTR("@") << record.getLine() << PLOG_NSTR("] ");
 
         switch(record.getSeverity()) {
