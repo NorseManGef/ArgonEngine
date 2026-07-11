@@ -250,13 +250,17 @@ namespace Argon{
         }
 
         plog::Severity severity = plog::fatal;
-        for(int i = 0; i < loglevel.Children().size(); ++i)
+        // only bother checking which level matched if any was matched at all.
+        if(loglevel.Matched())
         {
-            if(loglevel.Children()[i]->Matched())
+            for(int i = 0; i < loglevel.Children().size(); ++i)
             {
-                // offset by 2 because we don't have matchers for
-                // 0 (none) or 1 (fatal).
-                severity = (plog::Severity)(i + 2);
+                if(loglevel.Children()[i]->Matched())
+                {
+                    // offset by 2 because we don't have matchers for
+                    // 0 (none) or 1 (fatal).
+                    severity = (plog::Severity)(i + 2);
+                }
             }
         }
 
