@@ -219,21 +219,11 @@ namespace Argon{
         args::HelpFlag help(argparser, "help", "Display this help menu.", {'h', "help"});
 
         args::Group loglevel(argparser,"Logging levels:", args::Group::Validators::Xor);
-        args::Flag lVerbose(loglevel,"verbose", "Log all details.", {'v', "verbose"});
-        args::Flag lDebug(loglevel, "debug", "Log debug details.", {'d', "debug"});
-        args::Flag lInfo(loglevel, "info", "Log engine information.", {'i',"info"});
-        args::Flag lWarn(loglevel, "warning", "Log warnings.", {'w', "warning"});
         args::Flag lError(loglevel, "error", "Log errors.", {'e', "error"});
-
-        args::Flag* logflags[]{
-            nullptr,
-            nullptr,
-            &lError,
-            &lWarn,
-            &lInfo,
-            &lDebug,
-            &lVerbose
-        };
+        args::Flag lWarn(loglevel, "warning", "Log warnings.", {'w', "warning"});
+        args::Flag lInfo(loglevel, "info", "Log engine information.", {'i',"info"});
+        args::Flag lDebug(loglevel, "debug", "Log debug details.", {'d', "debug"});
+        args::Flag lVerbose(loglevel,"verbose", "Log all details.", {'v', "verbose"});
         
         args::Group logoption(argparser, "Logging options:", args::Group::Validators::AtMostOne);
         args::Flag lconsole(logoption, "console", "Send log messages to the console.", {"console"});
@@ -260,12 +250,13 @@ namespace Argon{
         }
 
         plog::Severity severity = plog::fatal;
-        for(int i = 0; i < sizeof(logflags)/sizeof(args::Flag*); ++i)
+        for(int i = 0; i < loglevel.Children().size(); ++i)
         {
-            if(logflags[i] != nullptr && logflags[i]->Get())
+            if(loglevel.Children()[i]->Matched())
             {
-                severity = (plog::Severity)i;
-                break;
+                // offset by 2 because we don't have matchers for
+                // 0 (none) or 1 (fatal).
+                severity = (plog::Severity)(i + 2);
             }
         }
 
