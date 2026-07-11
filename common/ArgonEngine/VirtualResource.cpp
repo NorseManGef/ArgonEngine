@@ -292,60 +292,60 @@ struct VirtualResourceAppended:public VirtualResourceIMPL::Source{
         VirtualResource::all_data()[".ahf"]=new AHFResource;
     {
         IF_PLOG(plog::info){
-            std::string str;
-            str.append("The Virtual Resource System has "+
-                       std::to_string(VirtualResource::all_sources().size())+
-                       " available sources to load from:\n");
+            std::stringstream str;
+            str << "The Virtual Resource System has " <<
+                    VirtualResource::all_sources().size()<<
+                    " available sources to load from:\n";
             size_t max=0;
             for (auto &a : VirtualResource::all_sources()){
                 if(max<a.first.size()+1)max=a.first.size()+1;
             }
             size_t indent = (max/4+1)*4;
             size_t pos =0;
-            str.append("|| ");
+            str << "|| ";
             for (auto &a : VirtualResource::all_sources()){
                 if(pos>=80){
-                    str.append("\n|| ");
+                    str << "\n|| ";
                     pos=0;
                 }
-                str.append(a.first);
+                str << a.first;
                 pos+=a.first.size();
                 while((pos%indent)&&pos<80){
-                    str.append(" ");
+                    str << " ";
                     ++pos;
                 }
 
             }
-            PLOGI << str;
+            PLOGI << str.str();
         }
     }
         {
             IF_PLOG(plog::info){
-                std::string str;
-                str.append("The Virtual Resource System has "+
-                           std::to_string(VirtualResource::all_data().size())+
-                           " known data types:\n");
+                std::stringstream str;
+                str << "The Virtual Resource System has " <<
+                        VirtualResource::all_data().size()<<
+                        " known data types:\n";
                 size_t max=0;
                 for (auto &a : VirtualResource::all_data()){
                     if(max<a.first.size()+1)max=a.first.size()+1;
                 }
                 size_t indent = (max/4+1)*4;
                 size_t pos =0;
-                str.append("|| ");
+                str << "|| ";
                 for (auto &a : VirtualResource::all_data()){
                     if(pos>=80){
-                        str.append("\n|| ");
+                        str << "\n|| ";
                         pos=0;
                     }
-                    str.append(a.first);
+                    str << a.first;
                     pos+=a.first.size();
                     while((pos%indent)&&pos<80){
-                        str.append(" ");
+                        str << " ";
                         ++pos;
                     }
 
                 }
-                PLOGI << str;
+                PLOGI << str.str();
             }
         }
 
