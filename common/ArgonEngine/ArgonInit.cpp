@@ -67,6 +67,38 @@ namespace Argon{
 
     void set_manual_redraw(void (*draw)()){manual_redraw=draw;}
 
+    void parse_args(int argc, char** argv) {
+        plog::Severity sev=plog::fatal;
+        bool console_log=false;
+        std::vector<char*> unknown_args;
+        for(int i = 1; i < argc; ++i) {
+            if(std::string("--verbose")==argv[i] || std::string("-V")==argv[i]){
+                sev=plog::verbose;
+            } else if(std::string("--debug")==argv[i] || std::string("-D")==argv[i]){
+                sev=plog::debug;
+            } else if(std::string("--info")==argv[i] || std::string("-I")==argv[i]){
+                sev=plog::info;
+            } else if(std::string("--warning")==argv[i] || std::string("-W")==argv[i]){
+                sev=plog::warning;
+            } else if(std::string("--error")==argv[i] || std::string("-E")==argv[i]){
+                sev=plog::error;
+            } else if(std::string("--console-log")==argv[i] || std::string("-CL")==argv[i]){
+                console_log = true;
+            } else {
+               unknown_args.push_back(argv[i]); 
+            }
+        }
+        if(console_log){
+            plog::init<plog::ArgonFormatter>(sev, plog::streamStdOut);
+        } else {
+            plog::init<plog::ArgonFormatter>(sev, "logs/log.txt", 1000000, 10);
+        }
+
+        for(auto i : unknown_args) {
+            PLOGN << "Unknown argument: " << i;
+        }
+    }
+
     static void InitVirtual(std::string organization_name, std::string app_name){
         PLOGN<<"Argon Engine";
         PLOGN<<"------------";
