@@ -13,8 +13,7 @@ void manual_redraw(){
     if(controller->draw())Argon::swap_buffers();
 }
 int main(int argc, char** argv){
-    Argon::parse_args(argc, argv);
-    Argon::initialize_engine("ArgonSoftware","ArgonApp");
+    Argon::initialize_engine("ArgonSoftware","ArgonApp", argc, argv);
 
     PLOGN << "None test!";
     PLOGF << "Fatal Error test!";

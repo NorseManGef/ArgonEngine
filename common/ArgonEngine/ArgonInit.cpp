@@ -8,6 +8,12 @@
 #include <stdlib.h>
 #include "Hardware.h"
 #include "VirtualResource.h"
+#include "plog/Severity.h"
+#include <args.hxx>
+#include <iostream>
+#include <string>
+#include <unordered_map>
+
 #ifdef USE_GLEW
 #include "GL/glew.h"
 #endif
@@ -35,7 +41,6 @@
 #ifdef USE_RTAUDIO
 #include <RtAudio/RtAudio.h>
 #endif
-#include <iostream>
 #include "AudioSystem.h"
 #ifdef PLATFORM_WINDOWS
 #define WIN32_LEAN_AND_MEAN 1
@@ -43,7 +48,6 @@
 #include <shlobj.h>
 #include <knownfolders.h>
 #include <objbase.h>
-
 #endif
 
 #define ANSI_COLOR_RED     "\x1b[31m"
@@ -66,38 +70,6 @@ namespace Argon{
     std::string last_title;
 
     void set_manual_redraw(void (*draw)()){manual_redraw=draw;}
-
-    void parse_args(int argc, char** argv) {
-        plog::Severity sev=plog::fatal;
-        bool console_log=false;
-        std::vector<char*> unknown_args;
-        for(int i = 1; i < argc; ++i) {
-            if(std::string("--verbose")==argv[i] || std::string("-V")==argv[i]){
-                sev=plog::verbose;
-            } else if(std::string("--debug")==argv[i] || std::string("-D")==argv[i]){
-                sev=plog::debug;
-            } else if(std::string("--info")==argv[i] || std::string("-I")==argv[i]){
-                sev=plog::info;
-            } else if(std::string("--warning")==argv[i] || std::string("-W")==argv[i]){
-                sev=plog::warning;
-            } else if(std::string("--error")==argv[i] || std::string("-E")==argv[i]){
-                sev=plog::error;
-            } else if(std::string("--console-log")==argv[i] || std::string("-CL")==argv[i]){
-                console_log = true;
-            } else {
-               unknown_args.push_back(argv[i]); 
-            }
-        }
-        if(console_log){
-            plog::init<plog::ArgonFormatter>(sev, plog::streamStdOut);
-        } else {
-            plog::init<plog::ArgonFormatter>(sev, "logs/log.txt", 1000000, 10);
-        }
-
-        for(auto i : unknown_args) {
-            PLOGN << "Unknown argument: " << i;
-        }
-    }
 
     static void InitVirtual(std::string organization_name, std::string app_name){
         PLOGN<<"Argon Engine";
@@ -237,7 +209,76 @@ namespace Argon{
         }
         SDL_ResumeAudioDevice(SDL_GetAudioStreamDevice(stream));
     }
-    void initialize_engine(std::string organization_name, std::string app_name){
+    void initialize_engine(
+        std::string organization_name,
+        std::string app_name,
+        int argc,
+        const char* argv[]){
+
+        args::ArgumentParser argparser("Argon Engine");
+        
+        args::HelpFlag help(argparser, "help", "Display this help menu.", {'h', "help"});
+
+        args::Group loglevel(argparser,"Logging levels:", args::Group::Validators::Xor);
+        args::Flag lVerbose(loglevel,"verbose", "Log all details.", {'v', "verbose"});
+        args::Flag lDebug(loglevel, "debug", "Log debug details.", {'d', "debug"});
+        args::Flag lInfo(loglevel, "info", "Log engine information.", {'i',"info"});
+        args::Flag lWarn(loglevel, "warning", "Log warnings.", {'w', "warning"});
+        args::Flag lError(loglevel, "error", "Log errors.", {'e', "error"});
+
+        args::Flag* logflags[]{
+            nullptr,
+            nullptr,
+            &lError,
+            &lWarn,
+            &lInfo,
+            &lDebug,
+            &lVerbose
+        };
+        
+        args::Group logoption(argparser, "Logging options:", args::Group::Validators::AtMostOne);
+        args::Flag lconsole(logoption, "console", "Send log messages to the console.", {"console"});
+
+        try {
+            argparser.ParseCLI(argc, argv);
+        // This is in the init function before anything is initialized,
+        // so it should be safe to just exit from these exception handlers.
+        } catch (args::Help) {
+            // print help to console and exit program.
+            std::cout << argparser;
+            exit(0);
+        }
+        catch (args::ParseError e) {
+            std::cerr << e.what() << std::endl;
+            std::cerr << argparser;
+            exit(1);
+        }
+        catch(args::ValidationError e)
+        {
+            std::cerr << e.what() << std::endl;
+            std::cerr << argparser;
+            exit(1);
+        }
+
+        plog::Severity severity = plog::fatal;
+        for(int i = 0; i < sizeof(logflags)/sizeof(args::Flag*); ++i)
+        {
+            if(logflags[i] != nullptr && logflags[i]->Get())
+            {
+                severity = (plog::Severity)i;
+                break;
+            }
+        }
+
+        if(lconsole.Get())
+        {
+            plog::init<plog::ArgonFormatter>(severity, plog::streamStdOut);
+        }
+        else
+        {
+            plog::init<plog::ArgonFormatter>(severity, ARGON_LOG_NAME, ARGON_LOG_MAX_SIZE, ARGON_LOG_MAX_FILES);
+        }
+
         SDL_SetMainReady();
         
         #ifdef ARGON_INIT_GAMEPAD
