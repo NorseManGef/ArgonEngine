@@ -11,7 +11,7 @@
 
 namespace Argon{
     /// Initialize the engine and HAL.
-    void initialize_engine(std::string organization_name, std::string app_name);
+    void initialize_engine(std::string organization_name, std::string app_name, int argc, char** argv);
     /// Termintate the engine, closing the program.
     void terminate_engine();
     /// Poll for events, this updates all hardware and HAL values, and should be called frequently.
