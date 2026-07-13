@@ -12,7 +12,7 @@ ArgonAppFlowControl* controller;
 void manual_redraw(){
     if(controller->draw())Argon::swap_buffers();
 }
-int main(int argc, char** argv){
+int main(int argc, const char** argv){
     Argon::initialize_engine("ArgonSoftware","ArgonApp", argc, argv);
 
     PLOGN << "None test!";
