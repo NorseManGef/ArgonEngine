@@ -6,9 +6,9 @@
 #include <plog/Initializers/RollingFileInitializer.h>
 
 namespace Argon {
-    const char* ARGON_LOG_NAME = "logs/argon.log";
-    const unsigned ARGON_LOG_MAX_SIZE = 1048576;
-    const unsigned ARGON_LOG_MAX_FILES = 10;
+    inline const char* ARGON_LOG_NAME = "logs/argon.log";
+    inline const unsigned ARGON_LOG_MAX_SIZE = 1048576;
+    inline const unsigned ARGON_LOG_MAX_FILES = 10;
 }
 
 namespace plog {
