@@ -1788,6 +1788,18 @@ namespace args
                         std::count_if(std::begin(Children()), std::end(Children()), [](const Base *child){return child->Matched();}));
             }
 
+            /** Get the list of children which were matched
+             */
+            std::vector<Base *> GetMatchedChildren() const
+            {
+                // Could be replaced by C++ 20 filter, or a custom iterator.
+                std::vector<Base*> matched_children;
+                std::copy_if(children.begin(), children.end(), std::back_inserter(matched_children), [](Base* b){
+                    return b->Matched();
+                });
+                return matched_children;
+            }
+
             /** Whether or not this group matches validation
              */
             virtual bool Matched() const noexcept override
@@ -2576,12 +2588,26 @@ namespace args
 
             OptionType ParseOption(const std::string &s, bool allowEmpty = false)
             {
-                if (s.find(longprefix) == 0 && (allowEmpty || s.length() > longprefix.length()))
+                const bool matchesLong = s.find(longprefix) == 0 && (allowEmpty || s.length() > longprefix.length());
+                const bool matchesShort = s.find(shortprefix) == 0 && (allowEmpty || s.length() > shortprefix.length());
+
+                // A chunk can start with both prefixes when one is a prefix of
+                // the other, or when the long prefix is empty (every string
+                // starts with it). Resolve to the longer, more specific prefix:
+                // this keeps the default "--"/"-" preference for long flags
+                // while letting a short flag be recognised under an empty long
+                // prefix instead of being swallowed as a nameless long flag.
+                if (matchesLong && matchesShort)
+                {
+                    return longprefix.length() >= shortprefix.length() ? OptionType::LongFlag : OptionType::ShortFlag;
+                }
+
+                if (matchesLong)
                 {
                     return OptionType::LongFlag;
                 }
 
-                if (s.find(shortprefix) == 0 && (allowEmpty || s.length() > shortprefix.length()))
+                if (matchesShort)
                 {
                     return OptionType::ShortFlag;
                 }
@@ -2876,7 +2902,7 @@ namespace args
             }
 
             template <typename It>
-            bool Complete(It it, It end)
+            bool Complete(It it, It end, bool terminated)
             {
                 auto nextIt = it;
                 if (!readCompletion || (++nextIt != end))
@@ -2889,7 +2915,11 @@ namespace args
                 std::vector<Command *> commands = GetCommands();
                 const auto optionType = ParseOption(chunk, true);
 
-                if (!commands.empty() && (chunk.empty() || optionType == OptionType::Positional))
+                // Once the terminator has been seen the parser treats every
+                // following chunk as positional, so only positional choices are
+                // valid completions here. Suggesting flags or commands past the
+                // terminator offers candidates the parser would then reject.
+                if (!terminated && !commands.empty() && (chunk.empty() || optionType == OptionType::Positional))
                 {
                     for (auto &cmd : commands)
                     {
@@ -2902,7 +2932,7 @@ namespace args
                 {
                     bool hasPositionalCompletion = true;
 
-                    if (!commands.empty())
+                    if (!terminated && !commands.empty())
                     {
                         for (auto &cmd : commands)
                         {
@@ -2924,7 +2954,7 @@ namespace args
                         }
                     }
 
-                    if (hasPositionalCompletion)
+                    if (!terminated && hasPositionalCompletion)
                     {
                         auto flags = GetAllFlags();
                         for (auto flag : flags)
@@ -3008,7 +3038,7 @@ namespace args
                 // Check all arg chunks
                 for (auto it = begin; it != end; ++it)
                 {
-                    if (Complete(it, end))
+                    if (Complete(it, end, terminated))
                     {
                         return end;
                     }
