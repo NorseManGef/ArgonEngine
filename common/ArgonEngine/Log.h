@@ -1,14 +1,31 @@
 #ifndef ARGON_LOG
 #define ARGON_LOG
-
+#include <filesystem>
 #include <plog/Log.h>
 #include <plog/Initializers/ConsoleInitializer.h>
 #include <plog/Initializers/RollingFileInitializer.h>
 
+#ifndef ARGON_LOG_DIR
+#define ARGON_LOG_DIR "logs"
+#endif
+#ifndef ARGON_LOG_NAME
+#define ARGON_LOG_NAME "argon.log"
+#endif
+#ifndef ARGON_LOG_MAX_SIZE
+#define ARGON_LOG_MAX_SIZE 1048576
+#endif
+#ifndef ARGON_LOG_MAX_FILES
+#define ARGON_LOG_MAX_FILES 10
+#endif
+
 namespace Argon {
-    inline const char* ARGON_LOG_NAME = "logs/argon.log";
-    inline const unsigned ARGON_LOG_MAX_SIZE = 1048576;
-    inline const unsigned ARGON_LOG_MAX_FILES = 10;
+
+    void init_log_directory() {
+        std::filesystem::path logdir(ARGON_LOG_DIR);
+        if(!exists(logdir)){
+            std::filesystem::create_directory(logdir);
+        }
+    }
 }
 
 namespace plog {

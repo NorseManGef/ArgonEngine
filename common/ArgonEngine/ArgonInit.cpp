@@ -208,6 +208,7 @@ namespace Argon{
         }
         SDL_ResumeAudioDevice(SDL_GetAudioStreamDevice(stream));
     }
+
     void initialize_engine(
         std::string organization_name,
         std::string app_name,
@@ -218,7 +219,7 @@ namespace Argon{
         
         args::HelpFlag help(argparser, "help", "Display this help menu.", {'h', "help"});
 
-        args::Group loglevel(argparser,"Logging levels:", args::Group::Validators::Xor);
+        args::Group loglevel(argparser,"Logging levels:", args::Group::Validators::AtMostOne);
         args::Flag lError(loglevel, "error", "Log errors.", {'e', "error"});
         args::Flag lWarn(loglevel, "warning", "Log warnings.", {'w', "warning"});
         args::Flag lInfo(loglevel, "info", "Log engine information.", {'i',"info"});
@@ -270,6 +271,7 @@ namespace Argon{
         }
         else
         {
+            init_log_directory();
             plog::init<plog::ArgonFormatter>(severity, ARGON_LOG_NAME, ARGON_LOG_MAX_SIZE, ARGON_LOG_MAX_FILES);
         }
 
