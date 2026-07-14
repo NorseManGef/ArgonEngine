@@ -19,8 +19,7 @@
 #endif
 
 namespace Argon {
-
-    void init_log_directory() {
+    inline void init_log_directory() {
         std::filesystem::path logdir(ARGON_LOG_DIR);
         if(!exists(logdir)){
             std::filesystem::create_directory(logdir);

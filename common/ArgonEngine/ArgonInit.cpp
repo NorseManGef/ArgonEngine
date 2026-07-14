@@ -272,7 +272,8 @@ namespace Argon{
         else
         {
             init_log_directory();
-            plog::init<plog::ArgonFormatter>(severity, ARGON_LOG_NAME, ARGON_LOG_MAX_SIZE, ARGON_LOG_MAX_FILES);
+            const char* log_location = ARGON_LOG_DIR "/" ARGON_LOG_NAME;
+            plog::init<plog::ArgonFormatter>(severity, log_location, ARGON_LOG_MAX_SIZE, ARGON_LOG_MAX_FILES);
         }
 
         SDL_SetMainReady();
