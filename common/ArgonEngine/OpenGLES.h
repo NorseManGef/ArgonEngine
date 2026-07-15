@@ -17,7 +17,7 @@
 #ifdef USE_OPENGL
 #if GRAPHICS_DEBUG_LEVEL > 5 && USE_OPENGL
 
-#define GL_CHECK(A) if(int x = glGetError()){std::cout<<"GLERROR: "<< A <<" E: "<< x <<"\n";}
+#define GL_CHECK(A) if(int x = glGetError()){PLOGE<<"GLERROR: "<< A <<" E: "<< x;}
 #else
 #define GL_CHECK(A) ;
 #endif
@@ -250,7 +250,7 @@ public:
         current_frame_buffer=render_tex_frame_buffer;
         GLenum g=glCheckFramebufferStatus(GL_FRAMEBUFFER);
 
-        if(g!=GL_FRAMEBUFFER_COMPLETE) std::cout<<"FBO is not complete error:"<<g<<"\n";
+        if(g!=GL_FRAMEBUFFER_COMPLETE) PLOGE<<"FBO is not complete error:"<<g;
         current_frame_buffer=render_tex_frame_buffer;
         GL_CHECK("AfterDepthTexBind");
 
@@ -267,7 +267,7 @@ public:
 #endif
         GLenum g=glCheckFramebufferStatus(GL_FRAMEBUFFER);
 
-        if(g!=GL_FRAMEBUFFER_COMPLETE) std::cout<<"FBO is not complete error:"<<std::hex<<g<<"\n";
+        if(g!=GL_FRAMEBUFFER_COMPLETE) PLOGE<<"FBO is not complete error:"<<std::hex<<g;
         current_frame_buffer=render_tex_frame_buffer;
         GL_CHECK("AfterColorTexBind");
 

@@ -199,7 +199,7 @@ namespace Argon{
         bool loop;
         void init_opus(VirtualResource path){
             if(!path.get_source<VirtualResourceIMPL::Source*>()){
-                std::cout <<"Could not fing OGG file: "<<path.get_path_string()<<std::endl;
+                PLOGE<<"Could not fing OGG file: "<<path.get_path_string();
                 return;
             }
             playback_position=0;
@@ -225,7 +225,7 @@ namespace Argon{
             }
             if(!opus_file&&vorbis_success<0){
                 vorbis_file=NULL;
-                std::cout<<"Failed to open ogg file: "<<path.get_path_string()<<"\n";
+                PLOGE<<"Failed to open ogg file: "<<path.get_path_string();
             }else initialized = true;
 
         }

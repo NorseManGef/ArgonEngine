@@ -13,7 +13,10 @@
 #include <type_traits>
 #include <map>
 #include <iostream>
+#include <sstream>
 #include "Thread.h"
+#include "Log.h"
+#include "plog/Log.h"
 /**
  * @brief This macro allows you to quickly define the TypeInfo of most structs.
  * @details
@@ -182,30 +185,33 @@ struct ReflectionBase{
         return s;
     }
     static void print_registered_factories(){
-        mutex().lock();
-        std::cout<< "There are "<< factory_map().size()<<" registered factories, that the reflection system can spawn:\n";
-        size_t max=0;
-        for (auto &a : factory_map()){
-            if(max<a.first.size()+1)max=a.first.size()+1;
-        }
-        size_t indent = (max/4+1)*4;
-        size_t pos =0;
-        std::cout<<"|| ";
-        for (auto &a : factory_map()){
-            if(pos>=80){
-                std::cout<<"\n|| ";
-                pos=0;
+        IF_PLOG(plog::info) {
+            mutex().lock();
+            std::stringstream stream;
+            stream<< "There are "<< factory_map().size()<<" registered factories, that the reflection system can spawn:\n";
+            size_t max=0;
+            for (auto &a : factory_map()){
+                if(max<a.first.size()+1)max=a.first.size()+1;
             }
-            std::cout<<a.first;
-            pos+=a.first.size();
-            while((pos%indent)&&pos<80){
-                std::cout<<" ";
-                ++pos;
-            }
+            size_t indent = (max/4+1)*4;
+            size_t pos =0;
+            stream<<"|| ";
+            for (auto &a : factory_map()){
+                if(pos>=80){
+                    stream<<"\n|| ";
+                    pos=0;
+                }
+                stream<<a.first;
+                pos+=a.first.size();
+                while((pos%indent)&&pos<80){
+                    stream<<" ";
+                    ++pos;
+                }
 
+            }
+            PLOGI<<stream.str();
+            mutex().unlock();
         }
-        std::cout<<std::endl;
-        mutex().unlock();
     }
 
     virtual void visit(Visitor& v){};

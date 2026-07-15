@@ -230,11 +230,9 @@ void Listener::update(){
         int curr_offset = sample_delay_for_distance(curr_distance);
         float offset_incr = float(kAudioBufferSize)/(curr_offset-last_offset+kAudioBufferSize);
 
-        //std::cout<<offset_incr<<" "<<this<<"\n";
 
 
         curr->update_if_needed(current_frame);
-        //std::cout<<last_offset<<" "<<curr_offset<<" "<<offset_incr<<"\n";
 
         int x=0;
         while(x<curr_offset-last_offset+kAudioBufferSize){

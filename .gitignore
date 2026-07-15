@@ -42,3 +42,8 @@ compile_commands.json
 .eps
 .emf
 .pdf
+
+# Logs
+
+.log
+logs/
