@@ -215,16 +215,18 @@ namespace Argon{
         int argc,
         const char** argv){
 
+            using LogFlag = args::ConstantFlag<plog::Severity>;
+
         args::ArgumentParser argparser("Argon Engine");
         
         args::HelpFlag help(argparser, "help", "Display this help menu.", {'h', "help"});
 
         args::Group loglevel(argparser,"Logging levels:", args::Group::Validators::AtMostOne);
-        args::Flag lError(loglevel, "error", "Log errors.", {'e', "error"});
-        args::Flag lWarn(loglevel, "warning", "Log warnings.", {'w', "warning"});
-        args::Flag lInfo(loglevel, "info", "Log engine information.", {'i',"info"});
-        args::Flag lDebug(loglevel, "debug", "Log debug details.", {'d', "debug"});
-        args::Flag lVerbose(loglevel,"verbose", "Log all details.", {'v', "verbose"});
+        LogFlag lError(loglevel, "error", "Log errors.", {'e', "error"}, plog::Severity::error);
+        LogFlag lWarn(loglevel, "warning", "Log warnings.", {'w', "warning"}, plog::Severity::warning);
+        LogFlag lInfo(loglevel, "info", "Log engine information.", {'i',"info"}, plog::Severity::info);
+        LogFlag lDebug(loglevel, "debug", "Log debug details.", {'d', "debug"}, plog::Severity::debug);
+        LogFlag lVerbose(loglevel,"verbose", "Log all details.", {'v', "verbose"}, plog::Severity::verbose);
         
         args::Group logoption(argparser, "Logging options:", args::Group::Validators::AtMostOne);
         args::Flag lconsole(logoption, "console", "Send log messages to the console.", {"console"});
@@ -250,20 +252,9 @@ namespace Argon{
             exit(1);
         }
 
-        plog::Severity severity = plog::fatal;
-        // only bother checking which level matched if any was matched at all.
-        if(loglevel.Matched())
-        {
-            for(int i = 0; i < loglevel.Children().size(); ++i)
-            {
-                if(loglevel.Children()[i]->Matched())
-                {
-                    // offset by 2 because we don't have matchers for
-                    // 0 (none) or 1 (fatal).
-                    severity = (plog::Severity)(i + 2);
-                }
-            }
-        }
+        plog::Severity severity = loglevel.Matched() ?
+            loglevel.GetFilteredChildren<LogFlag>(true)[0]->Get():
+            plog::fatal;
 
         if(lconsole.Get())
         {
