@@ -929,6 +929,8 @@ target_link_libraries(argonapp
         ${LIB_VULKAN}
 )
 
+set_property(TARGET argonapp PROPERTY CXX_STANDARD 17)
+
 target_compile_definitions(argonapp
     PRIVATE
         "_UNICODE"
