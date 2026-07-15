@@ -280,7 +280,7 @@ namespace Argon{
         
         #ifdef ARGON_INIT_GAMEPAD
         if (!SDL_Init(SDL_INIT_AUDIO | SDL_INIT_VIDEO | SDL_INIT_GAMEPAD)){
-            Log::logf() << SDL_GetError();
+            PLOGF << SDL_GetError();
             terminate_engine();
         }
         #else

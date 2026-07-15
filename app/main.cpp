@@ -15,14 +15,6 @@ void manual_redraw(){
 int main(int argc, const char** argv){
     Argon::initialize_engine("ArgonSoftware","ArgonApp", argc, argv);
 
-    PLOGN << "None test!";
-    PLOGF << "Fatal Error test!";
-    PLOGE << "Error test!";
-    PLOGW << "Warning test!";
-    PLOGI << "Info test!";
-    PLOGD << "debug test!";
-    PLOGV << "verbose test!";
-
     int run =1;
     Argon::set_manual_redraw(manual_redraw);
     controller=new ArgonAppFlowControl();

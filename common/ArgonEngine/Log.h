@@ -38,8 +38,8 @@ public:
     static util::nstring format(const Record& record) {
         util::nostringstream ss;
 
-        tm t;
-        util::localtime_s(&t, &record.getTime().time);
+        tm time;
+        util::localtime_s(&time, &record.getTime().time);
 
         auto sev = record.getSeverity();
 
@@ -48,7 +48,7 @@ public:
                 return ss.str();
         }
 
-        ss << t.tm_hour << ":" << t.tm_min << ":" << t.tm_sec;
+        ss << time.tm_hour << ":" << time.tm_min << ":" << time.tm_sec;
         ss << PLOG_NSTR(" [") << record.getFunc() << PLOG_NSTR("@") << record.getLine() << PLOG_NSTR("] ");
 
         switch(record.getSeverity()) {
