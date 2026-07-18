@@ -8,10 +8,13 @@
 #include <stdlib.h>
 #include "Hardware.h"
 #include "VirtualResource.h"
+#include "Graphics.h"
 #include "plog/Severity.h"
 #include <args/args.hxx>
 #include <iostream>
 #include <string>
+#include <unordered_map>
+#include <utility>
 
 #ifdef USE_GLEW
 #include "GL/glew.h"
@@ -215,7 +218,7 @@ namespace Argon{
         int argc,
         const char** argv){
 
-            using LogFlag = args::ConstantFlag<plog::Severity>;
+        using LogFlag = args::ConstantFlag<plog::Severity>;
 
         args::ArgumentParser argparser("Argon Engine");
         
@@ -228,51 +231,80 @@ namespace Argon{
         LogFlag lDebug(loglevel, "debug", "Log debug details.", {'d', "debug"}, plog::Severity::debug);
         LogFlag lVerbose(loglevel,"verbose", "Log all details.", {'v', "verbose"}, plog::Severity::verbose);
         
-        args::Group logoption(argparser, "Logging options:", args::Group::Validators::AtMostOne);
+        args::Group logoption(argparser, "Logging options", args::Group::Validators::AtMostOne);
         args::Flag lconsole(logoption, "console", "Send log messages to the console.", {"console"});
+        args::Group logfileoptions(logoption, "Log file options", args::Group::Validators::AtLeastOne);
+        args::ValueFlag<std::string> lfile(logfileoptions, "log file", "Name of a file in the log directory to log to.", args::Matcher{"logfile"},std::string(ARGON_LOG_NAME));
+        args::ValueFlag<std::string> ldir(logfileoptions, "log directory", "Name of a the log file directory.", args::Matcher{"logdir"},std::string(ARGON_LOG_DIR));
 
-        try {
+        args::ValueFlag<int> fcontroller(argparser, "controller", "Enable/disable controller (will not override developer options).", {"controller"},1);
+
+        auto renderers = get_renderers();
+        std::string rendererHelp = get_renderer_help();
+
+        args::MapFlag<std::string, Renderer> frenderer(argparser, "graphics", rendererHelp, {"graphics"}, renderers);
+
+        args::ValueFlag<int> fhpd(argparser, "HPD", "Enable High Pixel Density", {"hpd"}, 1);
+
+        try{
             argparser.ParseCLI(argc, argv);
         // This is in the init function before anything is initialized,
         // so it should be safe to just exit from these exception handlers.
-        } catch (args::Help) {
+        } catch (args::Help){
             // print help to console and exit program.
             std::cout << argparser;
             exit(0);
         }
-        catch (args::ParseError e) {
+        catch (args::ParseError e){
             std::cerr << e.what() << std::endl;
             std::cerr << argparser;
             exit(1);
         }
-        catch(args::ValidationError e)
-        {
+        catch(args::ValidationError e){
             std::cerr << e.what() << std::endl;
             std::cerr << argparser;
             exit(1);
         }
 
-        plog::Severity severity = loglevel.Matched() ?
-            loglevel.GetFilteredChildren<LogFlag>(true)[0]->Get():
-            plog::fatal;
+        plog::Severity severity = plog::fatal;
+        if (loglevel.Matched()) {
+            auto flags = loglevel.GetFilteredChildren<LogFlag>(true);
+            if (!flags.empty()) {
+                severity = flags[0]->Get();
+            }
+        }
 
-        if(lconsole.Get())
-        {
+        if(lconsole.Get()){
             plog::init<plog::ArgonFormatter>(severity, plog::streamStdOut);
         }
-        else
-        {
-            init_log_directory();
-            const char* log_location = ARGON_LOG_DIR "/" ARGON_LOG_NAME;
-            plog::init<plog::ArgonFormatter>(severity, log_location, ARGON_LOG_MAX_SIZE, ARGON_LOG_MAX_FILES);
+        else{
+            const char* fdir = ldir.Matched() ? ldir.Get().c_str() : ARGON_LOG_DIR;
+            const char* fname = lfile.Matched() ? lfile.Get().c_str() : ARGON_LOG_NAME;
+            init_log_directory(fdir);
+            std::stringstream lognamer;
+            lognamer << fdir << '/' << fname;
+            plog::init<plog::ArgonFormatter>(severity, lognamer.str().c_str(), ARGON_LOG_MAX_SIZE, ARGON_LOG_MAX_FILES);
         }
+
+        Renderer renderer = frenderer.Matched() ? frenderer.Get() : Renderer::OGL;
+        // TODO: Use this value
+
+        bool hpd = fhpd.Matched() ? fhpd.Get() : 1;
 
         SDL_SetMainReady();
         
         #ifdef ARGON_INIT_GAMEPAD
-        if (!SDL_Init(SDL_INIT_AUDIO | SDL_INIT_VIDEO | SDL_INIT_GAMEPAD)){
-            PLOGF << SDL_GetError();
-            terminate_engine();
+        if(!fcontroller.Matched() || fcontroller.Get()){
+            if (!SDL_Init(SDL_INIT_AUDIO | SDL_INIT_VIDEO | SDL_INIT_GAMEPAD)){
+                PLOGF << SDL_GetError();
+                terminate_engine();
+            }
+        }
+        else{
+            if (!SDL_Init(SDL_INIT_AUDIO | SDL_INIT_VIDEO)){
+                PLOGF << SDL_GetError();
+                terminate_engine();
+            }
         }
         #else
         if (!SDL_Init(SDL_INIT_AUDIO | SDL_INIT_VIDEO)){
@@ -305,16 +337,19 @@ namespace Argon{
         SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 
         SDL_PropertiesID props = SDL_CreateProperties();
-    SDL_SetStringProperty(props, SDL_PROP_WINDOW_CREATE_TITLE_STRING, "test");
-    SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X_NUMBER, Screen::position[0]);
-    SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_Y_NUMBER, Screen::position[1]);
-    SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, Screen::logical_size[0]);
-    SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, Screen::logical_size[1]);
-#ifdef ARGON_WINDOW_HIGH_PIXEL_DENSITY
-SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
-#else
-SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
-#endif
+        SDL_SetStringProperty(props, SDL_PROP_WINDOW_CREATE_TITLE_STRING, "test");
+        SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X_NUMBER, Screen::position[0]);
+        SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_Y_NUMBER, Screen::position[1]);
+        SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, Screen::logical_size[0]);
+        SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, Screen::logical_size[1]);
+        
+        if(hpd) {
+            SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
+        }
+        else {
+            SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+        }
+
         win = SDL_CreateWindowWithProperties(props);
         if(!win) {
             PLOGF << "SDL_CreateWindowWithProperties failed: " << SDL_GetError();
