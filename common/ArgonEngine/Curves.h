@@ -1,9 +1,8 @@
 #ifndef CURVES_H
 #define CURVES_H
 
-class Curves
-{
-public:
+class Curves {
+  public:
     Curves();
 };
 

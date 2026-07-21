@@ -1,5 +1,3 @@
 #include "Curves.h"
 
-Curves::Curves()
-{
-}
+Curves::Curves() {}
