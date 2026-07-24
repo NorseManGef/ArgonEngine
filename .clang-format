@@ -6,4 +6,4 @@ Language: Cpp
 DerivePointerAlignment: false
 PointerAlignment: Left
 AlignAfterOpenBracket: true
-ColumnLimit: 60
+ColumnLimit: 80
