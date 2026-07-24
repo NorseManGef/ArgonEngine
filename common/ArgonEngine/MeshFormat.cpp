@@ -15,13 +15,12 @@
 #include <fstream>
 namespace Argon {
 
-std::shared_ptr<Material>
-MeshFormatFile::get_material(const StringIntern& s) {
+std::shared_ptr<Material> MeshFormatFile::get_material(const StringIntern& s) {
 
     return materials[s];
 }
-void MeshFormatObject::set_mesh_data(
-    MeshFormatObjectData* d, MeshFormatFile* file) {
+void MeshFormatObject::set_mesh_data(MeshFormatObjectData* d,
+                                     MeshFormatFile* file) {
     data = d;
 
     BoundingCube b;
@@ -53,39 +52,31 @@ void MeshFormatObject::set_mesh_data(
 
     vertex_array = file->meshes[data->mesh];
     if (file->meshes[data->mesh])
-        bounds = vertex_array->get_attribute_bounds(
-            kPositionAttribute);
+        bounds = vertex_array->get_attribute_bounds(kPositionAttribute);
 }
 
-void MeshFormatLight::set_mesh_data(
-    MeshFormatLightData* d) {
+void MeshFormatLight::set_mesh_data(MeshFormatLightData* d) {
     data = d;
-    Light::specular_power = Light::diffuse_power =
-        d->intensity;
+    Light::specular_power = Light::diffuse_power = d->intensity;
     Light::distance = d->distance;
     color = d->color;
     Matrix4f m2 = Matrix4f(data->matrix);
     position = get_position(m2);
 }
-void MeshFormat::load_file(VirtualResource p) {
-    file.read(p);
-};
+void MeshFormat::load_file(VirtualResource p) { file.read(p); };
 void MeshFormat::create_objects() {
     object_data_iterator it = begin_object_data();
     object_data_iterator end = end_object_data();
-    std::map<StringIntern, std::shared_ptr<Material>>&
-        materials = file.materials;
-    std::map<StringIntern, std::shared_ptr<Node>>
-        object_map;
+    std::map<StringIntern, std::shared_ptr<Material>>& materials =
+        file.materials;
+    std::map<StringIntern, std::shared_ptr<Node>> object_map;
 
     while (it != end) {
         std::shared_ptr<MeshFormatObject> o(
             new MeshFormatObject(&it->second, &file));
         object_map[it->first] = o;
-        if (it->second.materials.size() &&
-            &materials[it->second.materials[0]])
-            o->material =
-                materials[it->second.materials[0]];
+        if (it->second.materials.size() && &materials[it->second.materials[0]])
+            o->material = materials[it->second.materials[0]];
 
         ++it;
     }
@@ -95,17 +86,16 @@ void MeshFormat::create_objects() {
     while (it2 != end2) {
         std::shared_ptr<MeshFormatLight> o;
         object_map[it2->first] = o =
-            std::shared_ptr<MeshFormatLight>(
-                new MeshFormatLight(&it2->second));
+            std::shared_ptr<MeshFormatLight>(new MeshFormatLight(&it2->second));
 
         ++it2;
     }
 
-    std::map<StringIntern, std::shared_ptr<Node>>::iterator
-        it3 = object_map.begin();
+    std::map<StringIntern, std::shared_ptr<Node>>::iterator it3 =
+        object_map.begin();
     while (it3 != object_map.end()) {
-        std::shared_ptr<Node> n = object_map
-            [get_file().objects[it3->first].parent];
+        std::shared_ptr<Node> n =
+            object_map[get_file().objects[it3->first].parent];
         it3->second->parent = n ? &*n : this;
 
         spawned_nodes[it3->first] = it3->second;
@@ -119,8 +109,7 @@ MeshFormat::spawn_object(const StringIntern& s) {
         PLOGE << s << " was not found";
         return nullptr;
     }
-    std::shared_ptr<MeshFormatObject> o(
-        new MeshFormatObject(d, &file));
+    std::shared_ptr<MeshFormatObject> o(new MeshFormatObject(d, &file));
 
     if (d->materials.size())
         o->material = get_material(d->materials[0]);

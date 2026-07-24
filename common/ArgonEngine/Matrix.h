@@ -16,9 +16,7 @@ namespace Argon {
 template <typename T, size_t TSize> struct MatrixBase {
     T data[TSize * TSize];
     T* get_data() { return data; }
-    T& operator()(size_t x, size_t y) {
-        return data[x + y * TSize];
-    }
+    T& operator()(size_t x, size_t y) { return data[x + y * TSize]; }
     const T& operator()(size_t x, size_t y) const {
         return data[x + y * TSize];
     }
@@ -32,9 +30,7 @@ template <typename T, size_t TSize> struct MatrixBase {
             data[x] = !(x % (TSize + 1));
     }
 
-    INLINE const T operator[](const size_t s) const {
-        return data[s];
-    }
+    INLINE const T operator[](const size_t s) const { return data[s]; }
     INLINE T& operator[](size_t s) { return data[s]; }
     INLINE VectorBase<T, TSize> row(size_t r) const {
         VectorBase<T, TSize> v;
@@ -49,16 +45,13 @@ template <typename T, size_t TSize> struct MatrixBase {
         return v;
     }
 };
-template <typename T>
-struct MatrixBase4 : public MatrixBase<T, 4> {
+template <typename T> struct MatrixBase4 : public MatrixBase<T, 4> {
     MatrixBase4() : MatrixBase<T, 4>() {}
     template <typename T2>
-    MatrixBase4(const MatrixBase<T2, 4>& m)
-        : MatrixBase<T, 4>(m) {}
+    MatrixBase4(const MatrixBase<T2, 4>& m) : MatrixBase<T, 4>(m) {}
 
-    MatrixBase4(T m0, T m1, T m2, T m3, T m4, T m5, T m6,
-                T m7, T m8, T m9, T m10, T m11, T m12,
-                T m13, T m14, T m15) {
+    MatrixBase4(T m0, T m1, T m2, T m3, T m4, T m5, T m6, T m7, T m8, T m9,
+                T m10, T m11, T m12, T m13, T m14, T m15) {
         T* f = this->data;
         f[0] = m0;
         f[1] = m1;
@@ -80,126 +73,104 @@ struct MatrixBase4 : public MatrixBase<T, 4> {
 
     bool inverse(MatrixBase4& inv) {
         T* m = this->data;
-        T det = m[0] * inv[0] + m[1] * inv[4] +
-                m[2] * inv[8] + m[3] * inv[12];
+        T det = m[0] * inv[0] + m[1] * inv[4] + m[2] * inv[8] + m[3] * inv[12];
 
         if (det == 0)
             return false;
         det = 1.0f / det;
 
-        inv[0] =
-            (m[5] * m[10] * m[15] - m[5] * m[11] * m[14] -
-             m[9] * m[6] * m[15] + m[9] * m[7] * m[14] +
-             m[13] * m[6] * m[11] - m[13] * m[7] * m[10]) *
-            det;
+        inv[0] = (m[5] * m[10] * m[15] - m[5] * m[11] * m[14] -
+                  m[9] * m[6] * m[15] + m[9] * m[7] * m[14] +
+                  m[13] * m[6] * m[11] - m[13] * m[7] * m[10]) *
+                 det;
 
-        inv[4] =
-            (-m[4] * m[10] * m[15] + m[4] * m[11] * m[14] +
-             m[8] * m[6] * m[15] - m[8] * m[7] * m[14] -
-             m[12] * m[6] * m[11] + m[12] * m[7] * m[10]) *
-            det;
+        inv[4] = (-m[4] * m[10] * m[15] + m[4] * m[11] * m[14] +
+                  m[8] * m[6] * m[15] - m[8] * m[7] * m[14] -
+                  m[12] * m[6] * m[11] + m[12] * m[7] * m[10]) *
+                 det;
 
         inv[8] =
-            (m[4] * m[9] * m[15] - m[4] * m[11] * m[13] -
-             m[8] * m[5] * m[15] + m[8] * m[7] * m[13] +
-             m[12] * m[5] * m[11] - m[12] * m[7] * m[9]) *
+            (m[4] * m[9] * m[15] - m[4] * m[11] * m[13] - m[8] * m[5] * m[15] +
+             m[8] * m[7] * m[13] + m[12] * m[5] * m[11] - m[12] * m[7] * m[9]) *
             det;
 
         inv[12] =
-            (-m[4] * m[9] * m[14] + m[4] * m[10] * m[13] +
-             m[8] * m[5] * m[14] - m[8] * m[6] * m[13] -
-             m[12] * m[5] * m[10] + m[12] * m[6] * m[9]) *
+            (-m[4] * m[9] * m[14] + m[4] * m[10] * m[13] + m[8] * m[5] * m[14] -
+             m[8] * m[6] * m[13] - m[12] * m[5] * m[10] + m[12] * m[6] * m[9]) *
             det;
 
-        inv[1] =
-            (-m[1] * m[10] * m[15] + m[1] * m[11] * m[14] +
-             m[9] * m[2] * m[15] - m[9] * m[3] * m[14] -
-             m[13] * m[2] * m[11] + m[13] * m[3] * m[10]) *
-            det;
+        inv[1] = (-m[1] * m[10] * m[15] + m[1] * m[11] * m[14] +
+                  m[9] * m[2] * m[15] - m[9] * m[3] * m[14] -
+                  m[13] * m[2] * m[11] + m[13] * m[3] * m[10]) *
+                 det;
 
-        inv[5] =
-            (m[0] * m[10] * m[15] - m[0] * m[11] * m[14] -
-             m[8] * m[2] * m[15] + m[8] * m[3] * m[14] +
-             m[12] * m[2] * m[11] - m[12] * m[3] * m[10]) *
-            det;
+        inv[5] = (m[0] * m[10] * m[15] - m[0] * m[11] * m[14] -
+                  m[8] * m[2] * m[15] + m[8] * m[3] * m[14] +
+                  m[12] * m[2] * m[11] - m[12] * m[3] * m[10]) *
+                 det;
 
         inv[9] =
-            (-m[0] * m[9] * m[15] + m[0] * m[11] * m[13] +
-             m[8] * m[1] * m[15] - m[8] * m[3] * m[13] -
-             m[12] * m[1] * m[11] + m[12] * m[3] * m[9]) *
+            (-m[0] * m[9] * m[15] + m[0] * m[11] * m[13] + m[8] * m[1] * m[15] -
+             m[8] * m[3] * m[13] - m[12] * m[1] * m[11] + m[12] * m[3] * m[9]) *
             det;
 
         inv[13] =
-            (m[0] * m[9] * m[14] - m[0] * m[10] * m[13] -
-             m[8] * m[1] * m[14] + m[8] * m[2] * m[13] +
-             m[12] * m[1] * m[10] - m[12] * m[2] * m[9]) *
+            (m[0] * m[9] * m[14] - m[0] * m[10] * m[13] - m[8] * m[1] * m[14] +
+             m[8] * m[2] * m[13] + m[12] * m[1] * m[10] - m[12] * m[2] * m[9]) *
             det;
 
         inv[2] =
-            (m[1] * m[6] * m[15] - m[1] * m[7] * m[14] -
-             m[5] * m[2] * m[15] + m[5] * m[3] * m[14] +
-             m[13] * m[2] * m[7] - m[13] * m[3] * m[6]) *
+            (m[1] * m[6] * m[15] - m[1] * m[7] * m[14] - m[5] * m[2] * m[15] +
+             m[5] * m[3] * m[14] + m[13] * m[2] * m[7] - m[13] * m[3] * m[6]) *
             det;
 
         inv[6] =
-            (-m[0] * m[6] * m[15] + m[0] * m[7] * m[14] +
-             m[4] * m[2] * m[15] - m[4] * m[3] * m[14] -
-             m[12] * m[2] * m[7] + m[12] * m[3] * m[6]) *
+            (-m[0] * m[6] * m[15] + m[0] * m[7] * m[14] + m[4] * m[2] * m[15] -
+             m[4] * m[3] * m[14] - m[12] * m[2] * m[7] + m[12] * m[3] * m[6]) *
             det;
 
         inv[10] =
-            (m[0] * m[5] * m[15] - m[0] * m[7] * m[13] -
-             m[4] * m[1] * m[15] + m[4] * m[3] * m[13] +
-             m[12] * m[1] * m[7] - m[12] * m[3] * m[5]) *
+            (m[0] * m[5] * m[15] - m[0] * m[7] * m[13] - m[4] * m[1] * m[15] +
+             m[4] * m[3] * m[13] + m[12] * m[1] * m[7] - m[12] * m[3] * m[5]) *
             det;
 
         inv[14] =
-            (-m[0] * m[5] * m[14] + m[0] * m[6] * m[13] +
-             m[4] * m[1] * m[14] - m[4] * m[2] * m[13] -
-             m[12] * m[1] * m[6] + m[12] * m[2] * m[5]) *
+            (-m[0] * m[5] * m[14] + m[0] * m[6] * m[13] + m[4] * m[1] * m[14] -
+             m[4] * m[2] * m[13] - m[12] * m[1] * m[6] + m[12] * m[2] * m[5]) *
             det;
 
         inv[3] =
-            (-m[1] * m[6] * m[11] + m[1] * m[7] * m[10] +
-             m[5] * m[2] * m[11] - m[5] * m[3] * m[10] -
-             m[9] * m[2] * m[7] + m[9] * m[3] * m[6]) *
+            (-m[1] * m[6] * m[11] + m[1] * m[7] * m[10] + m[5] * m[2] * m[11] -
+             m[5] * m[3] * m[10] - m[9] * m[2] * m[7] + m[9] * m[3] * m[6]) *
             det;
 
         inv[7] =
-            (m[0] * m[6] * m[11] - m[0] * m[7] * m[10] -
-             m[4] * m[2] * m[11] + m[4] * m[3] * m[10] +
-             m[8] * m[2] * m[7] - m[8] * m[3] * m[6]) *
+            (m[0] * m[6] * m[11] - m[0] * m[7] * m[10] - m[4] * m[2] * m[11] +
+             m[4] * m[3] * m[10] + m[8] * m[2] * m[7] - m[8] * m[3] * m[6]) *
             det;
 
         inv[11] =
-            (-m[0] * m[5] * m[11] + m[0] * m[7] * m[9] +
-             m[4] * m[1] * m[11] - m[4] * m[3] * m[9] -
-             m[8] * m[1] * m[7] + m[8] * m[3] * m[5]) *
+            (-m[0] * m[5] * m[11] + m[0] * m[7] * m[9] + m[4] * m[1] * m[11] -
+             m[4] * m[3] * m[9] - m[8] * m[1] * m[7] + m[8] * m[3] * m[5]) *
             det;
 
         inv[15] =
-            (m[0] * m[5] * m[10] - m[0] * m[6] * m[9] -
-             m[4] * m[1] * m[10] + m[4] * m[2] * m[9] +
-             m[8] * m[1] * m[6] - m[8] * m[2] * m[5]) *
+            (m[0] * m[5] * m[10] - m[0] * m[6] * m[9] - m[4] * m[1] * m[10] +
+             m[4] * m[2] * m[9] + m[8] * m[1] * m[6] - m[8] * m[2] * m[5]) *
             det;
 
         return true;
     }
 };
-template <typename T>
-MatrixBase4<T> transpose(const MatrixBase4<T>& m) {
-    return MatrixBase4<T>(
-        m[0], m[4], m[8], m[12], m[1], m[5], m[9], m[13],
-        m[2], m[6], m[10], m[14], m[3], m[7], m[11], m[15]);
+template <typename T> MatrixBase4<T> transpose(const MatrixBase4<T>& m) {
+    return MatrixBase4<T>(m[0], m[4], m[8], m[12], m[1], m[5], m[9], m[13],
+                          m[2], m[6], m[10], m[14], m[3], m[7], m[11], m[15]);
 }
-template <typename T>
-struct MatrixBase3 : public MatrixBase<T, 3> {
+template <typename T> struct MatrixBase3 : public MatrixBase<T, 3> {
     MatrixBase3() : MatrixBase<T, 3>() {}
     template <typename T2>
-    MatrixBase3(const MatrixBase<T2, 3>& m)
-        : MatrixBase<T, 3>(m) {}
-    MatrixBase3(T m0, T m1, T m2, T m3, T m4, T m5, T m6,
-                T m7, T m8, T m9) {
+    MatrixBase3(const MatrixBase<T2, 3>& m) : MatrixBase<T, 3>(m) {}
+    MatrixBase3(T m0, T m1, T m2, T m3, T m4, T m5, T m6, T m7, T m8, T m9) {
         T* f = this->data;
         f[0] = m0;
         f[1] = m1;
@@ -213,12 +184,10 @@ struct MatrixBase3 : public MatrixBase<T, 3> {
         f[9] = m9;
     }
 };
-template <typename T>
-struct MatrixBase2 : public MatrixBase<T, 2> {
+template <typename T> struct MatrixBase2 : public MatrixBase<T, 2> {
     MatrixBase2() : MatrixBase<T, 2>() {}
     template <typename T2>
-    MatrixBase2(const MatrixBase<T2, 2>& m)
-        : MatrixBase<T, 2>(m) {}
+    MatrixBase2(const MatrixBase<T2, 2>& m) : MatrixBase<T, 2>(m) {}
     MatrixBase2(T m0, T m1, T m2, T m3) {
         T* f = this->data;
         f[0] = m0;
@@ -234,12 +203,10 @@ typedef MatrixBase2<float> Matrix2f;
 typedef MatrixBase4<double> Matrix4d;
 typedef MatrixBase3<double> Matrix3d;
 typedef MatrixBase2<double> Matrix2d;
-template <typename T, size_t size>
-struct TypeInfo<MatrixBase<T, size>> {
+template <typename T, size_t size> struct TypeInfo<MatrixBase<T, size>> {
     enum { valid = 1 };
     static const char* get_name() { return "Matrix"; }
-    static void handle(MatrixBase<T, size>& v,
-                       Visitor& vis) {
+    static void handle(MatrixBase<T, size>& v, Visitor& vis) {
         for (int x = 0; x < size * size; ++x)
             vis.handle(v[x]);
     }
@@ -271,8 +238,7 @@ template <typename T> struct TypeInfo<MatrixBase2<T>> {
 
 template <typename T> struct TranslationMatrixCookie {
     const VectorBase<T, 3> data;
-    TranslationMatrixCookie(const VectorBase<T, 3> d)
-        : data(d) {}
+    TranslationMatrixCookie(const VectorBase<T, 3> d) : data(d) {}
 };
 template <typename T> struct ScaleMatrixCookie {
     VectorBase<T, 3> data;
@@ -280,176 +246,134 @@ template <typename T> struct ScaleMatrixCookie {
 };
 
 template <typename T, size_t TSize>
-const TranslationMatrixCookie<T>
-TranslateMatrix(const VectorBase<T, TSize> v) {
+const TranslationMatrixCookie<T> TranslateMatrix(const VectorBase<T, TSize> v) {
     return TranslationMatrixCookie<T>(v);
 }
 
 template <typename T>
-const ScaleMatrixCookie<T>
-ScaleMatrix(const VectorBase<T, 3> v) {
+const ScaleMatrixCookie<T> ScaleMatrix(const VectorBase<T, 3> v) {
     return ScaleMatrixCookie<T>(v);
 }
 template <typename T>
-const ScaleMatrixCookie<T>
-ScaleMatrix(const VectorBase<T, 2> v) {
-    return ScaleMatrixCookie<T>(
-        VectorBase<T, 3>(v[0], v[1], 1., 1.));
+const ScaleMatrixCookie<T> ScaleMatrix(const VectorBase<T, 2> v) {
+    return ScaleMatrixCookie<T>(VectorBase<T, 3>(v[0], v[1], 1., 1.));
 }
 
 template <typename T, typename T2>
-INLINE const MatrixBase<T, 2>
-operator*(const MatrixBase<T, 2> a,
-          const TranslationMatrixCookie<T2> b) {
-    return MatrixBase<T, 2>(
-        a[0] + a[0] * b.data[0] + a[2] * b.data[1],
-        a[1] + a[1] * b.data[0] + a[3] * b.data[1],
-        a[2] + a[0] * b.data[0] + a[2] * b.data[1],
-        a[3] + a[1] * b.data[0] + a[3] * b.data[1]);
+INLINE const MatrixBase<T, 2> operator*(const MatrixBase<T, 2> a,
+                                        const TranslationMatrixCookie<T2> b) {
+    return MatrixBase<T, 2>(a[0] + a[0] * b.data[0] + a[2] * b.data[1],
+                            a[1] + a[1] * b.data[0] + a[3] * b.data[1],
+                            a[2] + a[0] * b.data[0] + a[2] * b.data[1],
+                            a[3] + a[1] * b.data[0] + a[3] * b.data[1]);
 }
 
 template <typename T, typename T2>
-INLINE const MatrixBase<T, 4>
-operator*(MatrixBase<T, 4> a,
-          const TranslationMatrixCookie<T2> b) {
-    a[12] += a[0] * b.data[0] + a[4] * b.data[1] +
-             a[8] * b.data[2];
-    a[13] += a[1] * b.data[0] + a[5] * b.data[1] +
-             a[9] * b.data[2];
-    a[14] += a[2] * b.data[0] + a[6] * b.data[1] +
-             a[10] * b.data[2];
-    a[15] += a[3] * b.data[0] + a[7] * b.data[1] +
-             a[11] * b.data[2];
+INLINE const MatrixBase<T, 4> operator*(MatrixBase<T, 4> a,
+                                        const TranslationMatrixCookie<T2> b) {
+    a[12] += a[0] * b.data[0] + a[4] * b.data[1] + a[8] * b.data[2];
+    a[13] += a[1] * b.data[0] + a[5] * b.data[1] + a[9] * b.data[2];
+    a[14] += a[2] * b.data[0] + a[6] * b.data[1] + a[10] * b.data[2];
+    a[15] += a[3] * b.data[0] + a[7] * b.data[1] + a[11] * b.data[2];
 
     return a;
 }
 template <typename T, typename T2>
-INLINE const MatrixBase<T, 3>
-operator*(const MatrixBase<T, 3> a,
-          const TranslationMatrixCookie<T2> b) {
+INLINE const MatrixBase<T, 3> operator*(const MatrixBase<T, 3> a,
+                                        const TranslationMatrixCookie<T2> b) {
     const T c1 = a[0] * b.data[0] + a[3] * b.data[1];
     const T c2 = a[1] * b.data[0] + a[4] * b.data[1];
 
-    return MatrixBase<T, 3>(a[0], a[1], a[2], a[3], a[4],
-                            a[5], a[6] + c1, a[7] + c2,
-                            a[8]);
+    return MatrixBase<T, 3>(a[0], a[1], a[2], a[3], a[4], a[5], a[6] + c1,
+                            a[7] + c2, a[8]);
 }
 template <typename T, typename T2>
-INLINE const MatrixBase<T, 4>
-operator*(const MatrixBase<T, 4> a,
-          const ScaleMatrixCookie<T2> b) {
+INLINE const MatrixBase<T, 4> operator*(const MatrixBase<T, 4> a,
+                                        const ScaleMatrixCookie<T2> b) {
+    return MatrixBase4<T>(a[0] * b.data[0], a[1] * b.data[0], a[2] * b.data[0],
+                          a[3] * b.data[0], a[4] * b.data[1], a[5] * b.data[1],
+                          a[6] * b.data[1], a[7] * b.data[1], a[8] * b.data[2],
+                          a[9] * b.data[2], a[10] * b.data[2],
+                          a[11] * b.data[2], a[12], a[13], a[14], a[15]);
+}
+template <typename T, size_t TSize>
+INLINE const MatrixBase<T, TSize> operator*(T b,
+                                            const MatrixBase<T, TSize> a1) {
+    MatrixBase<T, TSize> a = a1;
+    for (int i = 0; i < TSize * TSize; ++i)
+        a[i] *= b;
+    return a;
+}
+template <typename T, size_t TSize>
+INLINE const MatrixBase<T, TSize> operator*(const MatrixBase<T, TSize> a1,
+                                            T b) {
+    MatrixBase<T, TSize> a = a1;
+
+    for (int i = 0; i < TSize * TSize; ++i)
+        a[i] *= b;
+    return a;
+}
+
+template <typename T>
+INLINE const MatrixBase<T, 2> operator*(const MatrixBase<T, 2> a,
+                                        const MatrixBase<T, 2> b) {
+
+    return MatrixBase<T, 2>(
+        a[0] * b[0] + a[1] * b[2], a[0] * b[1] + a[1] * b[3],
+        a[2] * b[0] + a[3] * b[2], a[2] * b[1] + a[3] * b[3]);
+}
+template <typename T>
+INLINE const MatrixBase<T, 3> operator*(const MatrixBase<T, 3> a,
+                                        const MatrixBase<T, 3> b) {
+    return MatrixBase<T, 3>(a[0] * b[0] + a[1] * b[3] + a[2] * b[6],
+                            a[0] * b[1] + a[1] * b[4] + a[2] * b[7],
+                            a[0] * b[2] + a[1] * b[5] + a[2] * b[8],
+
+                            a[3] * b[0] + a[4] * b[3] + a[5] * b[6],
+                            a[3] * b[1] + a[4] * b[4] + a[5] * b[7],
+                            a[3] * b[2] + a[4] * b[5] + a[5] * b[8],
+
+                            a[6] * b[0] + a[7] * b[3] + a[8] * b[6],
+                            a[6] * b[1] + a[7] * b[4] + a[8] * b[7],
+                            a[6] * b[2] + a[7] * b[5] + a[8] * b[8]);
+}
+template <typename T>
+INLINE const MatrixBase<T, 4> operator*(const MatrixBase<T, 4> b,
+                                        const MatrixBase<T, 4> a) {
     return MatrixBase4<T>(
-        a[0] * b.data[0], a[1] * b.data[0],
-        a[2] * b.data[0], a[3] * b.data[0],
-        a[4] * b.data[1], a[5] * b.data[1],
-        a[6] * b.data[1], a[7] * b.data[1],
-        a[8] * b.data[2], a[9] * b.data[2],
-        a[10] * b.data[2], a[11] * b.data[2], a[12], a[13],
-        a[14], a[15]);
+        a[0] * b[0] + a[1] * b[4] + a[2] * b[8] + a[3] * b[12],
+        a[0] * b[1] + a[1] * b[5] + a[2] * b[9] + a[3] * b[13],
+        a[0] * b[2] + a[1] * b[6] + a[2] * b[10] + a[3] * b[14],
+        a[0] * b[3] + a[1] * b[7] + a[2] * b[11] + a[3] * b[15],
+
+        a[4] * b[0] + a[5] * b[4] + a[6] * b[8] + a[7] * b[12],
+        a[4] * b[1] + a[5] * b[5] + a[6] * b[9] + a[7] * b[13],
+        a[4] * b[2] + a[5] * b[6] + a[6] * b[10] + a[7] * b[14],
+        a[4] * b[3] + a[5] * b[7] + a[6] * b[11] + a[7] * b[15],
+
+        a[8] * b[0] + a[9] * b[4] + a[10] * b[8] + a[11] * b[12],
+        a[8] * b[1] + a[9] * b[5] + a[10] * b[9] + a[11] * b[13],
+        a[8] * b[2] + a[9] * b[6] + a[10] * b[10] + a[11] * b[14],
+        a[8] * b[3] + a[9] * b[7] + a[10] * b[11] + a[11] * b[15],
+
+        a[12] * b[0] + a[13] * b[4] + a[14] * b[8] + a[15] * b[12],
+        a[12] * b[1] + a[13] * b[5] + a[14] * b[9] + a[15] * b[13],
+        a[12] * b[2] + a[13] * b[6] + a[14] * b[10] + a[15] * b[14],
+        a[12] * b[3] + a[13] * b[7] + a[14] * b[11] + a[15] * b[15]);
 }
-template <typename T, size_t TSize>
-INLINE const MatrixBase<T, TSize>
-operator*(T b, const MatrixBase<T, TSize> a1) {
-    MatrixBase<T, TSize> a = a1;
-    for (int i = 0; i < TSize * TSize; ++i)
-        a[i] *= b;
-    return a;
-}
-template <typename T, size_t TSize>
-INLINE const MatrixBase<T, TSize>
-operator*(const MatrixBase<T, TSize> a1, T b) {
-    MatrixBase<T, TSize> a = a1;
-
-    for (int i = 0; i < TSize * TSize; ++i)
-        a[i] *= b;
-    return a;
-}
-
-template <typename T>
-INLINE const MatrixBase<T, 2>
-operator*(const MatrixBase<T, 2> a,
-          const MatrixBase<T, 2> b) {
-
-    return MatrixBase<T, 2>(a[0] * b[0] + a[1] * b[2],
-                            a[0] * b[1] + a[1] * b[3],
-                            a[2] * b[0] + a[3] * b[2],
-                            a[2] * b[1] + a[3] * b[3]);
-}
-template <typename T>
-INLINE const MatrixBase<T, 3>
-operator*(const MatrixBase<T, 3> a,
-          const MatrixBase<T, 3> b) {
-    return MatrixBase<T, 3>(
-        a[0] * b[0] + a[1] * b[3] + a[2] * b[6],
-        a[0] * b[1] + a[1] * b[4] + a[2] * b[7],
-        a[0] * b[2] + a[1] * b[5] + a[2] * b[8],
-
-        a[3] * b[0] + a[4] * b[3] + a[5] * b[6],
-        a[3] * b[1] + a[4] * b[4] + a[5] * b[7],
-        a[3] * b[2] + a[4] * b[5] + a[5] * b[8],
-
-        a[6] * b[0] + a[7] * b[3] + a[8] * b[6],
-        a[6] * b[1] + a[7] * b[4] + a[8] * b[7],
-        a[6] * b[2] + a[7] * b[5] + a[8] * b[8]);
-}
-template <typename T>
-INLINE const MatrixBase<T, 4>
-operator*(const MatrixBase<T, 4> b,
-          const MatrixBase<T, 4> a) {
-    return MatrixBase4<T>(a[0] * b[0] + a[1] * b[4] +
-                              a[2] * b[8] + a[3] * b[12],
-                          a[0] * b[1] + a[1] * b[5] +
-                              a[2] * b[9] + a[3] * b[13],
-                          a[0] * b[2] + a[1] * b[6] +
-                              a[2] * b[10] + a[3] * b[14],
-                          a[0] * b[3] + a[1] * b[7] +
-                              a[2] * b[11] + a[3] * b[15],
-
-                          a[4] * b[0] + a[5] * b[4] +
-                              a[6] * b[8] + a[7] * b[12],
-                          a[4] * b[1] + a[5] * b[5] +
-                              a[6] * b[9] + a[7] * b[13],
-                          a[4] * b[2] + a[5] * b[6] +
-                              a[6] * b[10] + a[7] * b[14],
-                          a[4] * b[3] + a[5] * b[7] +
-                              a[6] * b[11] + a[7] * b[15],
-
-                          a[8] * b[0] + a[9] * b[4] +
-                              a[10] * b[8] + a[11] * b[12],
-                          a[8] * b[1] + a[9] * b[5] +
-                              a[10] * b[9] + a[11] * b[13],
-                          a[8] * b[2] + a[9] * b[6] +
-                              a[10] * b[10] + a[11] * b[14],
-                          a[8] * b[3] + a[9] * b[7] +
-                              a[10] * b[11] + a[11] * b[15],
-
-                          a[12] * b[0] + a[13] * b[4] +
-                              a[14] * b[8] + a[15] * b[12],
-                          a[12] * b[1] + a[13] * b[5] +
-                              a[14] * b[9] + a[15] * b[13],
-                          a[12] * b[2] + a[13] * b[6] +
-                              a[14] * b[10] + a[15] * b[14],
-                          a[12] * b[3] + a[13] * b[7] +
-                              a[14] * b[11] +
-                              a[15] * b[15]);
-}
-template <typename T>
-INLINE VectorBase3<T> get_position(MatrixBase<T, 4>& m) {
+template <typename T> INLINE VectorBase3<T> get_position(MatrixBase<T, 4>& m) {
     return VectorBase3<T>(m[12], m[13], m[14]);
 }
-template <typename T>
-INLINE VectorBase3<T> get_scale(MatrixBase<T, 4>& m) {
+template <typename T> INLINE VectorBase3<T> get_scale(MatrixBase<T, 4>& m) {
     VectorBase3<T> xs(m[0], m[1], m[2]);
     VectorBase3<T> ys(m[4], m[5], m[6]);
     VectorBase3<T> zs(m[8], m[9], m[10]);
-    return VectorBase3<T>(length(xs), length(ys),
-                          length(zs));
+    return VectorBase3<T>(length(xs), length(ys), length(zs));
 }
 
 template <typename T, size_t TSize>
-INLINE MatrixBase<T, TSize>
-operator*(const MatrixBase<T, TSize>& a,
-          const MatrixBase<T, TSize>& b) {
+INLINE MatrixBase<T, TSize> operator*(const MatrixBase<T, TSize>& a,
+                                      const MatrixBase<T, TSize>& b) {
     MatrixBase<T, TSize> m;
     for (size_t x = 0; x < TSize * TSize; ++x) {
         m[x] = dot(a.row(x / TSize), b.col(x % TSize));
@@ -457,38 +381,30 @@ operator*(const MatrixBase<T, TSize>& a,
     return m;
 }
 template <typename T>
-INLINE VectorBase<T, 4>
-operator*(const MatrixBase<T, 4>& a,
-          const VectorBase<T, 4>& b) {
-    return VectorBase4<T>(a[0] * b[0] + a[4] * b[1] +
-                              a[8] * b[2] + a[12] * b[3],
-                          a[1] * b[0] + a[5] * b[1] +
-                              a[9] * b[2] + a[13] * b[3],
-                          a[2] * b[0] + a[6] * b[1] +
-                              a[10] * b[2] + a[14] * b[3],
-                          a[3] * b[0] + a[7] * b[1] +
-                              a[11] * b[2] + a[15] * b[3]);
+INLINE VectorBase<T, 4> operator*(const MatrixBase<T, 4>& a,
+                                  const VectorBase<T, 4>& b) {
+    return VectorBase4<T>(
+        a[0] * b[0] + a[4] * b[1] + a[8] * b[2] + a[12] * b[3],
+        a[1] * b[0] + a[5] * b[1] + a[9] * b[2] + a[13] * b[3],
+        a[2] * b[0] + a[6] * b[1] + a[10] * b[2] + a[14] * b[3],
+        a[3] * b[0] + a[7] * b[1] + a[11] * b[2] + a[15] * b[3]);
 }
 template <typename T>
-INLINE VectorBase<T, 3>
-operator*(const MatrixBase<T, 3>& a,
-          const VectorBase<T, 3>& b) {
-    return VectorBase<T, 3>(
-        a[0] * b[0] + a[1] * b[1] + a[2] * b[2],
-        a[0] * b[4] + a[1] * b[5] + a[2] * b[6],
-        a[0] * b[8] + a[1] * b[9] + a[2] * b[10]);
+INLINE VectorBase<T, 3> operator*(const MatrixBase<T, 3>& a,
+                                  const VectorBase<T, 3>& b) {
+    return VectorBase<T, 3>(a[0] * b[0] + a[1] * b[1] + a[2] * b[2],
+                            a[0] * b[4] + a[1] * b[5] + a[2] * b[6],
+                            a[0] * b[8] + a[1] * b[9] + a[2] * b[10]);
 }
 template <typename T>
-INLINE VectorBase<T, 2>
-operator*(const MatrixBase<T, 2>& a,
-          const VectorBase<T, 2>& b) {
+INLINE VectorBase<T, 2> operator*(const MatrixBase<T, 2>& a,
+                                  const VectorBase<T, 2>& b) {
     return VectorBase<T, 2>(a[0] * b[0] + a[1] * b[1],
                             a[0] * b[4] + a[1] * b[5]);
 }
 template <typename T, size_t TSize>
-INLINE VectorBase<T, TSize>
-operator*(const MatrixBase<T, TSize>& a,
-          const VectorBase<T, TSize>& b) {
+INLINE VectorBase<T, TSize> operator*(const MatrixBase<T, TSize>& a,
+                                      const VectorBase<T, TSize>& b) {
     VectorBase<T, TSize> v;
     for (size_t x = 0; x < TSize; ++x) {
         v[x] = dot(a.row(x), b);
@@ -496,18 +412,15 @@ operator*(const MatrixBase<T, TSize>& a,
     return v;
 }
 
-template <typename T>
-static const MatrixBase<T, 4> IdentityMatrix() {
+template <typename T> static const MatrixBase<T, 4> IdentityMatrix() {
     return MatrixBase<T, 4>();
 }
 
 template <typename T, typename T1, typename T2, typename T3>
-static MatrixBase<T, 4>
-LookAtMatrix(const VectorBase<T1, 3>& eye_position,
-             const VectorBase<T2, 3>& center,
-             const VectorBase<T3, 3>& up) {
-    VectorBase<T, 3> forward =
-        normalize(center - eye_position);
+static MatrixBase<T, 4> LookAtMatrix(const VectorBase<T1, 3>& eye_position,
+                                     const VectorBase<T2, 3>& center,
+                                     const VectorBase<T3, 3>& up) {
+    VectorBase<T, 3> forward = normalize(center - eye_position);
     VectorBase<T, 3> side = normalize(cross(forward, up));
     VectorBase<T, 3> upv = cross(side, forward);
     MatrixBase<T, 4> m;
@@ -531,9 +444,8 @@ LookAtMatrix(const VectorBase<T1, 3>& eye_position,
     return m * TranslateMatrix(eye_position * -1.0f);
 }
 template <typename T>
-static MatrixBase<T, 4> FrustumMatrix(T left, T right,
-                                      T bottom, T top,
-                                      T znear, T zfar) {
+static MatrixBase<T, 4> FrustumMatrix(T left, T right, T bottom, T top, T znear,
+                                      T zfar) {
 
     T a = (right + left) / (right - left);
     T b = (top + bottom) / (top - bottom);
@@ -564,21 +476,18 @@ static MatrixBase<T, 4> FrustumMatrix(T left, T right,
     return m;
 }
 template <typename T>
-static MatrixBase<T, 4> PerspectiveMatrix(T field_of_view,
-                                          T aspect, T zNear,
+static MatrixBase<T, 4> PerspectiveMatrix(T field_of_view, T aspect, T zNear,
                                           T zFar) {
     T ymax, xmax;
     ymax = zNear * tanf(field_of_view * 3.14159f / 180.0f);
 
     xmax = ymax * aspect;
 
-    return FrustumMatrix(-xmax, xmax, -ymax, ymax, zNear,
-                         zFar);
+    return FrustumMatrix(-xmax, xmax, -ymax, ymax, zNear, zFar);
 }
 
 template <typename T>
-static MatrixBase<T, 4> OrthoMatrix(T right, T left, T top,
-                                    T bottom, T near,
+static MatrixBase<T, 4> OrthoMatrix(T right, T left, T top, T bottom, T near,
                                     T far) {
     MatrixBase<T, 4> matrix;
     matrix[0] = 2.0f / (right - left);
@@ -603,16 +512,14 @@ static MatrixBase<T, 4> OrthoMatrix(T right, T left, T top,
     return matrix;
 }
 template <typename T>
-static INLINE MatrixBase<T, 3>
-mat3(const MatrixBase<T, 4>& m) {
-    return MatrixBase<T, 3>(m[0], m[1], m[2], m[4], m[5],
-                            m[6], m[8], m[9], m[10]);
+static INLINE MatrixBase<T, 3> mat3(const MatrixBase<T, 4>& m) {
+    return MatrixBase<T, 3>(m[0], m[1], m[2], m[4], m[5], m[6], m[8], m[9],
+                            m[10]);
 }
 
 }; // namespace Argon
 template <typename T, typename TType, size_t TSize>
-T& operator<<(T& stream,
-              Argon::MatrixBase<TType, TSize>& m) {
+T& operator<<(T& stream, Argon::MatrixBase<TType, TSize>& m) {
     stream << "Matrix[\n";
     for (int i = 0; i < TSize * TSize; ++i) {
         stream << m.data[i];

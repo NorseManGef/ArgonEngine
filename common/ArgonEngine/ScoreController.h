@@ -16,19 +16,18 @@
 namespace Argon {
 //! @brief This class represents a recorded score.
 struct ScoreControllerScore : public ReflectionBase {
-    double score; //!< The players score as a double.
-    uint64_t daily_ranking;  //!< The players current daily
-                             //!< ranking in the online high
-                             //!< score system.
-    uint64_t weekly_ranking; //!< The players current weekly
-                             //!< ranking in the online high
-                             //!< score system.
-    uint64_t all_time_ranking; //!< The players all-time
-                               //!< ranking in the online
-                               //!< high score system.
-    Argon::StringIntern
-        leader_board; //!< The leaderboard that the score
-                      //!< belongs to.
+    double score;                     //!< The players score as a double.
+    uint64_t daily_ranking;           //!< The players current daily
+                                      //!< ranking in the online high
+                                      //!< score system.
+    uint64_t weekly_ranking;          //!< The players current weekly
+                                      //!< ranking in the online high
+                                      //!< score system.
+    uint64_t all_time_ranking;        //!< The players all-time
+                                      //!< ranking in the online
+                                      //!< high score system.
+    Argon::StringIntern leader_board; //!< The leaderboard that the score
+                                      //!< belongs to.
     bool operator<(const ScoreControllerScore& s) const {
         if (score != s.score)
             return score > s.score;
@@ -36,22 +35,19 @@ struct ScoreControllerScore : public ReflectionBase {
     }
 
     bool operator==(const ScoreControllerScore& s) const {
-        return score == s.score &&
-               leader_board == s.leader_board;
+        return score == s.score && leader_board == s.leader_board;
     }
     bool operator!=(const ScoreControllerScore& s) const {
-        return score != s.score ||
-               leader_board != s.leader_board;
+        return score != s.score || leader_board != s.leader_board;
     }
     MAKE_VISIT_HEAD(Score);
 };
 //! @brief This class represents an achievement's current
 //! progress.
 struct ScoreControllerAchievement : public ReflectionBase {
-    double percent; //!< How much percent is completed of
-                    //!< the achievement.
-    Argon::StringIntern
-        achievement; //!< The name of the achievement.
+    double percent;                  //!< How much percent is completed of
+                                     //!< the achievement.
+    Argon::StringIntern achievement; //!< The name of the achievement.
     MAKE_VISIT_HEAD(Achievement)
 };
 /**
@@ -80,26 +76,18 @@ class ScoreController : public ReflectionBase {
 
   public:
   private:
-    static std::map<Argon::StringIntern,
-                    ScoreControllerScore>
-        global_rankings;
-    static std::map<Argon::StringIntern, double>
-        achievements;
-    static std::vector<ScoreControllerAchievement>
-        unsubmitted_achievements;
+    static std::map<Argon::StringIntern, ScoreControllerScore> global_rankings;
+    static std::map<Argon::StringIntern, double> achievements;
+    static std::vector<ScoreControllerAchievement> unsubmitted_achievements;
     static std::vector<ScoreControllerScore> scores;
-    static std::vector<ScoreControllerScore>
-        unsubmitted_scores;
+    static std::vector<ScoreControllerScore> unsubmitted_scores;
 
   public:
-    static uint64_t
-        total_global_scores; //!< The total number of global
-                             //!< scores.
+    static uint64_t total_global_scores; //!< The total number of global
+                                         //!< scores.
 
     //! Tells the HAL to update the global rankings.
-    static void update_global_rankings() {
-        updateGlobalRankings = true;
-    }
+    static void update_global_rankings() { updateGlobalRankings = true; }
 
     //! Queried by the HAL. Returns true if the HAL should
     //! update global rankings.
@@ -125,40 +113,32 @@ class ScoreController : public ReflectionBase {
 
     //! Submits a score to the local and global leaderboard
     //! 'board'.
-    static void
-    submit_score(double points,
-                 const Argon::StringIntern& board);
+    static void submit_score(double points, const Argon::StringIntern& board);
 
     //! @brief Loads a score into the local leaderboard
     //! 'board'. Leaving the global one unchanged. Use this
     //! to specify default scores.
-    static void
-    load_score(double points,
-               const Argon::StringIntern& board);
+    static void load_score(double points, const Argon::StringIntern& board);
 
-    static void update_achievement(
-        const Argon::StringIntern& str,
-        double percent); //!< Update the users progress on
-                         //!< achievement "str" to percent
-                         //!< 'percent'
+    static void
+    update_achievement(const Argon::StringIntern& str,
+                       double percent); //!< Update the users progress on
+                                        //!< achievement "str" to percent
+                                        //!< 'percent'
 
     //! Returns the value of the top local score in
     //! leaderboard s.
-    static double
-    get_top_local_score(const Argon::StringIntern& s);
-    static const std::vector<ScoreControllerScore>&
-    get_scores() {
+    static double get_top_local_score(const Argon::StringIntern& s);
+    static const std::vector<ScoreControllerScore>& get_scores() {
         return scores;
     } //!< Returns a sorted vector of local high scores.
-    static double
-    get_achievement(const Argon::StringIntern& str) {
+    static double get_achievement(const Argon::StringIntern& str) {
         return achievements[str];
     } //!< returns the users current progress on achievement
       //!< "str"
-    void
-    save_scores(); //!< Saves the highscore data to disk.
-    void reload(); //!< Reloads the highscore data from disk
-                   //!< and global boards.
+    void save_scores(); //!< Saves the highscore data to disk.
+    void reload();      //!< Reloads the highscore data from disk
+                        //!< and global boards.
 
     /////////////////////////////////////////////////////////////////////
     //    The following functions are used by the
@@ -187,8 +167,7 @@ class ScoreController : public ReflectionBase {
     }
     //! Returns a vector of all scores that have not been
     //! submitted.
-    static const std::vector<ScoreControllerScore>&
-    get_unsubmitted_scores() {
+    static const std::vector<ScoreControllerScore>& get_unsubmitted_scores() {
         return unsubmitted_scores;
     }
 

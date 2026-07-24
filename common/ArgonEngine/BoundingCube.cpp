@@ -32,8 +32,7 @@ bool BoundingCube::overlaps_point(Vector2f point) const {
         return false;
     return true;
 }
-void BoundingCube::add_point_to_bounds(
-    const VectorBase<float, 3>& point) {
+void BoundingCube::add_point_to_bounds(const VectorBase<float, 3>& point) {
     if (size[0] == -1.) {
         origin = point;
         size.set_all(0);
@@ -57,40 +56,30 @@ void BoundingCube::add_point_to_bounds(
     } else if (t[2] > size[2])
         size[2] = t[2];
 }
-Vector3f
-BoundingCube::get_positive_vertex(Vector3f normal) const {
-    return Vector3f(
-        normal[0] < 0.0 ? origin[0] : origin[0] + size[0],
-        normal[1] < 0.0 ? origin[1] : origin[1] + size[1],
-        normal[2] < 0.0 ? origin[2] : origin[2] + size[2]);
+Vector3f BoundingCube::get_positive_vertex(Vector3f normal) const {
+    return Vector3f(normal[0] < 0.0 ? origin[0] : origin[0] + size[0],
+                    normal[1] < 0.0 ? origin[1] : origin[1] + size[1],
+                    normal[2] < 0.0 ? origin[2] : origin[2] + size[2]);
 }
-Vector3f
-BoundingCube::get_negative_vertex(Vector3f normal) const {
-    return Vector3f(
-        normal[0] < 0.0 ? origin[0] + size[0] : origin[0],
-        normal[1] < 0.0 ? origin[1] + size[1] : origin[1],
-        normal[2] < 0.0 ? origin[2] + size[2] : origin[2]);
+Vector3f BoundingCube::get_negative_vertex(Vector3f normal) const {
+    return Vector3f(normal[0] < 0.0 ? origin[0] + size[0] : origin[0],
+                    normal[1] < 0.0 ? origin[1] + size[1] : origin[1],
+                    normal[2] < 0.0 ? origin[2] + size[2] : origin[2]);
 }
 
 BoundingCube BoundingCube::transform(const Matrix4f& aff) {
     BoundingCube cube;
     Matrix4f m = aff;
     Vector4f a(origin[0], origin[1], origin[2], 1.);
-    Vector4f b(origin[0] + size[0], origin[1], origin[2],
-               1.);
-    Vector4f c(origin[0] + size[0], origin[1] + size[1],
-               origin[2], 1.);
-    Vector4f d(origin[0], origin[1] + size[1], origin[2],
-               1.);
+    Vector4f b(origin[0] + size[0], origin[1], origin[2], 1.);
+    Vector4f c(origin[0] + size[0], origin[1] + size[1], origin[2], 1.);
+    Vector4f d(origin[0], origin[1] + size[1], origin[2], 1.);
 
-    Vector4f e(origin[0], origin[1], origin[2] + size[2],
+    Vector4f e(origin[0], origin[1], origin[2] + size[2], 1.);
+    Vector4f f(origin[0] + size[0], origin[1], origin[2] + size[2], 1.);
+    Vector4f g(origin[0] + size[0], origin[1] + size[1], origin[2] + size[2],
                1.);
-    Vector4f f(origin[0] + size[0], origin[1],
-               origin[2] + size[2], 1.);
-    Vector4f g(origin[0] + size[0], origin[1] + size[1],
-               origin[2] + size[2], 1.);
-    Vector4f h(origin[0], origin[1] + size[1],
-               origin[2] + size[2], 1.);
+    Vector4f h(origin[0], origin[1] + size[1], origin[2] + size[2], 1.);
 
     cube.add_point_to_bounds((m * a));
     cube.add_point_to_bounds((m * b));

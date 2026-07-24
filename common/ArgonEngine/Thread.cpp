@@ -16,20 +16,14 @@
 #endif
 namespace Argon {
 #if USE_PTHREADS == 1
-Thread::Thread(void* (*function)(void*), void* data) {
-
-    launch(function, data);
-}
+Thread::Thread(void* (*function)(void*), void* data) { launch(function, data); }
 
 void Thread::launch(void* (*function)(void*), void* data) {
     pthread_t thread;
 
-    int retValue =
-        pthread_create(&thread, NULL, function, data);
+    int retValue = pthread_create(&thread, NULL, function, data);
     if (retValue) {
-        printf(
-            "Fatal: Failed to create thread errorcode:%d\n",
-            retValue);
+        printf("Fatal: Failed to create thread errorcode:%d\n", retValue);
     }
     threadPrimitive = &thread;
 }
@@ -54,30 +48,23 @@ Mutex::Mutex() {
     *win_t = CreateMutex(NULL, FALSE, NULL);
     mutex = (void*)win_t;
 }
-void Mutex::lock() {
-    WaitForSingleObject(*(HANDLE*)mutex, INFINITE);
-}
+void Mutex::lock() { WaitForSingleObject(*(HANDLE*)mutex, INFINITE); }
 bool Mutex::lockOrSkip() {
-    return WaitForSingleObject(*(HANDLE*)mutex, 0) !=
-           WAIT_TIMEOUT;
+    return WaitForSingleObject(*(HANDLE*)mutex, 0) != WAIT_TIMEOUT;
 }
 void Mutex::unlock() { ReleaseMutex(*(HANDLE*)mutex); }
 Mutex::~Mutex() {
     unlock();
     delete (HANDLE*)mutex;
 }
-Thread::Thread(void* (*function)(void*), void* data) {
-
-    launch(function, data);
-}
+Thread::Thread(void* (*function)(void*), void* data) { launch(function, data); }
 
 struct ThreadWrapData {
     void* (*function)(void*);
     void* data;
 };
 DWORD WINAPI thread_wrapper_func(LPVOID lpParam) {
-    ((ThreadWrapData*)lpParam)
-        ->function(((ThreadWrapData*)lpParam)->data);
+    ((ThreadWrapData*)lpParam)->function(((ThreadWrapData*)lpParam)->data);
     delete (ThreadWrapData*)lpParam;
     return 0;
 }
@@ -86,8 +73,7 @@ void Thread::launch(void* (*function)(void*), void* data) {
     ThreadWrapData* d = new ThreadWrapData;
     d->function = function;
     d->data = data;
-    thread = CreateThread(NULL, 0, thread_wrapper_func, d,
-                          0, NULL);
+    thread = CreateThread(NULL, 0, thread_wrapper_func, d, 0, NULL);
     if (!thread) {
         printf("Fatal: Failed to create thread\n");
     }
@@ -95,8 +81,7 @@ void Thread::launch(void* (*function)(void*), void* data) {
 }
 void Thread::join() {
     if (threadPrimitive)
-        WaitForSingleObject((HANDLE)threadPrimitive,
-                            INFINITE);
+        WaitForSingleObject((HANDLE)threadPrimitive, INFINITE);
 }
 void Thread::sleep(float secs) {
     if (secs < 0.0f)
@@ -123,8 +108,8 @@ Timer::Timer() {
 double Timer::time() {
     struct timeval v;
     gettimeofday(&v, NULL);
-    double current = (double)(v.tv_sec - timeA) +
-                     (double)(v.tv_usec - timeB) * 0.000001;
+    double current =
+        (double)(v.tv_sec - timeA) + (double)(v.tv_usec - timeB) * 0.000001;
     return current;
 }
 #endif

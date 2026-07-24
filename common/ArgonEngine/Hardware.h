@@ -35,24 +35,18 @@ class SleepLock {
 /// This class contains the static properties of the
 /// screen/window being rendered.
 struct Screen {
-    static Vector2f logical_size; /// Size of the virtual
-                                  /// screen in pixels.
-    static Vector2f
-        framebuffer_size; /// Size of the framebuffer in
-                          /// pixels.
-    static Vector2f
-        actual_size; /// The actual hardware screen size.
+    static Vector2f logical_size;     /// Size of the virtual
+                                      /// screen in pixels.
+    static Vector2f framebuffer_size; /// Size of the framebuffer in
+                                      /// pixels.
+    static Vector2f actual_size;      /// The actual hardware screen size.
     static Vector2f minimum_size;
     static Vector2f position;
     /// The ratio of height/width of the screen.
     static bool full_screen;
     static std::string title;
-    static float ratio() {
-        return logical_size[1] / logical_size[0];
-    }
-    static float actual_ratio() {
-        return actual_size[1] / actual_size[0];
-    }
+    static float ratio() { return logical_size[1] / logical_size[0]; }
+    static float actual_ratio() { return actual_size[1] / actual_size[0]; }
 };
 
 enum InputSource {
@@ -134,10 +128,8 @@ enum BatteryState {
 enum InputIDs {
     kInputIDMouseX = kInputMouse | kInputAxisX,
     kInputIDMouseY = kInputMouse | kInputAxisY,
-    kInputIDMouseHorzScroll =
-        kInputMouse | kInputAxisAnalog | 3,
-    kInputIDMouseVertScroll =
-        kInputMouse | kInputAxisAnalog | 4,
+    kInputIDMouseHorzScroll = kInputMouse | kInputAxisAnalog | 3,
+    kInputIDMouseVertScroll = kInputMouse | kInputAxisAnalog | 4,
 
     kInputIDMouseLeft = kInputMouse | 1,
     kInputIDMouseMiddle = kInputMouse | 2,
@@ -165,61 +157,37 @@ enum InputIDs {
     kInputIDCompassY = kInputCompass | kInputAxisY,
     kInputIDCompassZ = kInputCompass | kInputAxisZ,
 
-    kInputIDTouch0X =
-        kInputTouch | kInputDevice0 | kInputAxisX,
-    kInputIDTouch0Y =
-        kInputTouch | kInputDevice0 | kInputAxisY,
-    kInputIDTouch0Z =
-        kInputTouch | kInputDevice0 | kInputAxisZ,
+    kInputIDTouch0X = kInputTouch | kInputDevice0 | kInputAxisX,
+    kInputIDTouch0Y = kInputTouch | kInputDevice0 | kInputAxisY,
+    kInputIDTouch0Z = kInputTouch | kInputDevice0 | kInputAxisZ,
 
-    kInputIDTouch1X =
-        kInputTouch | kInputDevice1 | kInputAxisX,
-    kInputIDTouch1Y =
-        kInputTouch | kInputDevice1 | kInputAxisY,
-    kInputIDTouch1Z =
-        kInputTouch | kInputDevice1 | kInputAxisZ,
+    kInputIDTouch1X = kInputTouch | kInputDevice1 | kInputAxisX,
+    kInputIDTouch1Y = kInputTouch | kInputDevice1 | kInputAxisY,
+    kInputIDTouch1Z = kInputTouch | kInputDevice1 | kInputAxisZ,
 
-    kInputIDTouch2X =
-        kInputTouch | kInputDevice2 | kInputAxisX,
-    kInputIDTouch2Y =
-        kInputTouch | kInputDevice2 | kInputAxisY,
-    kInputIDTouch2Z =
-        kInputTouch | kInputDevice2 | kInputAxisZ,
+    kInputIDTouch2X = kInputTouch | kInputDevice2 | kInputAxisX,
+    kInputIDTouch2Y = kInputTouch | kInputDevice2 | kInputAxisY,
+    kInputIDTouch2Z = kInputTouch | kInputDevice2 | kInputAxisZ,
 
-    kInputIDTouch3X =
-        kInputTouch | kInputDevice3 | kInputAxisX,
-    kInputIDTouch3Y =
-        kInputTouch | kInputDevice3 | kInputAxisY,
-    kInputIDTouch3Z =
-        kInputTouch | kInputDevice3 | kInputAxisZ,
+    kInputIDTouch3X = kInputTouch | kInputDevice3 | kInputAxisX,
+    kInputIDTouch3Y = kInputTouch | kInputDevice3 | kInputAxisY,
+    kInputIDTouch3Z = kInputTouch | kInputDevice3 | kInputAxisZ,
 
-    kInputIDTouch4X =
-        kInputTouch | kInputDevice4 | kInputAxisX,
-    kInputIDTouch4Y =
-        kInputTouch | kInputDevice4 | kInputAxisY,
-    kInputIDTouch4Z =
-        kInputTouch | kInputDevice4 | kInputAxisZ,
+    kInputIDTouch4X = kInputTouch | kInputDevice4 | kInputAxisX,
+    kInputIDTouch4Y = kInputTouch | kInputDevice4 | kInputAxisY,
+    kInputIDTouch4Z = kInputTouch | kInputDevice4 | kInputAxisZ,
 
-    kInputIDTouch5X =
-        kInputTouch | kInputDevice5 | kInputAxisX,
-    kInputIDTouch5Y =
-        kInputTouch | kInputDevice5 | kInputAxisY,
-    kInputIDTouch5Z =
-        kInputTouch | kInputDevice5 | kInputAxisZ,
+    kInputIDTouch5X = kInputTouch | kInputDevice5 | kInputAxisX,
+    kInputIDTouch5Y = kInputTouch | kInputDevice5 | kInputAxisY,
+    kInputIDTouch5Z = kInputTouch | kInputDevice5 | kInputAxisZ,
 
-    kInputIDTouch6X =
-        kInputTouch | kInputDevice6 | kInputAxisX,
-    kInputIDTouch6Y =
-        kInputTouch | kInputDevice6 | kInputAxisY,
-    kInputIDTouch6Z =
-        kInputTouch | kInputDevice6 | kInputAxisZ,
+    kInputIDTouch6X = kInputTouch | kInputDevice6 | kInputAxisX,
+    kInputIDTouch6Y = kInputTouch | kInputDevice6 | kInputAxisY,
+    kInputIDTouch6Z = kInputTouch | kInputDevice6 | kInputAxisZ,
 
-    kInputIDTouch7X =
-        kInputTouch | kInputDevice7 | kInputAxisX,
-    kInputIDTouch7Y =
-        kInputTouch | kInputDevice7 | kInputAxisY,
-    kInputIDTouch7Z =
-        kInputTouch | kInputDevice7 | kInputAxisZ,
+    kInputIDTouch7X = kInputTouch | kInputDevice7 | kInputAxisX,
+    kInputIDTouch7Y = kInputTouch | kInputDevice7 | kInputAxisY,
+    kInputIDTouch7Z = kInputTouch | kInputDevice7 | kInputAxisZ,
     kInputIDEscape = kInputKeyboard | 256,
     kInputIDEnter = kInputKeyboard | 257,
     kInputIDTab = kInputKeyboard | 258,
@@ -328,76 +296,54 @@ enum InputIDs {
     kInputIDJoyHatZ2 = kInputJoy | kInputHatZ2,
 
     kInputIDJoyButton0 =
-        kInputJoy |
-        (kInputAxisButtonStart + kInputAxisIncrement * 0),
+        kInputJoy | (kInputAxisButtonStart + kInputAxisIncrement * 0),
     kInputIDJoyButton1 =
-        kInputJoy |
-        (kInputAxisButtonStart + kInputAxisIncrement * 1),
+        kInputJoy | (kInputAxisButtonStart + kInputAxisIncrement * 1),
     kInputIDJoyButton2 =
-        kInputJoy |
-        (kInputAxisButtonStart + kInputAxisIncrement * 2),
+        kInputJoy | (kInputAxisButtonStart + kInputAxisIncrement * 2),
     kInputIDJoyButton3 =
-        kInputJoy |
-        (kInputAxisButtonStart + kInputAxisIncrement * 3),
+        kInputJoy | (kInputAxisButtonStart + kInputAxisIncrement * 3),
     kInputIDJoyButton4 =
-        kInputJoy |
-        (kInputAxisButtonStart + kInputAxisIncrement * 4),
+        kInputJoy | (kInputAxisButtonStart + kInputAxisIncrement * 4),
     kInputIDJoyButton5 =
-        kInputJoy |
-        (kInputAxisButtonStart + kInputAxisIncrement * 5),
+        kInputJoy | (kInputAxisButtonStart + kInputAxisIncrement * 5),
     kInputIDJoyButton6 =
-        kInputJoy |
-        (kInputAxisButtonStart + kInputAxisIncrement * 6),
+        kInputJoy | (kInputAxisButtonStart + kInputAxisIncrement * 6),
     kInputIDJoyButton7 =
-        kInputJoy |
-        (kInputAxisButtonStart + kInputAxisIncrement * 7),
+        kInputJoy | (kInputAxisButtonStart + kInputAxisIncrement * 7),
     kInputIDJoyButton8 =
-        kInputJoy |
-        (kInputAxisButtonStart + kInputAxisIncrement * 8),
+        kInputJoy | (kInputAxisButtonStart + kInputAxisIncrement * 8),
     kInputIDJoyButton9 =
-        kInputJoy |
-        (kInputAxisButtonStart + kInputAxisIncrement * 9),
+        kInputJoy | (kInputAxisButtonStart + kInputAxisIncrement * 9),
     kInputIDJoyButton10 =
-        kInputJoy |
-        (kInputAxisButtonStart + kInputAxisIncrement * 10),
+        kInputJoy | (kInputAxisButtonStart + kInputAxisIncrement * 10),
     kInputIDJoyButton11 =
-        kInputJoy |
-        (kInputAxisButtonStart + kInputAxisIncrement * 11),
+        kInputJoy | (kInputAxisButtonStart + kInputAxisIncrement * 11),
     kInputIDJoyButton12 =
-        kInputJoy |
-        (kInputAxisButtonStart + kInputAxisIncrement * 12),
+        kInputJoy | (kInputAxisButtonStart + kInputAxisIncrement * 12),
     kInputIDJoyButton13 =
-        kInputJoy |
-        (kInputAxisButtonStart + kInputAxisIncrement * 13),
+        kInputJoy | (kInputAxisButtonStart + kInputAxisIncrement * 13),
     kInputIDJoyButton14 =
-        kInputJoy |
-        (kInputAxisButtonStart + kInputAxisIncrement * 14),
+        kInputJoy | (kInputAxisButtonStart + kInputAxisIncrement * 14),
     kInputIDJoyButton15 =
-        kInputJoy |
-        (kInputAxisButtonStart + kInputAxisIncrement * 15),
+        kInputJoy | (kInputAxisButtonStart + kInputAxisIncrement * 15),
     kInputIDJoyButton16 =
-        kInputJoy |
-        (kInputAxisButtonStart + kInputAxisIncrement * 16),
+        kInputJoy | (kInputAxisButtonStart + kInputAxisIncrement * 16),
     kInputIDJoyButton17 =
-        kInputJoy |
-        (kInputAxisButtonStart + kInputAxisIncrement * 17),
+        kInputJoy | (kInputAxisButtonStart + kInputAxisIncrement * 17),
     kInputIDJoyButton18 =
-        kInputJoy |
-        (kInputAxisButtonStart + kInputAxisIncrement * 18),
+        kInputJoy | (kInputAxisButtonStart + kInputAxisIncrement * 18),
     kInputIDJoyButton19 =
-        kInputJoy |
-        (kInputAxisButtonStart + kInputAxisIncrement * 19),
+        kInputJoy | (kInputAxisButtonStart + kInputAxisIncrement * 19),
     kInputIDJoyButton20 =
-        kInputJoy |
-        (kInputAxisButtonStart + kInputAxisIncrement * 20),
+        kInputJoy | (kInputAxisButtonStart + kInputAxisIncrement * 20),
 
 };
 struct InputUpdate : public ReflectionBase {
-    uint32_t input_id =
-        kInputUnknown; ///{16bits Axis, 8bits device number,
-                       /// 8bits source type}
-    double value;      /// The new value
-    double time;       /// The timestamp of the last update
+    uint32_t input_id = kInputUnknown; ///{16bits Axis, 8bits device number,
+                                       /// 8bits source type}
+    double value;                      /// The new value
+    double time;                       /// The timestamp of the last update
     MAKE_VISIT_HEAD(InputUpdate)
 };
 
@@ -466,10 +412,8 @@ struct Input {
         static Timer t;
         return t;
     }
-    RollingInt<0, 511>
-        value_index; /// The index of this input object.
-    RollingInt<0, 511>
-        read_index; /// The read index of this input object.
+    RollingInt<0, 511> value_index; /// The index of this input object.
+    RollingInt<0, 511> read_index;  /// The read index of this input object.
 
     /// A map of all active input states.
     std::map<uint32_t, InputState> values;
@@ -486,28 +430,23 @@ struct Input {
     /// Push a value update for a certain id. By using this
     /// with virtual inputs, you can abstract the control
     /// scheme from the game logic.
-    static void push_update(uint32_t input_id,
-                            double value);
+    static void push_update(uint32_t input_id, double value);
     /// Get a string that represents the name of a integer
     /// input id.
     static const char* get_source_string(uint32_t input_id);
     static std::string get_key_string(uint32_t input_id);
-    static std::string
-    get_full_input_string(uint32_t input_id);
-    static std::string
-    get_mouse_button_string(uint32_t input_id);
+    static std::string get_full_input_string(uint32_t input_id);
+    static std::string get_mouse_button_string(uint32_t input_id);
     static std::string get_window_string(uint32_t input_id);
 
-    static std::string
-    get_generic_axis_string(uint32_t input_id);
+    static std::string get_generic_axis_string(uint32_t input_id);
     /// Print the contents of the global input buffer, for
     /// debug purposes.
     template <typename T> void print_buffer(T& stream) {
         RollingInt<0, 511> x = value_index;
         while (x != buffer_index()) {
-            stream << get_full_input_string(
-                          buffer()[x].input_id)
-                   << " = " << buffer()[x].value << "\n";
+            stream << get_full_input_string(buffer()[x].input_id) << " = "
+                   << buffer()[x].value << "\n";
             ++x;
         }
     }
@@ -520,9 +459,7 @@ struct Input {
         return (input_id & kInputSourceMask) >> 24;
     }
     /// Fetch an InputState without updating it.
-    InputState& fetch_no_update(uint32_t input_id) {
-        return values[input_id];
-    }
+    InputState& fetch_no_update(uint32_t input_id) { return values[input_id]; }
     /// Fetch an InputState, and update it if needed.
     InputState& operator[](uint32_t input_id) {
 

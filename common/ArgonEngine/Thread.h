@@ -27,9 +27,7 @@ struct Mutex {
     //! is already locked. Returns false if the mutex was
     //! locked successfully. Returns True if the mutex was
     //! contended and couldn't be locked.
-    bool lockOrSkip() {
-        return !pthread_mutex_trylock(&mutex);
-    }
+    bool lockOrSkip() { return !pthread_mutex_trylock(&mutex); }
     //! Unlocks the mutex.
     void unlock() { pthread_mutex_unlock(&mutex); }
     //! Destroys the mutex.
@@ -48,8 +46,7 @@ struct RecursiveMutex {
         pthread_mutexattr_t mta;
 
         pthread_mutexattr_init(&mta);
-        pthread_mutexattr_settype(&mta,
-                                  PTHREAD_MUTEX_RECURSIVE);
+        pthread_mutexattr_settype(&mta, PTHREAD_MUTEX_RECURSIVE);
         pthread_mutex_init(&mutex, &mta);
     }
     //! Locks the mutex.
@@ -58,9 +55,7 @@ struct RecursiveMutex {
     //! is already locked. Returns false if the mutex was
     //! locked successfully. Returns True if the mutex was
     //! contended and couldn't be locked.
-    bool lockOrSkip() {
-        return !pthread_mutex_trylock(&mutex);
-    }
+    bool lockOrSkip() { return !pthread_mutex_trylock(&mutex); }
     //! Unlocks the mutex.
     void unlock() { pthread_mutex_unlock(&mutex); }
     //! Destroys the mutex.
@@ -153,8 +148,7 @@ class Timer {
   public:
     Timer();
     Timer(const Timer& t)
-        : timeA(t.timeA), timeB(t.timeB),
-          delta_time_(t.delta_time_) {}
+        : timeA(t.timeA), timeB(t.timeB), delta_time_(t.delta_time_) {}
     //! @brief Returns the current time in seconds. This may
     //! be the system time, uptime, or time since the
     //! application has launched.

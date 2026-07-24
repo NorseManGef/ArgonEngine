@@ -13,23 +13,18 @@
 #include "Matrix.h"
 #include "Vector.h"
 namespace Argon {
-template <typename T>
-struct Quaternion : public VectorBase4<T> {
+template <typename T> struct Quaternion : public VectorBase4<T> {
     typedef VectorBase4<T> base;
     Quaternion() { identity(); }
-    Quaternion(T x, T y, T z, T w) {
-        set_quaternion(x, y, z, w);
-    }
-    Quaternion(const T angle,
-               const VectorBase<T, 3>& axis) {
+    Quaternion(T x, T y, T z, T w) { set_quaternion(x, y, z, w); }
+    Quaternion(const T angle, const VectorBase<T, 3>& axis) {
         set_angle_axis(angle, axis);
     }
     Quaternion(const VectorBase<T, 4>& c) : base(c) {}
     void identity() { base::set(0, 0, 0, 1); }
     Quaternion inverse() {
         const Quaternion q = normalize(*this);
-        return normalize(
-            Quaternion(-q[0], -q[1], -q[2], q[3]));
+        return normalize(Quaternion(-q[0], -q[1], -q[2], q[3]));
     }
     void zero() { base::set(0, 0, 0, 0); }
     void set_angle_axis(T angle, VectorBase<T, 3> axis);
@@ -45,13 +40,10 @@ struct Quaternion : public VectorBase4<T> {
         return normalize(Quaternion(*this) *= o);
     }
     VectorBase<T, 4>& vector() { return *this; }
-    const VectorBase<T, 4>& const_vector() const {
-        return *this;
-    }
+    const VectorBase<T, 4>& const_vector() const { return *this; }
     Quaternion operator-() {
-        return Quaternion(
-            -base::operator[](0), -base::operator[](1),
-            -base::operator[](2), base::operator[](3));
+        return Quaternion(-base::operator[](0), -base::operator[](1),
+                          -base::operator[](2), base::operator[](3));
     }
 };
 typedef Quaternion<float> Quaternionf;
@@ -65,8 +57,7 @@ template <typename T> struct TypeInfo<Quaternion<T>> {
     }
 };
 template <typename T>
-void Quaternion<T>::set_angle_axis(T angle,
-                                   VectorBase<T, 3> axis) {
+void Quaternion<T>::set_angle_axis(T angle, VectorBase<T, 3> axis) {
     axis = Argon::normalize(axis) * sinf(angle * 0.5f);
 
     base::operator[](0) = axis[0];
@@ -76,8 +67,7 @@ void Quaternion<T>::set_angle_axis(T angle,
 
     *this = normalize(*this);
 }
-template <typename T>
-void Quaternion<T>::set_euler_xyz(T x, T y, T z) {
+template <typename T> void Quaternion<T>::set_euler_xyz(T x, T y, T z) {
     Quaternion q1;
     Quaternion q2;
     set_angle_axis(x, VectorBase3<T>(1, 0, 0));
@@ -87,13 +77,11 @@ void Quaternion<T>::set_euler_xyz(T x, T y, T z) {
     *this *= Argon::normalize(q2);
     *this = Argon::normalize(*this);
 }
-template <typename T>
-void Quaternion<T>::set_quaternion(T x, T y, T z, T w) {
+template <typename T> void Quaternion<T>::set_quaternion(T x, T y, T z, T w) {
     base::set(x, y, z, w);
 }
 template <typename T>
-Quaternion<T>&
-Quaternion<T>::operator*=(const Quaternion& o) {
+Quaternion<T>& Quaternion<T>::operator*=(const Quaternion& o) {
 
     T x = base::operator[](0);
     T y = base::operator[](1);
@@ -103,17 +91,16 @@ Quaternion<T>::operator*=(const Quaternion& o) {
     T rqy = o[1];
     T rqz = o[2];
     T rqw = o[3];
-    base::operator=(Argon::normalize(
-        base(w * rqx + x * rqw + y * rqz - z * rqy,
-             w * rqy + y * rqw + z * rqx - x * rqz,
-             w * rqz + z * rqw + x * rqy - y * rqx,
-             w * rqw - x * rqx - y * rqy - z * rqz)));
+    base::operator=(
+        Argon::normalize(base(w * rqx + x * rqw + y * rqz - z * rqy,
+                              w * rqy + y * rqw + z * rqx - x * rqz,
+                              w * rqz + z * rqw + x * rqy - y * rqx,
+                              w * rqw - x * rqx - y * rqy - z * rqz)));
     return *this;
 }
 template <typename T>
 static inline Quaternion<T> slerp(const Quaternion<T>& a,
-                                  const Quaternion<T>& b,
-                                  float t) {
+                                  const Quaternion<T>& b, float t) {
 
     T flip = 1.0f;
 
@@ -125,9 +112,8 @@ static inline Quaternion<T> slerp(const Quaternion<T>& a,
     }
 
     if ((1.0f - cosine) < 0.000001f)
-        return Argon::normalize(
-            Quaternion<T>(a.const_vector() * (1.0f - t) +
-                          b.const_vector() * (t * flip)));
+        return Argon::normalize(Quaternion<T>(a.const_vector() * (1.0f - t) +
+                                              b.const_vector() * (t * flip)));
 
     T theta = (T)acos(cosine);
     T sine = (T)sin(theta);
@@ -135,24 +121,20 @@ static inline Quaternion<T> slerp(const Quaternion<T>& a,
     T alpha = (T)sin(t * theta) / sine * flip;
 
     return Argon::normalize(
-        Quaternion<T>(a.const_vector() * beta +
-                      b.const_vector() * alpha));
+        Quaternion<T>(a.const_vector() * beta + b.const_vector() * alpha));
 }
 
 template <typename T> struct RotationMatrixCookie {
-    RotationMatrixCookie(const Quaternion<T>& d)
-        : data(d.const_vector()) {}
+    RotationMatrixCookie(const Quaternion<T>& d) : data(d.const_vector()) {}
     const VectorBase<T, 4>& data;
 };
 template <typename T>
-static INLINE RotationMatrixCookie<T>
-RotateMatrix(const Quaternion<T>& v) {
+static INLINE RotationMatrixCookie<T> RotateMatrix(const Quaternion<T>& v) {
     return RotationMatrixCookie<T>(v);
 }
 template <typename T1, typename TV>
-const MatrixBase<T1, 4>
-operator*(const MatrixBase<T1, 4>& m,
-          const RotationMatrixCookie<TV>& q) {
+const MatrixBase<T1, 4> operator*(const MatrixBase<T1, 4>& m,
+                                  const RotationMatrixCookie<TV>& q) {
     const VectorBase<T1, 4> fT = q.data * 2.0f;
 
     const T1 fTx0 = fT[0] * q.data[0];
@@ -187,19 +169,15 @@ operator*(const MatrixBase<T1, 4>& m,
     const VectorBase<T1, 4> r1 = m1 * a + m2 * b + m3 * c;
     const VectorBase<T1, 4> r2 = m1 * d + m2 * e + m3 * f;
     const VectorBase<T1, 4> r3 = m1 * g + m2 * h + m3 * i;
-    return MatrixBase4<T1>(r1[0], r1[1], r1[2], r1[3],
-                           r2[0], r2[1], r2[2], r2[3],
-                           r3[0], r3[1], r3[2], r3[3],
-                           m[12], m[13], m[14], m[15]);
+    return MatrixBase4<T1>(r1[0], r1[1], r1[2], r1[3], r2[0], r2[1], r2[2],
+                           r2[3], r3[0], r3[1], r3[2], r3[3], m[12], m[13],
+                           m[14], m[15]);
 }
-template <typename T>
-INLINE Quaternion<T> get_rotation(MatrixBase<T, 4>& m) {
+template <typename T> INLINE Quaternion<T> get_rotation(MatrixBase<T, 4>& m) {
     VectorBase3<T> scale_val = get_scale(m);
-    float xr =
-        atan2f(m[9] / scale_val[2], m[10] / scale_val[2]);
+    float xr = atan2f(m[9] / scale_val[2], m[10] / scale_val[2]);
     float yr = -asin(m[8] / scale_val[2]);
-    float zr =
-        atan2f(m[4] / scale_val[1], m[0] / scale_val[0]);
+    float zr = atan2f(m[4] / scale_val[1], m[0] / scale_val[0]);
     Quaternion<float> q;
     Quaternion<float> q1;
     Quaternion<float> q2;

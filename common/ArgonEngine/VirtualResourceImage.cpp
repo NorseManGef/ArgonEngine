@@ -15,33 +15,27 @@
 #include <stb/stb_image.h>
 #include <stb/stb_image_write.h>
 namespace Argon {
-bool VirtualResourceImage::save(
-    VirtualResourceIMPL::Source* source) {
+bool VirtualResourceImage::save(VirtualResourceIMPL::Source* source) {
     if (source && image_data) {
         int out_len = 0;
         int components = 4;
-        unsigned char* dt =
-            new unsigned char[width * height * 4];
+        unsigned char* dt = new unsigned char[width * height * 4];
         Vector4f d;
         for (int y = 0; y < height; ++y)
             for (int x = 0; x < width; ++x) {
                 d = get_pixel_color(x, y);
                 dt[(x + y * width) * 4] =
-                    std::min(std::max(d[0], 0.f), 1.f) *
-                    255.f;
+                    std::min(std::max(d[0], 0.f), 1.f) * 255.f;
                 dt[(x + y * width) * 4 + 1] =
-                    std::min(std::max(d[1], 0.f), 1.f) *
-                    255.f;
+                    std::min(std::max(d[1], 0.f), 1.f) * 255.f;
                 dt[(x + y * width) * 4 + 2] =
-                    std::min(std::max(d[2], 0.f), 1.f) *
-                    255.f;
+                    std::min(std::max(d[2], 0.f), 1.f) * 255.f;
                 dt[(x + y * width) * 4 + 3] =
-                    std::min(std::max(d[3], 0.f), 1.f) *
-                    255.f;
+                    std::min(std::max(d[3], 0.f), 1.f) * 255.f;
             }
 
-        unsigned char* dat = stbi_write_png_to_mem(
-            dt, 0, width, height, components, &out_len);
+        unsigned char* dat =
+            stbi_write_png_to_mem(dt, 0, width, height, components, &out_len);
         source->resize(out_len);
         source->write((char*)dat, out_len, 0);
         source->save();
@@ -71,24 +65,21 @@ void* deffered_loading(void* data_pt) {
     std::string data;
     data.resize(0);
     if (uint8_t* d = image->source->get_pointer()) {
-        dat = (float*)stbi_loadf_from_memory(
-            (stbi_uc*)d, image->source->size(), &x, &y, &c,
-            STBI_rgb_alpha);
+        dat = (float*)stbi_loadf_from_memory((stbi_uc*)d, image->source->size(),
+                                             &x, &y, &c, STBI_rgb_alpha);
 
     } else {
         while (read == next_addition) {
             size_t off = data.size();
             next_addition = off / 2 + 512;
             data.resize(off + next_addition);
-            read = image->source->read(&data[off],
-                                       next_addition, off);
+            read = image->source->read(&data[off], next_addition, off);
             actual_size += read;
             data.resize(actual_size);
         }
 
-        dat = (float*)stbi_loadf_from_memory(
-            (stbi_uc*)&data[0], data.size(), &x, &y, &c,
-            STBI_rgb_alpha);
+        dat = (float*)stbi_loadf_from_memory((stbi_uc*)&data[0], data.size(),
+                                             &x, &y, &c, STBI_rgb_alpha);
     }
 
     if (im->get_width() == -1) {
@@ -96,8 +87,7 @@ void* deffered_loading(void* data_pt) {
             im->create(x, y, im->get_format());
         } else {
             float scale = float(im->get_height()) / y;
-            im->create(x * scale, im->get_height(),
-                       im->get_format());
+            im->create(x * scale, im->get_height(), im->get_format());
         }
     }
 
@@ -106,8 +96,7 @@ void* deffered_loading(void* data_pt) {
             im->create(x, y, im->get_format());
         } else {
             float scale = float(im->get_width()) / x;
-            im->create(im->get_width(), y * scale,
-                       im->get_format());
+            im->create(im->get_width(), y * scale, im->get_format());
         }
     }
 
@@ -118,9 +107,8 @@ void* deffered_loading(void* data_pt) {
     for (int yi = 0; yi < y; ++yi)
         for (int xi = 0; xi < x; ++xi) {
             const float* d = dat + (xi + yi * x) * 4;
-            im->set_sample_color(
-                xi * pixel_x, yi * pixel_y,
-                Vector4f(d[0], d[1], d[2], d[3]));
+            im->set_sample_color(xi * pixel_x, yi * pixel_y,
+                                 Vector4f(d[0], d[1], d[2], d[3]));
         }
     stbi_image_free((char*)dat);
 
@@ -172,8 +160,7 @@ unsigned int VirtualResourceImage::parse_format(
 
     int mip = string_to_number(arg_map["mip"]);
     int filter = string_to_number(arg_map["filter"]);
-    int filter_mip =
-        string_to_number(arg_map["filter_mip"]);
+    int filter_mip = string_to_number(arg_map["filter_mip"]);
     int ansio = string_to_number(arg_map["ansiotropic"]);
     int clamp = string_to_number(arg_map["clamp"]);
     int fbo = string_to_number(arg_map["fbo"]);
@@ -197,8 +184,7 @@ unsigned int VirtualResourceImage::parse_format(
         format |= kTextureFBO;
     return format;
 }
-bool VirtualResourceImage::reload(
-    VirtualResourceIMPL::Source* source) {
+bool VirtualResourceImage::reload(VirtualResourceIMPL::Source* source) {
     if (preloading)
         return true;
     preloading = true;

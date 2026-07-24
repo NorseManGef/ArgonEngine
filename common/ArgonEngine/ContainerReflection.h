@@ -21,8 +21,7 @@
 #include <vector>
 
 namespace Argon {
-template <typename T, typename T2>
-struct TypeInfo<std::vector<T, T2>> {
+template <typename T, typename T2> struct TypeInfo<std::vector<T, T2>> {
     enum { valid = 1 };
 
     static void handle(std::vector<T, T2>& t, Visitor& v) {
@@ -43,8 +42,7 @@ struct TypeInfo<std::vector<T, T2>> {
         }
     }
 };
-template <typename T, size_t size>
-struct TypeInfo<std::array<T, size>> {
+template <typename T, size_t size> struct TypeInfo<std::array<T, size>> {
     enum { valid = 1 };
     static void handle(std::array<T, size>& t, Visitor& v) {
         v.type_name = "std::array";
@@ -73,8 +71,7 @@ struct TypeInfo<std::set<T, T2, T3>> {
         }
     }
 };
-template <typename T, typename T2>
-struct TypeInfo<std::list<T, T2>> {
+template <typename T, typename T2> struct TypeInfo<std::list<T, T2>> {
     enum { valid = 1 };
     static void handle(std::list<T, T2>& t, Visitor& v) {
         v.type_name = "std::list";
@@ -94,8 +91,7 @@ struct TypeInfo<std::list<T, T2>> {
         }
     }
 };
-template <typename T, typename T2>
-struct TypeInfo<std::deque<T, T2>> {
+template <typename T, typename T2> struct TypeInfo<std::deque<T, T2>> {
     enum { valid = 1 };
 
     static void handle(std::deque<T, T2>& t, Visitor& v) {
@@ -114,8 +110,7 @@ struct TypeInfo<std::deque<T, T2>> {
         }
     }
 };
-template <typename T, typename T2>
-struct TypeInfo<std::pair<T, T2>> {
+template <typename T, typename T2> struct TypeInfo<std::pair<T, T2>> {
     enum { valid = 1 };
 
     static void handle(std::pair<T, T2>& t, Visitor& v) {
@@ -131,8 +126,7 @@ template <typename T, typename T2, typename T3, typename T4>
 struct TypeInfo<std::map<T, T2, T3, T4>> {
     enum { valid = 1 };
 
-    static void unpack(std::map<T, T2, T3, T4>& t,
-                       Visitor& v) {
+    static void unpack(std::map<T, T2, T3, T4>& t, Visitor& v) {
         v.type_name = "std::map";
         auto it = t.begin();
         if (v.read_only()) {
@@ -154,8 +148,7 @@ template <typename T2, typename T3, typename T4>
 struct TypeInfo<std::map<std::string, T2, T3, T4>> {
     enum { valid = 1 };
 
-    static void handle(std::map<std::string, T2, T3, T4>& t,
-                       Visitor& v) {
+    static void handle(std::map<std::string, T2, T3, T4>& t, Visitor& v) {
         v.type_name = "std::map";
         if (v.begin_map()) {
             if (v.read_only()) {
@@ -180,16 +173,13 @@ template <typename T2, typename T3, typename T4>
 struct TypeInfo<std::map<Argon::StringIntern, T2, T3, T4>> {
     enum { valid = 1 };
 
-    static void
-    handle(std::map<StringIntern, T2, T3, T4>& t,
-           Visitor& v) {
+    static void handle(std::map<StringIntern, T2, T3, T4>& t, Visitor& v) {
         v.type_name = "std::map";
         if (v.begin_map()) {
             if (v.read_only()) {
                 auto it = t.begin();
                 while (it != t.end()) {
-                    v.handle(it->second,
-                             it->first.str().c_str());
+                    v.handle(it->second, it->first.str().c_str());
                     ++it;
                 }
             } else {

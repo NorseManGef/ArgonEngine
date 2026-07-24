@@ -19,20 +19,17 @@
 #include "Vector.h"
 #include <algorithm>
 namespace Argon {
-const extern StringIntern
-    kColorAttribute; //!< A string that identifies a Color
-                     //!< Attribute in a Vertex Array.
-const extern StringIntern
-    kTextureAttribute; //!< A string that identifies a
-                       //!< Texture Attribute in a Vertex
-                       //!< Array.
+const extern StringIntern kColorAttribute; //!< A string that identifies a Color
+                                           //!< Attribute in a Vertex Array.
+const extern StringIntern kTextureAttribute; //!< A string that identifies a
+                                             //!< Texture Attribute in a Vertex
+                                             //!< Array.
 const extern StringIntern
     kNormalAttribute; //!< A string that identifies a Normal
                       //!< Attribute in a Vertex Array.
-const extern StringIntern
-    kPositionAttribute; //!< A string that identifies a
-                        //!< Position Attribute in a Vertex
-                        //!< Array.
+const extern StringIntern kPositionAttribute; //!< A string that identifies a
+                                              //!< Position Attribute in a
+                                              //!< Vertex Array.
 enum RenderLayers {
     kRenderLayerDebug = 1 << 31,
     kRenderLayerMask = ~kRenderLayerDebug
@@ -79,14 +76,10 @@ enum BlendFactor {
     kBlendReplace = (kDstMask & kZero) | (kSrcMask & kOne),
     kBlendPremultipliedAlpha =
         (kDstMask & kOneMinusSrcAlpha) | (kSrcMask & kOne),
-    kBlendAlpha = (kDstMask & kOneMinusSrcAlpha) |
-                  (kSrcMask & kSrcAlpha),
-    kBlendMultiply = (kSrcMask & kDstColor) |
-                     (kDstMask & kOneMinusSrcAlpha),
-    kBlendScreen =
-        (kSrcMask & kOne) | (kDstMask & kOneMinusSrcColor),
-    kBlendAdditive =
-        (kSrcMask & kSrcAlpha) | (kDstMask & kOne),
+    kBlendAlpha = (kDstMask & kOneMinusSrcAlpha) | (kSrcMask & kSrcAlpha),
+    kBlendMultiply = (kSrcMask & kDstColor) | (kDstMask & kOneMinusSrcAlpha),
+    kBlendScreen = (kSrcMask & kOne) | (kDstMask & kOneMinusSrcColor),
+    kBlendAdditive = (kSrcMask & kSrcAlpha) | (kDstMask & kOne),
     kLinearDodge = kOne,
 
 };
@@ -98,18 +91,18 @@ enum DrawType {
     //! first two vertices of the next triangle. This is the
     //! fastest on old hardware.
     kDrawTriangleStrip,
-    kDrawPoints, //!< Each vertex is rendered as an
-                 //!< individual point.
-    kDrawLines, //!< Two vertexes form a line. Each line has
-                //!< its own pair of vertices. This is slow
-                //!< on most hardware.
-    kDrawLineLoop,  //!< A loop of lines are formed by using
-                    //!< the previous vertex and the next
-                    //!< vertex to form a line. This is slow
-                    //!< on most hardware.
-    kDrawTriangles, //!< Every 3 vertices define a new
-                    //!< triangle. This is the fastest mode
-                    //!< on modern hardware.
+    kDrawPoints,     //!< Each vertex is rendered as an
+                     //!< individual point.
+    kDrawLines,      //!< Two vertexes form a line. Each line has
+                     //!< its own pair of vertices. This is slow
+                     //!< on most hardware.
+    kDrawLineLoop,   //!< A loop of lines are formed by using
+                     //!< the previous vertex and the next
+                     //!< vertex to form a line. This is slow
+                     //!< on most hardware.
+    kDrawTriangles,  //!< Every 3 vertices define a new
+                     //!< triangle. This is the fastest mode
+                     //!< on modern hardware.
     kDrawTriangleFan //!< The first vertex is the first
                      //!< vertex on all triangles. The
                      //!< second vertex is the previous
@@ -126,24 +119,24 @@ enum RenderType {
 //! @brief The Cull Mode to use when rendering the
 //! Renderable.
 enum CullFaceStyle {
-    kCullNotSet,             //!< Unknown cull state
-    kCullNone,               //!< Don't cull any faces.
-    kCullFrontFaceClockWise, //!< Cull faces that face the
-                             //!< viewer, assuming a
-                             //!< clockwise winding.
-    kCullBackFaceClockWise,  //!< Cull faces that face away
-                            //!< from the viewer, assuming a
-                            //!< clockwise winding.
+    kCullNotSet,                    //!< Unknown cull state
+    kCullNone,                      //!< Don't cull any faces.
+    kCullFrontFaceClockWise,        //!< Cull faces that face the
+                                    //!< viewer, assuming a
+                                    //!< clockwise winding.
+    kCullBackFaceClockWise,         //!< Cull faces that face away
+                                    //!< from the viewer, assuming a
+                                    //!< clockwise winding.
     kCullFrontFaceCounterClockWise, //!< Cull faces that
                                     //!< face the viewer,
                                     //!< assuming a
                                     //!< counter-clockwise
                                     //!< winding.
-    kCullBackFaceCounterClockWise, //!< Cull faces that face
-                                   //!< away from the
-                                   //!< viewer, assuming a
-                                   //!< counter-clockwise
-                                   //!< winding.
+    kCullBackFaceCounterClockWise,  //!< Cull faces that face
+                                    //!< away from the
+                                    //!< viewer, assuming a
+                                    //!< counter-clockwise
+                                    //!< winding.
 };
 enum TextureFormat {
 
@@ -182,8 +175,7 @@ enum TextureFormat {
     kTextureClamp = 0x10000
 
 };
-inline static unsigned int
-get_tex_format_pixel_size(unsigned int format) {
+inline static unsigned int get_tex_format_pixel_size(unsigned int format) {
     const static int lookup[16] = {
         2, 3, 12, 12, 24,     // RGB
         2, 2, 4,  16, 16, 32, // RGBA
@@ -191,15 +183,12 @@ get_tex_format_pixel_size(unsigned int format) {
     };
     return lookup[format & 0xF];
 }
-void tex_set_color(unsigned char* data, unsigned int format,
-                   Vector4f color, int x, int y, int w,
-                   int h);
-Vector4f tex_lookup_color(unsigned char* data,
-                          unsigned int format, int x, int y,
-                          int w, int h);
+void tex_set_color(unsigned char* data, unsigned int format, Vector4f color,
+                   int x, int y, int w, int h);
+Vector4f tex_lookup_color(unsigned char* data, unsigned int format, int x,
+                          int y, int w, int h);
 
-double texture_format_fitness(unsigned int tex_form1,
-                              unsigned int tex_form2);
+double texture_format_fitness(unsigned int tex_form1, unsigned int tex_form2);
 //! @brief The variable type of a Uniform.
 enum UniformType {
     kUniformScalar = 0x1,
@@ -259,30 +248,25 @@ enum UniformType {
 
 //! @brief Flags for rendering
 enum RenderFlags {
-    kRenderShadow =
-        0x1, //!< The object should cast a shadow.
+    kRenderShadow = 0x1,    //!< The object should cast a shadow.
     kRenderDepthMask = 0x2, //!< The object should write
                             //!< into the depth buffer.
-    kRenderDepthTest =
-        0x4, //!< The object should use depth testing.
-    kRenderOpaqueFlags =
-        kRenderDepthMask | kRenderDepthTest,
-    kRenderRedMask = 0x8, //!< The object should render into
-                          //!< the red channel.
+    kRenderDepthTest = 0x4, //!< The object should use depth testing.
+    kRenderOpaqueFlags = kRenderDepthMask | kRenderDepthTest,
+    kRenderRedMask = 0x8,    //!< The object should render into
+                             //!< the red channel.
     kRenderGreenMask = 0x10, //!< The object should render
                              //!< into the green channel.
     kRenderBlueMask = 0x20,  //!< The object should render
                              //!< into the blue channel.
     kRenderAlphaMask = 0x40, //!< The object should render
                              //!< into the alpha channel.
-    kRenderRGBMask =
-        kRenderRedMask | kRenderGreenMask | kRenderBlueMask,
-    kRenderColorMask = kRenderRedMask | kRenderGreenMask |
-                       kRenderBlueMask | kRenderAlphaMask,
+    kRenderRGBMask = kRenderRedMask | kRenderGreenMask | kRenderBlueMask,
+    kRenderColorMask =
+        kRenderRedMask | kRenderGreenMask | kRenderBlueMask | kRenderAlphaMask,
 
-    kRenderShouldRender =
-        0x80, //!< The object should render at all.
-    kRenderDefault = 0xFF, //!< The default render flags.
+    kRenderShouldRender = 0x80, //!< The object should render at all.
+    kRenderDefault = 0xFF,      //!< The default render flags.
 
 };
 //! @brief Flags for framebuffer update.
@@ -297,11 +281,9 @@ enum FramebufferFlags {
     kSortTransparent = 0x20,
     kSortOpaque = 0x40,
 
-    kShouldRenderAll =
-        kShouldRenderOpaque | kShouldRenderTransparent,
-    kShouldClearAll = kShouldClearDepth |
-                      kShouldClearColor |
-                      kShouldClearStencil,
+    kShouldRenderAll = kShouldRenderOpaque | kShouldRenderTransparent,
+    kShouldClearAll =
+        kShouldClearDepth | kShouldClearColor | kShouldClearStencil,
     kSortAll = kSortTransparent | kSortOpaque
 };
 }; // namespace Argon

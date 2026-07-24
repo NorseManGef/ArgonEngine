@@ -11,8 +11,7 @@
 #ifndef ArgonEngine_InstancedRenderable_h
 #define ArgonEngine_InstancedRenderable_h
 #include "RenderSystem.h"
-template <class T, int TMaxBatch>
-class InstancedRenderable {
+template <class T, int TMaxBatch> class InstancedRenderable {
   private:
     struct Render : public Renderable {
         int vertex_count;
@@ -26,9 +25,8 @@ class InstancedRenderable {
                 v = T::vertex_array();
                 v_count = v.index_data.size();
                 for (int x = 1; x < TMaxBatch; ++x)
-                    v.create_instance_duplicates(
-                        T::vertex_array(), kIndexAttribute,
-                        x);
+                    v.create_instance_duplicates(T::vertex_array(),
+                                                 kIndexAttribute, x);
             }
             vertex_count = v_count;
             return v;
@@ -53,19 +51,14 @@ class InstancedRenderable {
         void lazy_calc() {
             if (lazy) {
                 lazy = false;
-                set_end_vertex(instances.size() *
-                               vertex_count);
+                set_end_vertex(instances.size() * vertex_count);
 
                 clear_uniforms();
                 T::register_base_uniforms(*this);
                 for (int x = 0; x < instances.size(); ++x) {
-                    for (int y = 0;
-                         y < instances[x]->uniforms.size();
-                         ++y) {
-                        const Uniform& u =
-                            instances[x]->uniforms[y];
-                        register_uniform(u.name.str(),
-                                         u.type, u.data,
+                    for (int y = 0; y < instances[x]->uniforms.size(); ++y) {
+                        const Uniform& u = instances[x]->uniforms[y];
+                        register_uniform(u.name.str(), u.type, u.data,
                                          u.is_pointer, x);
                     }
                 }
@@ -86,43 +79,38 @@ class InstancedRenderable {
         int x = 0;
         bool inserted = false;
         while (x < renderables.size() && !inserted) {
-            inserted =
-                renderables[x]->add(static_cast<T*>(this));
+            inserted = renderables[x]->add(static_cast<T*>(this));
             ++x;
         }
         if (!inserted) {
             renderables.push_back(new Render());
-            inserted = renderables.back()->add(
-                static_cast<T*>(this));
+            inserted = renderables.back()->add(static_cast<T*>(this));
         }
     }
     InstancedRenderable(const InstancedRenderable& r) {
         int x = 0;
         bool inserted = false;
         while (x < renderables.size() && !inserted) {
-            inserted =
-                renderables[x]->add(static_cast<T*>(this));
+            inserted = renderables[x]->add(static_cast<T*>(this));
             ++x;
         }
         if (!inserted) {
             renderables.push_back(new Render());
-            inserted = renderables.back()->add(
-                static_cast<T*>(this));
+            inserted = renderables.back()->add(static_cast<T*>(this));
         }
     }
-    InstancedRenderable&
-    operator=(const InstancedRenderable& i) {
+    InstancedRenderable& operator=(const InstancedRenderable& i) {
         return *this;
     }
     ~InstancedRenderable() {
         if (r->remove(static_cast<T*>(this))) {
-            renderables.erase(std::find(
-                renderables.begin(), renderables.end(), r));
+            renderables.erase(
+                std::find(renderables.begin(), renderables.end(), r));
             delete r;
         }
     }
-    void register_uniform(const StringIntern& s,
-                          UniformType type, void* pointer) {
+    void register_uniform(const StringIntern& s, UniformType type,
+                          void* pointer) {
         Uniform u;
         u.type = type;
         u.data = pointer;
@@ -131,61 +119,48 @@ class InstancedRenderable {
         uniforms.insert(u);
         r->lazy = true;
     }
-    void register_uniform_float(const StringIntern& s,
-                                float* f) {
+    void register_uniform_float(const StringIntern& s, float* f) {
         register_uniform(s, kUniformFloat, f);
     }
-    void register_uniform_fvec2(const StringIntern& s,
-                                float* f) {
+    void register_uniform_fvec2(const StringIntern& s, float* f) {
         register_uniform(s, kUniformFVec2, f);
     }
-    void register_uniform_fvec3(const StringIntern& s,
-                                float* f) {
+    void register_uniform_fvec3(const StringIntern& s, float* f) {
         register_uniform(s, kUniformFVec3, f);
     }
-    void register_uniform_fvec4(const StringIntern& s,
-                                float* f) {
+    void register_uniform_fvec4(const StringIntern& s, float* f) {
         register_uniform(s, kUniformFVec4, f);
     }
 
-    void register_uniform_fmat2x2(const StringIntern& s,
-                                  float* f) {
+    void register_uniform_fmat2x2(const StringIntern& s, float* f) {
         register_uniform(s, kUniformFMat2x2, f);
     }
-    void register_uniform_fmat3x3(const StringIntern& s,
-                                  float* f) {
+    void register_uniform_fmat3x3(const StringIntern& s, float* f) {
         register_uniform(s, kUniformFMat3x3, f);
     }
-    void register_uniform_fmat4x4(const StringIntern& s,
-                                  float* f) {
+    void register_uniform_fmat4x4(const StringIntern& s, float* f) {
         register_uniform(s, kUniformFMat4x4, f);
     }
 
-    void register_uniform_int(const StringIntern& s,
-                              int* f) {
+    void register_uniform_int(const StringIntern& s, int* f) {
         register_uniform(s, kUniformInt, f);
     }
-    void register_uniform_ivec2(const StringIntern& s,
-                                int* f) {
+    void register_uniform_ivec2(const StringIntern& s, int* f) {
         register_uniform(s, kUniformIVec2, f);
     }
-    void register_uniform_ivec3(const StringIntern& s,
-                                int* f) {
+    void register_uniform_ivec3(const StringIntern& s, int* f) {
         register_uniform(s, kUniformIVec3, f);
     }
-    void register_uniform_ivec4(const StringIntern& s,
-                                int* f) {
+    void register_uniform_ivec4(const StringIntern& s, int* f) {
         register_uniform(s, kUniformIVec4, f);
     }
 
-    void register_uniform_texture(const StringIntern& s,
-                                  Texture* tex) {
+    void register_uniform_texture(const StringIntern& s, Texture* tex) {
         register_uniform(s, kUniformTexture, tex);
     }
 };
 template <class T, int TMaxBatch>
-std::deque<
-    typename InstancedRenderable<T, TMaxBatch>::Render*>
+std::deque<typename InstancedRenderable<T, TMaxBatch>::Render*>
     InstancedRenderable<T, TMaxBatch>::renderables;
 
 #endif

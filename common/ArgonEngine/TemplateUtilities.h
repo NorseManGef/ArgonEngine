@@ -67,14 +67,11 @@ template <> struct TypePromotionRank<long double> {
  * @tparam T2 The type to typedef type as if b is true.
  * @tparam b Determines whether to typedef type as T or T2.
  **/
-template <typename T, typename T2, bool b>
-struct TemplateSwitch;
-template <typename T, typename T2>
-struct TemplateSwitch<T, T2, true> {
+template <typename T, typename T2, bool b> struct TemplateSwitch;
+template <typename T, typename T2> struct TemplateSwitch<T, T2, true> {
     typedef T2 type;
 };
-template <typename T, typename T2>
-struct TemplateSwitch<T, T2, false> {
+template <typename T, typename T2> struct TemplateSwitch<T, T2, false> {
     typedef T type;
 };
 /**
@@ -87,8 +84,7 @@ struct TemplateSwitch<T, T2, false> {
  **/
 template <typename T, typename T2> struct TypePromotion {
     typedef typename TemplateSwitch < T, T2,
-        TypePromotionRank<T>::rank<
-            TypePromotionRank<T2>::rank>::type type;
+        TypePromotionRank<T>::rank<TypePromotionRank<T2>::rank>::type type;
 };
 
 }; // namespace Argon

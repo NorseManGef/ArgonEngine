@@ -36,8 +36,7 @@ void SleepLock::allow_sleep() {
     have_lock_ = false;
 }
 
-InputUpdate Input::get_last_update(double min_update,
-                                   double max_time_ago) {
+InputUpdate Input::get_last_update(double min_update, double max_time_ago) {
     RollingInt<0, 511> ind = buffer_index() - 1;
     RollingInt<0, 511> ind2 = ind + 1;
     std::map<uint32_t, double> vals;
@@ -48,8 +47,7 @@ InputUpdate Input::get_last_update(double min_update,
         if (d.time + max_time_ago < current_time)
             break;
         uint32_t dev = d.input_id & kInputSourceMask;
-        if (dev != kInputOther && dev != kInputUnknown &&
-            dev != kInputWindow) {
+        if (dev != kInputOther && dev != kInputUnknown && dev != kInputWindow) {
             InputUpdate d = buffer()[ind];
 
             double& v = prev[d.input_id];
@@ -77,20 +75,17 @@ void Input::update_values() {
 
             double dt = up.time - s.last_time;
 
-            s.magnitude *=
-                std::max(1.0 - s.magnitude_decay * dt, 0.);
+            s.magnitude *= std::max(1.0 - s.magnitude_decay * dt, 0.);
             s.magnitude += std::abs(up.value - s.value);
 
             s.integral += s.value * dt;
 
             float ratio = std::min(s.filter_ratio * dt, 1.);
             s.filtered_value =
-                s.value * ratio +
-                s.filtered_value * (1.0 - ratio);
+                s.value * ratio + s.filtered_value * (1.0 - ratio);
             s.distance += std::fabs(s.value - up.value);
             s.value = up.value;
-            if (s.value < s.deadzone &&
-                s.value > s.deadzone * -1.)
+            if (s.value < s.deadzone && s.value > s.deadzone * -1.)
                 s.value = 0.;
 
             s.last_time = up.time;
@@ -98,20 +93,17 @@ void Input::update_values() {
         ++value_index;
     }
     double current = timer().time();
-    std::map<uint32_t, InputState>::iterator it =
-        values.begin();
+    std::map<uint32_t, InputState>::iterator it = values.begin();
     while (it != values.end()) {
         InputState& s = it->second;
         double dt = current - s.last_time;
 
-        s.magnitude *=
-            std::max(1.0 - s.magnitude_decay * dt, 0.);
+        s.magnitude *= std::max(1.0 - s.magnitude_decay * dt, 0.);
 
         s.integral += s.value * dt;
 
         double ratio = std::min(s.filter_ratio * dt, 1.);
-        s.filtered_value = s.value * ratio +
-                           s.filtered_value * (1.0 - ratio);
+        s.filtered_value = s.value * ratio + s.filtered_value * (1.0 - ratio);
         s.last_time = current;
         ++it;
     }
@@ -148,8 +140,7 @@ const char* Input::get_source_string(uint32_t input_id) {
     }
     return "Unknown";
 }
-std::string
-Input::get_mouse_button_string(uint32_t input_id) {
+std::string Input::get_mouse_button_string(uint32_t input_id) {
     if (input_id == kInputIDMouseX)
         return "X Axis";
     if (input_id == kInputIDMouseY)
@@ -168,8 +159,7 @@ Input::get_mouse_button_string(uint32_t input_id) {
     s << "Button " << input_id - kInputIDMouseButton0;
     return s.str();
 }
-std::string
-Input::get_generic_axis_string(uint32_t input_id) {
+std::string Input::get_generic_axis_string(uint32_t input_id) {
     switch (input_id & kInputAxisMask) {
     case kInputAxisX:
         return "X Axis";
@@ -358,8 +348,7 @@ std::string Input::get_window_string(uint32_t input_id) {
     return s.str();
 }
 
-std::string
-Input::get_full_input_string(uint32_t input_id) {
+std::string Input::get_full_input_string(uint32_t input_id) {
     std::stringstream str;
     str << get_source_string(input_id) << " ";
     switch (input_id & kInputSourceMask) {

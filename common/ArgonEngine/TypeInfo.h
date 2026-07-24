@@ -72,65 +72,63 @@
  * Now MyClass and MyClass2 can be used in the Reflection
  * System.
  **/
-#define MAKE_VISIT(A, B)                                   \
-    virtual void visit(Visitor& v) {                       \
-        v.type_name = #A;                                  \
-        if (v.begin_map()) {                               \
-            A& t = *this;                                  \
-            B v.finish_map();                              \
-        }                                                  \
+#define MAKE_VISIT(A, B)                                                       \
+    virtual void visit(Visitor& v) {                                           \
+        v.type_name = #A;                                                      \
+        if (v.begin_map()) {                                                   \
+            A& t = *this;                                                      \
+            B v.finish_map();                                                  \
+        }                                                                      \
     }
 
 #define MAKE_VISIT_HEAD(A) virtual void visit(Visitor& v);
-#define REGISTER_FACTORY_EXPLICIT(A, B)                    \
-    std::shared_ptr<ReflectionBase> make_##A() {           \
-        return std::make_shared<A>();                      \
-    }                                                      \
-    volatile bool reg_this##A =                            \
-        Argon::ReflectionBase::add_factory(B, make_##A);
+#define REGISTER_FACTORY_EXPLICIT(A, B)                                        \
+    std::shared_ptr<ReflectionBase> make_##A() {                               \
+        return std::make_shared<A>();                                          \
+    }                                                                          \
+    volatile bool reg_this##A = Argon::ReflectionBase::add_factory(B, make_##A);
 
-#define MAKE_VISIT_IMPL(A, B)                              \
-    std::shared_ptr<ReflectionBase> make_##A() {           \
-        return std::make_shared<A>();                      \
-    }                                                      \
-    bool reg_this##A =                                     \
-        Argon::ReflectionBase::add_factory(#A, make_##A);  \
-    void A::visit(Visitor& v) {                            \
-        v.type_name = #A;                                  \
-        if (v.begin_map()) {                               \
-            A& t = *this;                                  \
-            B v.finish_map();                              \
-        }                                                  \
+#define MAKE_VISIT_IMPL(A, B)                                                  \
+    std::shared_ptr<ReflectionBase> make_##A() {                               \
+        return std::make_shared<A>();                                          \
+    }                                                                          \
+    bool reg_this##A = Argon::ReflectionBase::add_factory(#A, make_##A);       \
+    void A::visit(Visitor& v) {                                                \
+        v.type_name = #A;                                                      \
+        if (v.begin_map()) {                                                   \
+            A& t = *this;                                                      \
+            B v.finish_map();                                                  \
+        }                                                                      \
     }
 
-#define MAKE_TYPE_INFO(A, B)                               \
-    namespace Argon {                                      \
-    template <> struct TypeInfo<A> {                       \
-        enum { valid = 1 };                                \
-        static void handle(A& t, Visitor& v) {             \
-            v.type_name = #A;                              \
-            if (v.begin_map()) {                           \
-                handle2(t, v);                             \
-                v.finish_map();                            \
-            }                                              \
-        };                                                 \
-        static void handle2(A& t, Visitor& v) { B }        \
-    };                                                     \
+#define MAKE_TYPE_INFO(A, B)                                                   \
+    namespace Argon {                                                          \
+    template <> struct TypeInfo<A> {                                           \
+        enum { valid = 1 };                                                    \
+        static void handle(A& t, Visitor& v) {                                 \
+            v.type_name = #A;                                                  \
+            if (v.begin_map()) {                                               \
+                handle2(t, v);                                                 \
+                v.finish_map();                                                \
+            }                                                                  \
+        };                                                                     \
+        static void handle2(A& t, Visitor& v) { B }                            \
+    };                                                                         \
     };
 
 //! A duplicate of MAKE_TYPE_INFO(A,B) except it is for use
 //! in the Argon namespace.
-#define MAKE_TYPE_INFO_Argon(A, B)                         \
-    template <> struct TypeInfo<A> {                       \
-        enum { valid = 1 };                                \
-        static void handle(A& t, Visitor& v) {             \
-            v.type_name = #A;                              \
-            if (v.begin_map()) {                           \
-                handle2(t, v);                             \
-                v.finish_map();                            \
-            }                                              \
-        };                                                 \
-        static void handle2(A& t, Visitor& v) { B }        \
+#define MAKE_TYPE_INFO_Argon(A, B)                                             \
+    template <> struct TypeInfo<A> {                                           \
+        enum { valid = 1 };                                                    \
+        static void handle(A& t, Visitor& v) {                                 \
+            v.type_name = #A;                                                  \
+            if (v.begin_map()) {                                               \
+                handle2(t, v);                                                 \
+                v.finish_map();                                                \
+            }                                                                  \
+        };                                                                     \
+        static void handle2(A& t, Visitor& v) { B }                            \
     };
 //! Used to add a variable in the MAKE_TYPE_INFO macro. It
 //! is stored under a key that matches the variables name.
@@ -141,10 +139,10 @@
 //! @param B The key to add it as.
 #define ADD_VAR2(A, B) v.handle(t.A, B)
 //! Used to add a base class in the MAKE_TYPE_INFO macro.
-#define ADD_BASE(A)                                        \
-    {                                                      \
-        v.set_key(#A);                                     \
-        A::visit(v);                                       \
+#define ADD_BASE(A)                                                            \
+    {                                                                          \
+        v.set_key(#A);                                                         \
+        A::visit(v);                                                           \
     }
 #include <limits>
 #include <string>
@@ -205,13 +203,9 @@ template <typename T> struct TypeInfo {
 };
 struct VirtualResource;
 struct ReflectionBase {
-    static std::map<std::string,
-                    std::shared_ptr<ReflectionBase> (*)()>&
+    static std::map<std::string, std::shared_ptr<ReflectionBase> (*)()>&
     factory_map() {
-        static std::map<
-            std::string,
-            std::shared_ptr<ReflectionBase> (*)()>
-            m;
+        static std::map<std::string, std::shared_ptr<ReflectionBase> (*)()> m;
         return m;
     }
     static Mutex& mutex() {
@@ -219,16 +213,14 @@ struct ReflectionBase {
         return m;
     }
 
-    static bool
-    add_factory(const std::string& str,
-                std::shared_ptr<ReflectionBase> (*ptr)()) {
+    static bool add_factory(const std::string& str,
+                            std::shared_ptr<ReflectionBase> (*ptr)()) {
         mutex().lock();
         factory_map()[str] = ptr;
         mutex().unlock();
         return true;
     }
-    static std::shared_ptr<ReflectionBase>
-    make_type(const std::string& str) {
+    static std::shared_ptr<ReflectionBase> make_type(const std::string& str) {
         mutex().lock();
         auto s = factory_map()[str]();
         mutex().unlock();
@@ -282,29 +274,24 @@ struct ReflectionBase {
 struct Visitor {
     /// These structs are used to help identify the variable
     /// type to call the correct function definition.
-    template <typename T, bool type_valid, bool numerical,
-              bool integer, bool reflection_base>
+    template <typename T, bool type_valid, bool numerical, bool integer,
+              bool reflection_base>
     struct HandleIMPL {};
 
     template <typename T, bool numerical, bool integer>
     struct HandleIMPL<T, false, numerical, integer, true> {
-        static void go(Visitor& v, const T& t) {
-            const_cast<T&>(t).visit(v);
-        }
+        static void go(Visitor& v, const T& t) { const_cast<T&>(t).visit(v); }
     };
 
-    template <typename T, bool numerical, bool integer,
-              bool reflection>
-    struct HandleIMPL<T, true, numerical, integer,
-                      reflection> {
+    template <typename T, bool numerical, bool integer, bool reflection>
+    struct HandleIMPL<T, true, numerical, integer, reflection> {
         static void go(Visitor& v, const T& t) {
 
             TypeInfo<T>::handle(const_cast<T&>(t), v);
         }
     };
 
-    template <typename T>
-    struct HandleIMPL<T, false, true, false, false> {
+    template <typename T> struct HandleIMPL<T, false, true, false, false> {
         static void go(Visitor& v, T& t) {
             double d = t;
             v.handle_double(d);
@@ -312,8 +299,7 @@ struct Visitor {
         }
     };
 
-    template <typename T>
-    struct HandleIMPL<T, false, true, true, false> {
+    template <typename T> struct HandleIMPL<T, false, true, true, false> {
         static void go(Visitor& v, T& t) {
             intmax_t i = t;
             v.handle_int(i);
@@ -363,9 +349,7 @@ struct Visitor {
     //! unpacked for a certain key. You use this to unpack
     //! arrays.
     virtual bool can_unpack_value() { return false; }
-    virtual size_t get_min_remaining_items() {
-        return can_unpack_value();
-    }
+    virtual size_t get_min_remaining_items() { return can_unpack_value(); }
 
     //! Returns true if the current map has keys that have
     //! not been accessed using set_key.
@@ -386,14 +370,12 @@ struct Visitor {
      * @param str The key to pack or unpack the variable
      * under.
      **/
-    template <typename T>
-    void handle(T& t, const char* str) {
+    template <typename T> void handle(T& t, const char* str) {
         set_key(str);
         HandleIMPL<T, TypeInfo<T>::valid,
                    std::numeric_limits<T>::is_specialized,
                    std::numeric_limits<T>::is_integer,
-                   std::is_base_of<ReflectionBase,
-                                   T>::value>::go(*this, t);
+                   std::is_base_of<ReflectionBase, T>::value>::go(*this, t);
     }
     /**
      * Packs or unpacks a given variable under a certain key
@@ -409,8 +391,7 @@ struct Visitor {
         HandleIMPL<T, TypeInfo<T>::valid,
                    std::numeric_limits<T>::is_specialized,
                    std::numeric_limits<T>::is_integer,
-                   std::is_base_of<ReflectionBase,
-                                   T>::value>::go(*this, t);
+                   std::is_base_of<ReflectionBase, T>::value>::go(*this, t);
     }
 };
 /**
@@ -453,12 +434,9 @@ struct Visitor {
 
 template <> struct TypeInfo<std::string> {
     enum { valid = 1 };
-    static void handle(std::string& t, Visitor& v) {
-        v.handle_string(t);
-    }
+    static void handle(std::string& t, Visitor& v) { v.handle_string(t); }
 };
 }; // namespace Argon
-std::ostream& operator<<(std::ostream& s,
-                         Argon::ReflectionBase& v);
+std::ostream& operator<<(std::ostream& s, Argon::ReflectionBase& v);
 
 #endif

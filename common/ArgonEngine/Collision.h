@@ -18,12 +18,11 @@ namespace Argon {
 // a ray clamp the point that defines the origin. If the
 // line is a segment clamp both points(default).
 template <typename T, size_t TComps>
-VectorBase<T, TComps>
-closest_point_on_line(const VectorBase<T, TComps>& lineA,
-                      const VectorBase<T, TComps>& lineB,
-                      const VectorBase<T, TComps>& point,
-                      bool clamp_a = true,
-                      bool clamp_b = true) {
+VectorBase<T, TComps> closest_point_on_line(const VectorBase<T, TComps>& lineA,
+                                            const VectorBase<T, TComps>& lineB,
+                                            const VectorBase<T, TComps>& point,
+                                            bool clamp_a = true,
+                                            bool clamp_b = true) {
     VectorBase<T, TComps> ap = point - lineA;
     VectorBase<T, TComps> ab = lineB - lineA;
     T delta = dot(ap, ab) / dot(ab, ab);

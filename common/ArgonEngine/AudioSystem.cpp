@@ -6,8 +6,7 @@
 #include <iostream>
 namespace Argon {
 AudioSource3D* AudioSource3D::root_source = NULL;
-std::shared_ptr<AudioNode>
-    AudioNode::root_nodes[kAudioNumberOfChannels];
+std::shared_ptr<AudioNode> AudioNode::root_nodes[kAudioNumberOfChannels];
 size_t Listener::current_frame = 0;
 
 void SinGenerator::render(float* buffer) {
@@ -31,8 +30,7 @@ void TriangleGenerator::render(float* buffer) {
     float* be = buffer + kAudioBufferSize;
     while (buffer != be) {
         *buffer++ += phase * volume;
-        phase += frequency * kAudioTimePerSample *
-                 direction * 2.;
+        phase += frequency * kAudioTimePerSample * direction * 2.;
 
         if (phase > 1.)
             direction = -1;
@@ -90,9 +88,8 @@ void Resample::render(float* buffer) {
             input->render(sample_buffer);
         }
         int index = sample_pos;
-        float v = interopolate(
-            index ? sample_buffer[index - 1] : last,
-            sample_buffer[index], sample_pos - index);
+        float v = interopolate(index ? sample_buffer[index - 1] : last,
+                               sample_buffer[index], sample_pos - index);
         (*buffer++) += v;
         sample_pos += rate;
     }
@@ -122,16 +119,13 @@ void OggNode::read_data() {
     if (opus_file) {
         int64_t pos = op_pcm_tell(opus_file);
         int64_t total = op_pcm_total(opus_file, -2);
-        if (std::abs(playback_position -
-                     (float(pos) / float(total))) >
+        if (std::abs(playback_position - (float(pos) / float(total))) >
             0.0005) {
-            op_pcm_seek(opus_file,
-                        playback_position * total);
+            op_pcm_seek(opus_file, playback_position * total);
             pos = op_pcm_tell(opus_file);
         }
-        size = op_read_float_stereo(
-            opus_file, PCM_data,
-            std::min(total - pos, int64_t(4096)));
+        size = op_read_float_stereo(opus_file, PCM_data,
+                                    std::min(total - pos, int64_t(4096)));
         pos = op_pcm_tell(opus_file);
         playback_position = float(pos) / float(total);
         if (pos + size >= total - 2 && loop) {
@@ -146,17 +140,14 @@ void OggNode::read_data() {
     } else if (vorbis_file) {
         int64_t pos = ov_pcm_tell(vorbis_file);
         int64_t total = ov_pcm_total(vorbis_file, -2);
-        if (std::abs(playback_position -
-                     (float(pos) / float(total))) >
+        if (std::abs(playback_position - (float(pos) / float(total))) >
             0.0005) {
-            ov_pcm_seek(vorbis_file,
-                        playback_position * total);
+            ov_pcm_seek(vorbis_file, playback_position * total);
             pos = ov_pcm_tell(vorbis_file);
         }
         float** buffer;
         int stream = 0;
-        long size = ov_read_float(vorbis_file, &buffer,
-                                  4096, &stream);
+        long size = ov_read_float(vorbis_file, &buffer, 4096, &stream);
 
         pos = ov_pcm_tell(vorbis_file);
         playback_position = float(pos) / float(total);
@@ -170,19 +161,14 @@ void OggNode::read_data() {
                 for (size_t i = 0; i < size; ++i) {
                     clones[c]->data.push_back(buffer[c][i]);
                 }
-                channels[c]->rate =
-                    double(v->rate) /
-                    double(kAudioSampleRate);
+                channels[c]->rate = double(v->rate) / double(kAudioSampleRate);
             } else {
                 int c2 = number_of_channels;
                 c2 -= 1;
                 for (size_t i = 0; i < size; ++i) {
-                    clones[c2]->data.push_back(
-                        buffer[c][i]);
+                    clones[c2]->data.push_back(buffer[c][i]);
                 }
-                channels[c2]->rate =
-                    double(v->rate) /
-                    double(kAudioSampleRate);
+                channels[c2]->rate = double(v->rate) / double(kAudioSampleRate);
             }
         }
     }
@@ -235,8 +221,7 @@ void PeakDetector::render(float* buffer) {
 
     peak = p * decay_coeff + peak * (1. - decay_coeff);
     if (peak < p)
-        peak =
-            peak * (1.0 - growth_coeff) + p * growth_coeff;
+        peak = peak * (1.0 - growth_coeff) + p * growth_coeff;
 }
 
 void Listener::update() {
@@ -246,46 +231,33 @@ void Listener::update() {
 
         Vector3f last_direction =
             normalize(curr->last_position2 - last_position);
-        Vector3f curr_direction =
-            normalize(curr->last_position - position);
+        Vector3f curr_direction = normalize(curr->last_position - position);
 
         float last_direction_scale =
-            (dot(direction, last_direction) + 1.0) *
-                direction_factor +
-            1.0 - direction_factor;
+            (dot(direction, last_direction) + 1.0) * direction_factor + 1.0 -
+            direction_factor;
         float curr_direction_scale =
-            (dot(direction, curr_direction) + 1.0) *
-                direction_factor +
-            1.0 - direction_factor;
-        float direction_incr =
-            (curr_direction_scale - last_direction_scale) /
-            float(kAudioBufferSize);
+            (dot(direction, curr_direction) + 1.0) * direction_factor + 1.0 -
+            direction_factor;
+        float direction_incr = (curr_direction_scale - last_direction_scale) /
+                               float(kAudioBufferSize);
 
-        float previous_distance =
-            distance(curr->last_position2, last_position);
-        float curr_distance =
-            distance(curr->last_position, position);
+        float previous_distance = distance(curr->last_position2, last_position);
+        float curr_distance = distance(curr->last_position, position);
         float increment =
-            (curr_distance - previous_distance) /
-            float(kAudioBufferSize);
+            (curr_distance - previous_distance) / float(kAudioBufferSize);
 
-        int last_offset =
-            sample_delay_for_distance(previous_distance);
-        int curr_offset =
-            sample_delay_for_distance(curr_distance);
-        float offset_incr =
-            float(kAudioBufferSize) /
-            (curr_offset - last_offset + kAudioBufferSize);
+        int last_offset = sample_delay_for_distance(previous_distance);
+        int curr_offset = sample_delay_for_distance(curr_distance);
+        float offset_incr = float(kAudioBufferSize) /
+                            (curr_offset - last_offset + kAudioBufferSize);
 
         curr->update_if_needed(current_frame);
 
         int x = 0;
-        while (x < curr_offset - last_offset +
-                       kAudioBufferSize) {
+        while (x < curr_offset - last_offset + kAudioBufferSize) {
 
-            Argon::RollingInt<
-                0, kAudioListenerBufferSamples - 1>
-                ind;
+            Argon::RollingInt<0, kAudioListenerBufferSamples - 1> ind;
             /*while (x<kAudioBufferSize && ind==index1) {
 
                     index2 = index1+1;
@@ -304,16 +276,14 @@ void Listener::update() {
 
                 }*/
             float inten =
-                intensity_at_distance(previous_distance +
-                                      x * increment) *
+                intensity_at_distance(previous_distance + x * increment) *
                 (last_direction_scale + direction_incr * x);
 
             int v = offset_incr * x + 0.5;
             if (v >= kAudioBufferSize)
                 v = kAudioBufferSize - 1;
             ind = x + last_offset + delay_index;
-            delay_buffer[ind] +=
-                curr->audio_data[v] * inten;
+            delay_buffer[ind] += curr->audio_data[v] * inten;
 
             x++;
         }
@@ -341,8 +311,7 @@ void Listener::render(float* buffer) {
 Listener::Listener() {
     direction_factor = 1.0;
     low_pass = 0;
-    speed_of_sound =
-        340.29; // meters per second @ sea level.
+    speed_of_sound = 340.29; // meters per second @ sea level.
     for (int i = 0; i < kAudioListenerBufferSamples; ++i) {
         delay_buffer[i] = 0.;
     }

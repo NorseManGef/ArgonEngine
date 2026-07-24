@@ -18,33 +18,26 @@
 #include <vector>
 namespace Argon {
 namespace VirtualResourceIMPL {
-size_t search_string(const std::string& s, char character,
-                     size_t begin = 0, size_t end = 0);
-size_t advance_whitespace(const std::string& s,
-                          size_t begin = 0, size_t end = 0);
-size_t trim_whitespace(const std::string& s,
-                       size_t begin = 0, size_t end = 0);
-size_t parse_arguments(const std::string& s,
-                       std::string& args, size_t begin,
+size_t search_string(const std::string& s, char character, size_t begin = 0,
+                     size_t end = 0);
+size_t advance_whitespace(const std::string& s, size_t begin = 0,
+                          size_t end = 0);
+size_t trim_whitespace(const std::string& s, size_t begin = 0, size_t end = 0);
+size_t parse_arguments(const std::string& s, std::string& args, size_t begin,
                        size_t end);
-size_t search_string_reverse(const std::string& s,
-                             char character,
-                             size_t begin = 0,
-                             size_t end = 0);
+size_t search_string_reverse(const std::string& s, char character,
+                             size_t begin = 0, size_t end = 0);
 struct Source {
     Source() {}
     virtual bool reload() { return true; }
     virtual bool save() { return true; }
     virtual size_t size() const = 0;
     virtual void resize(size_t byte_size) = 0;
-    virtual size_t read(char* buffer, size_t buffer_size,
-                        size_t offset) = 0;
-    virtual size_t write(const char* buffer,
-                         size_t buffer_size,
+    virtual size_t read(char* buffer, size_t buffer_size, size_t offset) = 0;
+    virtual size_t write(const char* buffer, size_t buffer_size,
                          size_t offset) = 0;
-    virtual Source*
-    create_source(const std::string& path,
-                  const std::string& arguments) = 0;
+    virtual Source* create_source(const std::string& path,
+                                  const std::string& arguments) = 0;
     virtual uint8_t* get_pointer() { return NULL; }
     virtual size_t update_id() { return 0; }
     virtual ~Source() {}
@@ -54,8 +47,7 @@ struct Data {
     virtual bool reload(Source* s) = 0;
     virtual bool save(Source* s) = 0;
 
-    virtual Data*
-    clone_type(const std::string& arguments) const = 0;
+    virtual Data* clone_type(const std::string& arguments) const = 0;
 
     virtual size_t update_id() = 0;
     virtual ~Data() {}
@@ -83,38 +75,27 @@ struct Pointer {
 };
 
 }; // namespace VirtualResourceIMPL
-void get_argument_map(
-    const std::string& args,
-    std::map<std::string, std::string>& arg_map);
+void get_argument_map(const std::string& args,
+                      std::map<std::string, std::string>& arg_map);
 struct VirtualResource {
     VirtualResourceIMPL::Pointer* p_node;
     size_t last_update_id = -1;
-    static std::map<std::string,
-                    VirtualResourceIMPL::Pointer>&
-    all_nodes();
-    static std::map<std::string,
-                    VirtualResourceIMPL::Source*>&
-    all_sources();
-    static std::map<std::string,
-                    VirtualResourceIMPL::Data*>&
-    all_data();
+    static std::map<std::string, VirtualResourceIMPL::Pointer>& all_nodes();
+    static std::map<std::string, VirtualResourceIMPL::Source*>& all_sources();
+    static std::map<std::string, VirtualResourceIMPL::Data*>& all_data();
     static Mutex& m();
     static void initialize();
 
     void remove();
     void set(VirtualResourceIMPL::Pointer* p);
-    void set_source(VirtualResourceIMPL::Source* s,
-                    bool reload = true) {
+    void set_source(VirtualResourceIMPL::Source* s, bool reload = true) {
         p_node->set_source(s, reload);
     }
-    void set_source(const std::string& s,
-                    bool reload = true);
-    void set_data(VirtualResourceIMPL::Data* d,
-                  bool reload = true) {
+    void set_source(const std::string& s, bool reload = true);
+    void set_data(VirtualResourceIMPL::Data* d, bool reload = true) {
         p_node->set_data(d, reload);
     }
-    void set_data(const std::string& ext,
-                  bool reload = true);
+    void set_data(const std::string& ext, bool reload = true);
     void set(const std::string& path);
     size_t update_id();
     bool has_updated() {
@@ -126,20 +107,16 @@ struct VirtualResource {
     }
 
     size_t size() const {
-        return p_node && p_node->source
-                   ? p_node->source->size()
-                   : 0;
+        return p_node && p_node->source ? p_node->source->size() : 0;
     }
     void resize(size_t byte_size) {
         if (p_node && p_node->source)
             p_node->source->resize(byte_size);
     }
-    size_t read(char* buffer, size_t buffer_size,
-                size_t offset) {
+    size_t read(char* buffer, size_t buffer_size, size_t offset) {
         if (p_node) {
             return p_node->source
-                       ? p_node->source->read(
-                             buffer, buffer_size, offset)
+                       ? p_node->source->read(buffer, buffer_size, offset)
                        : 0;
         }
         return 0;
@@ -148,41 +125,29 @@ struct VirtualResource {
         if (p_node && p_node->source)
             p_node->source->reload();
     }
-    size_t write(const char* buffer, size_t buffer_size,
-                 size_t offset) {
+    size_t write(const char* buffer, size_t buffer_size, size_t offset) {
         return p_node && p_node->source
-                   ? p_node->source->write(
-                         buffer, buffer_size, offset)
+                   ? p_node->source->write(buffer, buffer_size, offset)
                    : 0;
     }
     std::string get_data_as_string();
-    std::map<std::string,
-             VirtualResourceIMPL::Pointer>::iterator
+    std::map<std::string, VirtualResourceIMPL::Pointer>::iterator
     get_pointer_iter();
-    std::map<std::string,
-             VirtualResourceIMPL::Pointer>::const_iterator
+    std::map<std::string, VirtualResourceIMPL::Pointer>::const_iterator
     get_pointer_iter() const;
     std::string get_path_string() const {
         auto it = get_pointer_iter();
-        return it == all_nodes().end() ? "Unknown Path"
-                                       : it->first;
+        return it == all_nodes().end() ? "Unknown Path" : it->first;
     }
-    template <typename T = VirtualResourceIMPL::Source*>
-    T get_source() {
-        return p_node ? dynamic_cast<T>(p_node->source)
-                      : NULL;
+    template <typename T = VirtualResourceIMPL::Source*> T get_source() {
+        return p_node ? dynamic_cast<T>(p_node->source) : NULL;
     }
 
     template <typename T> T get_data() {
-        return p_node ? dynamic_cast<T>(p_node->data)
-                      : NULL;
+        return p_node ? dynamic_cast<T>(p_node->data) : NULL;
     }
-    bool operator<(const VirtualResource& r) const {
-        return p_node < r.p_node;
-    }
-    bool operator>(const VirtualResource& r) const {
-        return p_node > r.p_node;
-    }
+    bool operator<(const VirtualResource& r) const { return p_node < r.p_node; }
+    bool operator>(const VirtualResource& r) const { return p_node > r.p_node; }
     bool operator<=(const VirtualResource& r) const {
         return p_node <= r.p_node;
     }
@@ -197,18 +162,10 @@ struct VirtualResource {
     }
     VirtualResource() : p_node(NULL) {}
 
-    VirtualResource(const std::string& path)
-        : p_node(NULL) {
-        set(path);
-    }
-    VirtualResource(const char* path) : p_node(NULL) {
-        set(path);
-    }
+    VirtualResource(const std::string& path) : p_node(NULL) { set(path); }
+    VirtualResource(const char* path) : p_node(NULL) { set(path); }
 
-    VirtualResource(const VirtualResource& r)
-        : p_node(NULL) {
-        set(r.p_node);
-    }
+    VirtualResource(const VirtualResource& r) : p_node(NULL) { set(r.p_node); }
 
     VirtualResource& operator=(const VirtualResource& r) {
         if (&r != this)
@@ -218,10 +175,8 @@ struct VirtualResource {
     operator bool() const { return p_node; }
 };
 
-struct VirtualResourceIO
-    : public VirtualResourceIMPL::Source {
-    VirtualResourceIO(const std::string& str,
-                      bool allow_write = false)
+struct VirtualResourceIO : public VirtualResourceIMPL::Source {
+    VirtualResourceIO(const std::string& str, bool allow_write = false)
         : path(str), allow_write(allow_write), data("") {}
     Mutex loading;
     size_t update_id_;
@@ -233,19 +188,12 @@ struct VirtualResourceIO
     bool save();
     virtual size_t update_id();
     size_t size() const { return data.size(); }
-    size_t read(char* buffer, size_t buffer_size,
-                size_t offset);
-    virtual uint8_t* get_pointer() {
-        return (uint8_t*)&data[0];
-    }
-    void resize(size_t byte_size) {
-        data.resize(byte_size);
-    }
-    size_t write(const char* buffer, size_t buffer_size,
-                 size_t offset);
-    VirtualResourceIMPL::Source*
-    create_source(const std::string& pa,
-                  const std::string& args);
+    size_t read(char* buffer, size_t buffer_size, size_t offset);
+    virtual uint8_t* get_pointer() { return (uint8_t*)&data[0]; }
+    void resize(size_t byte_size) { data.resize(byte_size); }
+    size_t write(const char* buffer, size_t buffer_size, size_t offset);
+    VirtualResourceIMPL::Source* create_source(const std::string& pa,
+                                               const std::string& args);
 };
 
 template <> struct TypeInfo<VirtualResource> {

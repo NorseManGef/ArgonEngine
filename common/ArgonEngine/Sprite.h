@@ -16,8 +16,7 @@ namespace Argon {
 //! screen. They are commonly used for the user interface,
 //! bill-boards, or 2D elements.
 struct Sprite : public Renderable {
-    VirtualResource& texture =
-        uniform.get_texture("texture");
+    VirtualResource& texture = uniform.get_texture("texture");
     Sprite();
     Sprite(const Sprite& s) : Sprite() { operator=(s); }
     Sprite& operator=(const Sprite& s) {
@@ -39,10 +38,8 @@ struct InstancedSprites : public Node {
         kVerticesPerBatch = kSpritesPerBatch * 4
     };
 
-    std::shared_ptr<Material> material =
-        std::make_shared<Material>();
-    VirtualResource& texture =
-        material->uniform.get_texture("texture");
+    std::shared_ptr<Material> material = std::make_shared<Material>();
+    VirtualResource& texture = material->uniform.get_texture("texture");
     VirtualResource& shader = material->shader;
     std::vector<std::shared_ptr<Renderable>> renders;
     std::vector<std::shared_ptr<VertexArray>> arrays;
@@ -52,8 +49,7 @@ struct InstancedSprites : public Node {
         texture = "resource://test.png";
         material->render_flags &= ~(kRenderDepthMask);
     }
-    InstancedSprites(const InstancedSprites& s)
-        : InstancedSprites() {
+    InstancedSprites(const InstancedSprites& s) : InstancedSprites() {
         operator=(s);
     }
     InstancedSprites& operator=(const InstancedSprites& s) {
@@ -63,15 +59,11 @@ struct InstancedSprites : public Node {
     }
 
     void set_sprites(size_t total_sprites);
-    void set_sprite(size_t index, const Vector4f& color,
-                    const Vector3f& v0, const Vector3f& v1,
-                    const Vector3f& v2, const Vector3f& v3,
-                    const Vector2f& min_tex,
-                    const Vector2f& max_tex);
-    void set_sprite(size_t index, const Vector4f& color,
-                    const Vector3f scale,
-                    const Vector3f position,
-                    const Quaternionf& rotation,
+    void set_sprite(size_t index, const Vector4f& color, const Vector3f& v0,
+                    const Vector3f& v1, const Vector3f& v2, const Vector3f& v3,
+                    const Vector2f& min_tex, const Vector2f& max_tex);
+    void set_sprite(size_t index, const Vector4f& color, const Vector3f scale,
+                    const Vector3f position, const Quaternionf& rotation,
                     Vector2f min_tex = Vector2f(0.f, 0.f),
                     Vector2f max_tex = Vector2f(1.f, 1.f));
 

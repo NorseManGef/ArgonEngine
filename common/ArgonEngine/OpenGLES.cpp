@@ -19,14 +19,12 @@
 #include <string>
 namespace Argon {
 
-void OpenGLES::bind_attributes(
-    shader_data& d, std::shared_ptr<VertexArray> v) {
+void OpenGLES::bind_attributes(shader_data& d, std::shared_ptr<VertexArray> v) {
     auto at_it = d.attributes.begin();
     while (at_it != d.attributes.end()) {
         std::vector<VertexAttribPair>::const_iterator it =
             v->attributes.begin();
-        while (it != v->attributes.end() &&
-               it->attribute != at_it->first)
+        while (it != v->attributes.end() && it->attribute != at_it->first)
             ++it;
         if (it == v->attributes.end())
             glDisableVertexAttribArray(at_it->second);
@@ -49,18 +47,16 @@ void OpenGLES::bind_attributes(
             default:
                 break;
             }
-            glVertexAttribPointer(
-                at_it->second, it->components, t, false,
-                v->stride, (void*)it->offset);
+            glVertexAttribPointer(at_it->second, it->components, t, false,
+                                  v->stride, (void*)it->offset);
             GL_CHECK("After VertexAttrib Pointer\n");
         }
 
         ++at_it;
     }
 }
-void OpenGLES::draw_vertex_array(
-    std::shared_ptr<VertexArray> array, int end_vert,
-    int d) {
+void OpenGLES::draw_vertex_array(std::shared_ptr<VertexArray> array,
+                                 int end_vert, int d) {
     GL_CHECK("Before Draw Elements\n");
 
     if (!array)
@@ -74,8 +70,7 @@ void OpenGLES::draw_vertex_array(
 
         current_vert_array = array;
 
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,
-                     vert_d.index_buffer);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vert_d.index_buffer);
         glBindBuffer(GL_ARRAY_BUFFER, vert_d.vert_buffer);
         GL_CHECK("After Bind Buffer Elements\n");
 
@@ -117,24 +112,22 @@ void OpenGLES::draw_vertex_array(
         end_vert = index_size;
 #ifndef USE_OPENGLES
     if (end_vert)
-        glDrawRangeElements(draw_type, 0,
-                            array->vertex_count(), end_vert,
+        glDrawRangeElements(draw_type, 0, array->vertex_count(), end_vert,
                             GL_UNSIGNED_SHORT, NULL);
 #endif
 #ifdef USE_OPENGLES
     if (end_vert)
-        glDrawElements(draw_type, array->vertex_count(),
-                       GL_UNSIGNED_SHORT, NULL);
+        glDrawElements(draw_type, array->vertex_count(), GL_UNSIGNED_SHORT,
+                       NULL);
 #endif
     if (end_vert > 10000 || array->vertex_count() > 10000)
 
         GL_CHECK("After Draw Elements\n");
 }
 void OpenGLES::init_texture_formats() {
-    unsigned int texture_mask =
-        kTextureFBO | kTextureClamp |
-        kTextureDontFilterPixels | kTextureDontMipmap |
-        kTextureDontFilterMipmap;
+    unsigned int texture_mask = kTextureFBO | kTextureClamp |
+                                kTextureDontFilterPixels | kTextureDontMipmap |
+                                kTextureDontFilterMipmap;
     if (extensions["GL_EXT_texture_filter_anisotropic"]) {
         GLfloat v = 0;
         glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &v);
@@ -148,65 +141,54 @@ void OpenGLES::init_texture_formats() {
 
 #ifdef USE_OPENGLES
     if (extensions["GL_OES_rgb8_rgba8"]) {
-        add_format(kTextureRGBA8 | texture_mask, GL_RGBA,
-                   GL_RGBA, GL_UNSIGNED_BYTE);
-        add_format(kTextureRGB8 | texture_mask, GL_RGB,
-                   GL_RGB, GL_UNSIGNED_BYTE);
+        add_format(kTextureRGBA8 | texture_mask, GL_RGBA, GL_RGBA,
+                   GL_UNSIGNED_BYTE);
+        add_format(kTextureRGB8 | texture_mask, GL_RGB, GL_RGB,
+                   GL_UNSIGNED_BYTE);
     }
     if (extensions["GL_OES_depth_texture"])
-        add_format(kTextureDepth16 | texture_mask,
-                   GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT16,
-                   GL_UNSIGNED_SHORT);
+        add_format(kTextureDepth16 | texture_mask, GL_DEPTH_COMPONENT,
+                   GL_DEPTH_COMPONENT16, GL_UNSIGNED_SHORT);
 
     if (extensions["GL_OES_depth24"])
-        add_format(kTextureDepth24 | texture_mask,
-                   GL_DEPTH_COMPONENT,
-                   GL_DEPTH_COMPONENT24_OES,
-                   GL_UNSIGNED_INT);
+        add_format(kTextureDepth24 | texture_mask, GL_DEPTH_COMPONENT,
+                   GL_DEPTH_COMPONENT24_OES, GL_UNSIGNED_INT);
     if (extensions["GL_OES_texture_float"]) {
-        add_format(kTextureRGBF32 | texture_mask, GL_RGB,
-                   GL_RGB, GL_FLOAT);
-        add_format(kTextureRGBAF32 | texture_mask, GL_RGBA,
-                   GL_RGBA, GL_FLOAT);
+        add_format(kTextureRGBF32 | texture_mask, GL_RGB, GL_RGB, GL_FLOAT);
+        add_format(kTextureRGBAF32 | texture_mask, GL_RGBA, GL_RGBA, GL_FLOAT);
     }
     if (extensions["GL_OES_texture_half_float"]) {
 
-        add_format(kTextureRGBF16 | texture_mask, GL_RGB,
-                   GL_RGB, GL_HALF_FLOAT_OES);
-        add_format(kTextureRGBAF16 | texture_mask, GL_RGBA,
-                   GL_RGBA, GL_HALF_FLOAT_OES);
+        add_format(kTextureRGBF16 | texture_mask, GL_RGB, GL_RGB,
+                   GL_HALF_FLOAT_OES);
+        add_format(kTextureRGBAF16 | texture_mask, GL_RGBA, GL_RGBA,
+                   GL_HALF_FLOAT_OES);
     }
 #else
-    add_format(kTextureRGBA8 | texture_mask, GL_RGBA,
-               GL_RGBA, GL_UNSIGNED_BYTE);
-    add_format(kTextureRGB8 | texture_mask, GL_RGB, GL_RGB,
+    add_format(kTextureRGBA8 | texture_mask, GL_RGBA, GL_RGBA,
                GL_UNSIGNED_BYTE);
-    add_format(kTextureRGBF32 | texture_mask, GL_RGB32F_ARB,
-               GL_RGB, GL_FLOAT);
-    add_format(kTextureRGBAF32 | texture_mask,
-               GL_RGBA32F_ARB, GL_RGBA, GL_FLOAT);
-    add_format(kTextureRGBF16 | texture_mask, GL_RGB16F_ARB,
-               GL_RGB, GL_FLOAT);
-    add_format(kTextureRGBAF16 | texture_mask,
-               GL_RGBA16F_ARB, GL_RGBA, GL_FLOAT);
-    add_format(kTextureDepth24 | texture_mask,
-               GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT,
+    add_format(kTextureRGB8 | texture_mask, GL_RGB, GL_RGB, GL_UNSIGNED_BYTE);
+    add_format(kTextureRGBF32 | texture_mask, GL_RGB32F_ARB, GL_RGB, GL_FLOAT);
+    add_format(kTextureRGBAF32 | texture_mask, GL_RGBA32F_ARB, GL_RGBA,
                GL_FLOAT);
-    add_format(kTextureDepth16 | texture_mask,
-               GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT,
+    add_format(kTextureRGBF16 | texture_mask, GL_RGB16F_ARB, GL_RGB, GL_FLOAT);
+    add_format(kTextureRGBAF16 | texture_mask, GL_RGBA16F_ARB, GL_RGBA,
                GL_FLOAT);
+    add_format(kTextureDepth24 | texture_mask, GL_DEPTH_COMPONENT,
+               GL_DEPTH_COMPONENT, GL_FLOAT);
+    add_format(kTextureDepth16 | texture_mask, GL_DEPTH_COMPONENT,
+               GL_DEPTH_COMPONENT, GL_FLOAT);
 
 #endif
-    add_format(kTextureRGB565 | texture_mask, GL_RGB,
-               GL_RGB, GL_UNSIGNED_SHORT_5_6_5);
-    add_format(kTextureRGBA4 | texture_mask, GL_RGBA,
-               GL_RGBA, GL_UNSIGNED_SHORT_4_4_4_4);
-    add_format(kTextureRGBA5551 | texture_mask, GL_RGBA,
-               GL_RGBA, GL_UNSIGNED_SHORT_5_5_5_1);
+    add_format(kTextureRGB565 | texture_mask, GL_RGB, GL_RGB,
+               GL_UNSIGNED_SHORT_5_6_5);
+    add_format(kTextureRGBA4 | texture_mask, GL_RGBA, GL_RGBA,
+               GL_UNSIGNED_SHORT_4_4_4_4);
+    add_format(kTextureRGBA5551 | texture_mask, GL_RGBA, GL_RGBA,
+               GL_UNSIGNED_SHORT_5_5_5_1);
 }
 void OpenGLES::add_format(unsigned int base_texture_format,
-                          GLenum internal_format,
-                          GLenum format, GLenum type) {
+                          GLenum internal_format, GLenum format, GLenum type) {
     RealTexFormat tex;
     tex.texture_format = base_texture_format;
 
@@ -289,150 +271,130 @@ void OpenGLES::set_blend(unsigned int blend) {
     if (current_blend != blend) {
         if (blend == kBlendReplace) {
             glDisable(GL_BLEND);
-            glBlendFuncSeparate(
-                blend_converter(blend >> kSrcColorOffset),
-                blend_converter(blend >> kDstColorOffset),
-                blend_converter(blend >> kSrcAlphaOffset),
-                blend_converter(blend >> kDstAlphaOffset));
+            glBlendFuncSeparate(blend_converter(blend >> kSrcColorOffset),
+                                blend_converter(blend >> kDstColorOffset),
+                                blend_converter(blend >> kSrcAlphaOffset),
+                                blend_converter(blend >> kDstAlphaOffset));
         } else {
             if (current_blend == kBlendReplace)
                 glEnable(GL_BLEND);
-            glBlendFuncSeparate(
-                blend_converter(blend >> kSrcColorOffset),
-                blend_converter(blend >> kDstColorOffset),
-                blend_converter(blend >> kSrcAlphaOffset),
-                blend_converter(blend >> kDstAlphaOffset));
+            glBlendFuncSeparate(blend_converter(blend >> kSrcColorOffset),
+                                blend_converter(blend >> kDstColorOffset),
+                                blend_converter(blend >> kSrcAlphaOffset),
+                                blend_converter(blend >> kDstAlphaOffset));
         }
         current_blend = blend;
     }
 }
 
 void OpenGLES::cache_texture(VirtualResource tex) {
-    VirtualResourceImage* image =
-        tex.get_data<VirtualResourceImage*>();
+    VirtualResourceImage* image = tex.get_data<VirtualResourceImage*>();
     if (image) {
         TexturePrim& p = textures[tex];
         p.last_frame = 0;
-        bool realloc = p.width != image->get_width() ||
-                       p.height != image->get_height();
+        bool realloc =
+            p.width != image->get_width() || p.height != image->get_height();
         if (realloc) {
-            RealTexFormat format =
-                get_closest_format(image->get_format());
-            p.alloc_texture(image->get_width(),
-                            image->get_height(), format);
+            RealTexFormat format = get_closest_format(image->get_format());
+            p.alloc_texture(image->get_width(), image->get_height(), format);
             if (bound_textures.size())
-                glBindTexture(GL_TEXTURE_2D,
-                              bound_textures[0]);
+                glBindTexture(GL_TEXTURE_2D, bound_textures[0]);
         }
 
         if (p.update_id != image->update_id() || realloc) {
 
-            p.upload_texture_data(
-                image->get_width(), image->get_height(),
-                (void*)image->get_image_data());
+            p.upload_texture_data(image->get_width(), image->get_height(),
+                                  (void*)image->get_image_data());
             p.update_id = image->update_id();
             if (bound_textures.size())
-                glBindTexture(GL_TEXTURE_2D,
-                              bound_textures[0]);
+                glBindTexture(GL_TEXTURE_2D, bound_textures[0]);
         }
     } else {
-        PLOGE << tex.get_path_string()
-              << " is not a valid texture.";
+        PLOGE << tex.get_path_string() << " is not a valid texture.";
     }
 }
 
-void OpenGLES::cache_material(
-    Material& state, const VirtualResource& shader) {
+void OpenGLES::cache_material(Material& state, const VirtualResource& shader) {
     GL_CHECK("BEFORE CACHE MATERIAL");
 
     GL_CHECK("After CACHE MATERIAL");
 }
-#define SET_UNIFORM(A, B, C)                               \
-    {                                                      \
-        bool cont = true;                                  \
-        for (int x = 0; x < size; ++x) {                   \
-            auto it2 = all_uniforms[x]->A.find(it->first); \
-            if (it2 != all_uniforms[x]->A.end()) {         \
-                cont = false;                              \
-                B(it->second.uniform,                      \
-                  (GLsizei)std::min(it2->second.size(),    \
-                                    it->second.size),      \
-                  (C*)&(it2->second[0]));                  \
-                break;                                     \
-            }                                              \
-        }                                                  \
-        if (cont)                                          \
-            PLOGW << "No value was set for uniform: "      \
-                  << it->first << " of type: " << #A       \
-                  << " and size " << it->second.size;      \
+#define SET_UNIFORM(A, B, C)                                                   \
+    {                                                                          \
+        bool cont = true;                                                      \
+        for (int x = 0; x < size; ++x) {                                       \
+            auto it2 = all_uniforms[x]->A.find(it->first);                     \
+            if (it2 != all_uniforms[x]->A.end()) {                             \
+                cont = false;                                                  \
+                B(it->second.uniform,                                          \
+                  (GLsizei)std::min(it2->second.size(), it->second.size),      \
+                  (C*)&(it2->second[0]));                                      \
+                break;                                                         \
+            }                                                                  \
+        }                                                                      \
+        if (cont)                                                              \
+            PLOGW << "No value was set for uniform: " << it->first             \
+                  << " of type: " << #A << " and size " << it->second.size;    \
     }
-#define SET_UNIFORM_MAT(A, B, C)                           \
-    {                                                      \
-        bool cont = true;                                  \
-        for (int x = 0; x < size; ++x) {                   \
-            auto it2 = all_uniforms[x]->A.find(it->first); \
-            if (it2 != all_uniforms[x]->A.end()) {         \
-                cont = false;                              \
-                B(it->second.uniform,                      \
-                  (GLsizei)std::min(it2->second.size(),    \
-                                    it->second.size),      \
-                  false, (C*)&(it2->second[0]));           \
-                break;                                     \
-            }                                              \
-        }                                                  \
-        if (cont)                                          \
-            PLOGW << "No value was set for uniform: "      \
-                  << it->first << " of type: " << #A       \
-                  << " and size " << it->second.size;      \
+#define SET_UNIFORM_MAT(A, B, C)                                               \
+    {                                                                          \
+        bool cont = true;                                                      \
+        for (int x = 0; x < size; ++x) {                                       \
+            auto it2 = all_uniforms[x]->A.find(it->first);                     \
+            if (it2 != all_uniforms[x]->A.end()) {                             \
+                cont = false;                                                  \
+                B(it->second.uniform,                                          \
+                  (GLsizei)std::min(it2->second.size(), it->second.size),      \
+                  false, (C*)&(it2->second[0]));                               \
+                break;                                                         \
+            }                                                                  \
+        }                                                                      \
+        if (cont)                                                              \
+            PLOGW << "No value was set for uniform: " << it->first             \
+                  << " of type: " << #A << " and size " << it->second.size;    \
     }
 
-#define SET_UNIFORM_COPY(A, B, C, D)                       \
-    {                                                      \
-        bool cont = true;                                  \
-        for (int x = 0; x < size; ++x) {                   \
-            auto it2 = all_uniforms[x]->A.find(it->first); \
-            if (it2 != all_uniforms[x]->A.end()) {         \
-                cont = false;                              \
-                std::vector<B> temp;                       \
-                temp.reserve(it2->second.size());          \
-                for (auto& i : it2->second)                \
-                    temp.push_back(B(i));                  \
-                C(it->second.uniform,                      \
-                  (GLsizei)std::min(temp.size(),           \
-                                    it->second.size),      \
-                  (D*)&(temp[0]));                         \
-                break;                                     \
-            }                                              \
-        }                                                  \
-        if (cont)                                          \
-            PLOGW << "No value was set for uniform: "      \
-                  << it->first << " of type: " << #A       \
-                  << " and size " << it->second.size;      \
+#define SET_UNIFORM_COPY(A, B, C, D)                                           \
+    {                                                                          \
+        bool cont = true;                                                      \
+        for (int x = 0; x < size; ++x) {                                       \
+            auto it2 = all_uniforms[x]->A.find(it->first);                     \
+            if (it2 != all_uniforms[x]->A.end()) {                             \
+                cont = false;                                                  \
+                std::vector<B> temp;                                           \
+                temp.reserve(it2->second.size());                              \
+                for (auto& i : it2->second)                                    \
+                    temp.push_back(B(i));                                      \
+                C(it->second.uniform,                                          \
+                  (GLsizei)std::min(temp.size(), it->second.size),             \
+                  (D*)&(temp[0]));                                             \
+                break;                                                         \
+            }                                                                  \
+        }                                                                      \
+        if (cont)                                                              \
+            PLOGW << "No value was set for uniform: " << it->first             \
+                  << " of type: " << #A << " and size " << it->second.size;    \
     }
-#define SET_UNIFORM_COPY2(A, B, C, D)                      \
-    {                                                      \
-        bool cont = true;                                  \
-        for (int x = 0; x < size; ++x) {                   \
-            auto it2 = all_uniforms[x]->A.find(it->first); \
-            if (it2 != all_uniforms[x]->A.end()) {         \
-                cont = false;                              \
-                std::vector<B> temp(it2->second.begin(),   \
-                                    it2->second.end());    \
-                temp.reserve(it2->second.size());          \
-                C(it->second.uniform,                      \
-                  (GLsizei)std::min(temp.size(),           \
-                                    it->second.size),      \
-                  (D*)&(temp[0]));                         \
-                break;                                     \
-            }                                              \
-        }                                                  \
-        if (cont)                                          \
-            PLOGW << "No value was set for uniform: "      \
-                  << it->first << " of type: " << #A       \
-                  << " and size " << it->second.size;      \
+#define SET_UNIFORM_COPY2(A, B, C, D)                                          \
+    {                                                                          \
+        bool cont = true;                                                      \
+        for (int x = 0; x < size; ++x) {                                       \
+            auto it2 = all_uniforms[x]->A.find(it->first);                     \
+            if (it2 != all_uniforms[x]->A.end()) {                             \
+                cont = false;                                                  \
+                std::vector<B> temp(it2->second.begin(), it2->second.end());   \
+                temp.reserve(it2->second.size());                              \
+                C(it->second.uniform,                                          \
+                  (GLsizei)std::min(temp.size(), it->second.size),             \
+                  (D*)&(temp[0]));                                             \
+                break;                                                         \
+            }                                                                  \
+        }                                                                      \
+        if (cont)                                                              \
+            PLOGW << "No value was set for uniform: " << it->first             \
+                  << " of type: " << #A << " and size " << it->second.size;    \
     }
-void OpenGLES::set_uniforms(Uniforms** all_uniforms,
-                            int size) {
+void OpenGLES::set_uniforms(Uniforms** all_uniforms, int size) {
     typedef VectorBase<GLint, 2> gliv2;
     typedef VectorBase<GLint, 3> gliv3;
     typedef VectorBase<GLint, 4> gliv4;
@@ -456,51 +418,37 @@ void OpenGLES::set_uniforms(Uniforms** all_uniforms,
         case GL_SAMPLER_2D: {
             bool cont = true;
             for (int x = 0; x < size; ++x) {
-                auto it2 = all_uniforms[x]->textures.find(
-                    it->first);
-                if (it2 !=
-                    all_uniforms[x]->textures.end()) {
+                auto it2 = all_uniforms[x]->textures.find(it->first);
+                if (it2 != all_uniforms[x]->textures.end()) {
                     cont = false;
                     for (int s = 0;
-                         s < std::min(it->second.size,
-                                      it2->second.size());
+                         s < std::min(it->second.size, it2->second.size());
                          ++s) {
-                        if (bound_textures.size() <=
-                            tex_index) {
-                            bound_textures.resize(
-                                tex_index + 1);
+                        if (bound_textures.size() <= tex_index) {
+                            bound_textures.resize(tex_index + 1);
                         }
                         cache_texture(it2->second[s]);
                         if (bound_textures[tex_index] !=
                             textures[it2->second[s]].tex) {
                             bound_textures[tex_index] =
-                                textures[it2->second[s]]
-                                    .tex;
+                                textures[it2->second[s]].tex;
 
                             // if(active_texture!=GL_TEXTURE0+tex_index){
-                            glActiveTexture(GL_TEXTURE0 +
-                                            tex_index);
-                            active_texture =
-                                GL_TEXTURE0 + tex_index;
+                            glActiveTexture(GL_TEXTURE0 + tex_index);
+                            active_texture = GL_TEXTURE0 + tex_index;
                             //}
-                            glBindTexture(
-                                GL_TEXTURE_2D,
-                                textures[it2->second[s]]
-                                    .tex);
+                            glBindTexture(GL_TEXTURE_2D,
+                                          textures[it2->second[s]].tex);
 
-                            glUniform1i(it->second.uniform +
-                                            s,
-                                        tex_index);
+                            glUniform1i(it->second.uniform + s, tex_index);
                             ++tex_index;
                         }
                     }
                 }
             }
             if (cont)
-                PLOGW << "No value was set for uniform: "
-                      << it->first
-                      << " of type: texture and size "
-                      << it->second.size;
+                PLOGW << "No value was set for uniform: " << it->first
+                      << " of type: texture and size " << it->second.size;
 
         }
 
@@ -520,23 +468,19 @@ void OpenGLES::set_uniforms(Uniforms** all_uniforms,
 #ifndef USE_OPENGLES
         case GL_BOOL:
         case GL_UNSIGNED_INT:
-            SET_UNIFORM_COPY2(f, GLuint, glUniform1uiv,
-                              GLuint)
+            SET_UNIFORM_COPY2(f, GLuint, glUniform1uiv, GLuint)
             break;
         case GL_BOOL_VEC2:
         case GL_UNSIGNED_INT_VEC2:
-            SET_UNIFORM_COPY(f2, gluiv2, glUniform2uiv,
-                             GLuint)
+            SET_UNIFORM_COPY(f2, gluiv2, glUniform2uiv, GLuint)
             break;
         case GL_BOOL_VEC3:
         case GL_UNSIGNED_INT_VEC3:
-            SET_UNIFORM_COPY(f3, gluiv3, glUniform3uiv,
-                             GLuint)
+            SET_UNIFORM_COPY(f3, gluiv3, glUniform3uiv, GLuint)
             break;
         case GL_BOOL_VEC4:
         case GL_UNSIGNED_INT_VEC4:
-            SET_UNIFORM_COPY(f4, gluiv4, glUniform4uiv,
-                             GLuint)
+            SET_UNIFORM_COPY(f4, gluiv4, glUniform4uiv, GLuint)
             break;
 #endif
         case GL_FLOAT:
@@ -552,21 +496,18 @@ void OpenGLES::set_uniforms(Uniforms** all_uniforms,
             SET_UNIFORM(f4, glUniform4fv, GLfloat);
             break;
         case GL_FLOAT_MAT2:
-            SET_UNIFORM_MAT(mat2, glUniformMatrix2fv,
-                            GLfloat);
+            SET_UNIFORM_MAT(mat2, glUniformMatrix2fv, GLfloat);
             break;
         case GL_FLOAT_MAT3:
-            SET_UNIFORM_MAT(mat3, glUniformMatrix3fv,
-                            GLfloat);
+            SET_UNIFORM_MAT(mat3, glUniformMatrix3fv, GLfloat);
             break;
         case GL_FLOAT_MAT4:
-            SET_UNIFORM_MAT(mat4, glUniformMatrix4fv,
-                            GLfloat);
+            SET_UNIFORM_MAT(mat4, glUniformMatrix4fv, GLfloat);
             break;
         default:
             PLOGE << std::hex
-                  << "Shader uses unknown uniform type: "
-                  << it->second.type << std::dec;
+                  << "Shader uses unknown uniform type: " << it->second.type
+                  << std::dec;
             break;
         }
 
@@ -574,8 +515,7 @@ void OpenGLES::set_uniforms(Uniforms** all_uniforms,
         ++it;
     }
 }
-void OpenGLES::set_shader(Argon::Renderable* state,
-                          VirtualResource& shader,
+void OpenGLES::set_shader(Argon::Renderable* state, VirtualResource& shader,
                           Uniforms** uniforms, int size) {
     GL_CHECK("Before GL USE PROGRAM");
 
@@ -603,8 +543,7 @@ bool OpenGLES::link_shader(GLuint shader) {
     glGetProgramiv(shader, GL_INFO_LOG_LENGTH, &logLength);
     if (logLength > 0) {
         GLchar* log = (GLchar*)malloc(logLength);
-        glGetProgramInfoLog(shader, logLength, &logLength,
-                            log);
+        glGetProgramInfoLog(shader, logLength, &logLength, log);
         printf("Program link log:\n%s", log);
 
         free(log);
@@ -626,8 +565,7 @@ bool OpenGLES::compile_shader(GLuint& shader, GLenum type,
     glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &logLength);
     if (logLength > 1) {
         GLchar* log = (GLchar*)malloc(logLength);
-        glGetShaderInfoLog(shader, logLength, &logLength,
-                           log);
+        glGetShaderInfoLog(shader, logLength, &logLength, log);
 
         printf("Shader compile log:\n%s", log);
         free(log);
@@ -640,8 +578,7 @@ bool OpenGLES::compile_shader(GLuint& shader, GLenum type,
 
     return status;
 }
-void OpenGLES::cache_array(
-    std::shared_ptr<VertexArray> array) {
+void OpenGLES::cache_array(std::shared_ptr<VertexArray> array) {
     vert_data& d = vertex_arrays[array];
     d.last_frame = 0;
     if (d.vert_buffer == 0) {
@@ -651,28 +588,22 @@ void OpenGLES::cache_array(
         d.update_id = array->update_id - 1;
     }
     if (d.update_id != array->update_id) {
-        if (array->vertex_count() &&
-            array->index_data.size()) {
+        if (array->vertex_count() && array->index_data.size()) {
             GL_CHECK("Before Vertex Buffer Update\n");
 
-            GLenum g = array->updates_frequently
-                           ? GL_STREAM_DRAW
-                           : GL_STATIC_DRAW;
-            d.buff_size =
-                array->vertex_count() * array->stride;
+            GLenum g =
+                array->updates_frequently ? GL_STREAM_DRAW : GL_STATIC_DRAW;
+            d.buff_size = array->vertex_count() * array->stride;
             d.vertices = array->vertex_count() - 1;
             d.index_size = array->index_data.size() * 2;
             d.update_id = array->update_id;
 
             glBindBuffer(GL_ARRAY_BUFFER, d.vert_buffer);
-            glBufferData(GL_ARRAY_BUFFER, d.buff_size,
-                         array->data_start(), g);
+            glBufferData(GL_ARRAY_BUFFER, d.buff_size, array->data_start(), g);
 
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,
-                         d.index_buffer);
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, d.index_buffer);
 
-            glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-                         d.index_size,
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER, d.index_size,
                          &array->index_data[0], g);
         }
     }
@@ -696,23 +627,19 @@ int OpenGLES::make_shader(VirtualResource& shader) {
     prefix_string += "#line 0\n";
     shader_string = shader.get_data_as_string();
 
-    std::string vert_sh = prefix_string +
-                          "#define VERTEX_SHADER 1\n" +
-                          shader_string;
-    std::string frag_sh = prefix_string +
-                          "#define FRAGMENT_SHADER 1\n" +
-                          shader_string;
+    std::string vert_sh =
+        prefix_string + "#define VERTEX_SHADER 1\n" + shader_string;
+    std::string frag_sh =
+        prefix_string + "#define FRAGMENT_SHADER 1\n" + shader_string;
 
     GLuint v = glCreateShader(GL_VERTEX_SHADER);
     GLuint f = glCreateShader(GL_FRAGMENT_SHADER);
 
-    bool success =
-        compile_shader(v, GL_VERTEX_SHADER, vert_sh) &&
-        compile_shader(f, GL_FRAGMENT_SHADER, frag_sh);
+    bool success = compile_shader(v, GL_VERTEX_SHADER, vert_sh) &&
+                   compile_shader(f, GL_FRAGMENT_SHADER, frag_sh);
 
     if (!success)
-        PLOGE << "Failed to compile program:"
-              << shader.get_path_string();
+        PLOGE << "Failed to compile program:" << shader.get_path_string();
 
     glAttachShader(s.program, v);
     glAttachShader(s.program, f);
@@ -721,27 +648,22 @@ int OpenGLES::make_shader(VirtualResource& shader) {
     if (!success)
         PLOGE << "Failed to link program: " << s.program;
 
-    glGetProgramiv(s.program, GL_ACTIVE_ATTRIBUTES,
-                   &s.active_attribs);
+    glGetProgramiv(s.program, GL_ACTIVE_ATTRIBUTES, &s.active_attribs);
     for (GLuint i = 0; i < s.active_attribs; ++i) {
         GLchar buffer[100];
         GLsizei length;
         GLint size;
         GLenum type;
-        glGetActiveAttrib(s.program, i, 100, &length, &size,
-                          &type, buffer);
-        s.attributes[buffer] =
-            glGetAttribLocation(s.program, buffer);
+        glGetActiveAttrib(s.program, i, 100, &length, &size, &type, buffer);
+        s.attributes[buffer] = glGetAttribLocation(s.program, buffer);
     }
-    glGetProgramiv(s.program, GL_ACTIVE_UNIFORMS,
-                   &s.active_uniforms);
+    glGetProgramiv(s.program, GL_ACTIVE_UNIFORMS, &s.active_uniforms);
     for (GLuint i = 0; i < s.active_uniforms; ++i) {
         GLchar buffer[100];
         GLsizei length;
         GLint size;
         GLenum type = 0;
-        glGetActiveUniform(s.program, i, 100, &length,
-                           &size, &type, buffer);
+        glGetActiveUniform(s.program, i, 100, &length, &size, &type, buffer);
         for (int x = 0; x < 100; ++x) {
             if (buffer[x] == '[')
                 buffer[x] = '\0';
@@ -776,16 +698,13 @@ void OpenGLES::update_resources() {
         glDisable(GL_SCISSOR_TEST);
         init_texture_formats();
 #ifndef USE_OPENGLES
-        glGetIntegerv(GL_FRAMEBUFFER_BINDING_EXT,
-                      &main_frame_buffer);
+        glGetIntegerv(GL_FRAMEBUFFER_BINDING_EXT, &main_frame_buffer);
 #endif
 #ifdef USE_OPENGLES
-        glGetIntegerv(GL_FRAMEBUFFER_BINDING,
-                      &main_frame_buffer);
+        glGetIntegerv(GL_FRAMEBUFFER_BINDING, &main_frame_buffer);
 #endif
     }
-    std::map<VirtualResource, TexturePrim>::iterator it =
-        textures.begin();
+    std::map<VirtualResource, TexturePrim>::iterator it = textures.begin();
     while (it != textures.end()) {
         it->second.last_frame++;
         if (it->second.last_frame > 300) {
@@ -794,8 +713,7 @@ void OpenGLES::update_resources() {
             ++it;
     }
 
-    std::map<std::shared_ptr<VertexArray>,
-             vert_data>::iterator it2 =
+    std::map<std::shared_ptr<VertexArray>, vert_data>::iterator it2 =
         vertex_arrays.begin();
     while (it2 != vertex_arrays.end()) {
         it2->second.last_frame++;
@@ -806,8 +724,7 @@ void OpenGLES::update_resources() {
         } else
             ++it2;
     }
-    std::map<VirtualResource, shader_data>::iterator it3 =
-        shaders.begin();
+    std::map<VirtualResource, shader_data>::iterator it3 = shaders.begin();
     while (it3 != shaders.end()) {
         it3->second.last_frame++;
         if (it3->second.last_frame > 300) {

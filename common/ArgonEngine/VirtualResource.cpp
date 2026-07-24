@@ -29,52 +29,37 @@
 #endif
 
 namespace Argon {
-struct VirtualResourceStringSource
-    : public VirtualResourceIMPL::Source {
-    VirtualResourceStringSource(const std::string& str)
-        : data(str) {}
+struct VirtualResourceStringSource : public VirtualResourceIMPL::Source {
+    VirtualResourceStringSource(const std::string& str) : data(str) {}
     std::string data;
     size_t size() const { return data.size(); }
-    size_t read(char* buffer, size_t buffer_size,
-                size_t offset);
-    void resize(size_t byte_size) {
-        data.resize(byte_size);
-    }
-    size_t write(const char* buffer, size_t buffer_size,
-                 size_t offset);
-    virtual uint8_t* get_pointer() {
-        return (uint8_t*)&data[0];
-    }
+    size_t read(char* buffer, size_t buffer_size, size_t offset);
+    void resize(size_t byte_size) { data.resize(byte_size); }
+    size_t write(const char* buffer, size_t buffer_size, size_t offset);
+    virtual uint8_t* get_pointer() { return (uint8_t*)&data[0]; }
 
-    VirtualResourceIMPL::Source*
-    create_source(const std::string& pa,
-                  const std::string& args) {
+    VirtualResourceIMPL::Source* create_source(const std::string& pa,
+                                               const std::string& args) {
         return new VirtualResourceStringSource(args);
     }
 };
-struct VirtualResourceAppended
-    : public VirtualResourceIMPL::Source {
+struct VirtualResourceAppended : public VirtualResourceIMPL::Source {
     std::vector<VirtualResource> resources;
     VirtualResourceAppended(const std::string& str);
     size_t size() const;
-    size_t read(char* buffer, size_t buffer_size,
-                size_t offset);
+    size_t read(char* buffer, size_t buffer_size, size_t offset);
     void resize(size_t byte_size) {}
-    size_t write(const char* buffer, size_t buffer_size,
-                 size_t offset) {
+    size_t write(const char* buffer, size_t buffer_size, size_t offset) {
         return 0;
     }
-    VirtualResourceIMPL::Source*
-    create_source(const std::string& pa,
-                  const std::string& args) {
+    VirtualResourceIMPL::Source* create_source(const std::string& pa,
+                                               const std::string& args) {
         return new VirtualResourceAppended(args);
     }
 };
 #ifdef USE_CURL
-struct VirtualResourceCURL
-    : public VirtualResourceIMPL::Source {
-    VirtualResourceCURL(const std::string& str,
-                        bool allow_write = false)
+struct VirtualResourceCURL : public VirtualResourceIMPL::Source {
+    VirtualResourceCURL(const std::string& str, bool allow_write = false)
         : path(str), allow_write(allow_write) {}
     Mutex loading;
     size_t update_id;
@@ -85,38 +70,27 @@ struct VirtualResourceCURL
     bool allow_write;
     size_t write_offset;
 
-    static size_t write_function(char* ptr, size_t size,
-                                 size_t nmemb,
+    static size_t write_function(char* ptr, size_t size, size_t nmemb,
                                  void* resource);
-    static size_t read_function(char* ptr, size_t size,
-                                size_t nmemb,
+    static size_t read_function(char* ptr, size_t size, size_t nmemb,
                                 void* resource);
-    static int status_function(void* resource,
-                               double dltotal, double dlnow,
-                               double ultotal,
-                               double ulnow);
+    static int status_function(void* resource, double dltotal, double dlnow,
+                               double ultotal, double ulnow);
 
     bool reload();
     bool save();
-    virtual uint8_t* get_pointer() {
-        return (uint8_t*)&data[0];
-    }
+    virtual uint8_t* get_pointer() { return (uint8_t*)&data[0]; }
     size_t size() const { return data.size(); }
-    size_t read(char* buffer, size_t buffer_size,
-                size_t offset);
-    void resize(size_t byte_size) {
-        data.resize(byte_size);
-    }
-    size_t write(const char* buffer, size_t buffer_size,
-                 size_t offset);
-    VirtualResourceIMPL::Source*
-    create_source(const std::string& pa,
-                  const std::string& args);
+    size_t read(char* buffer, size_t buffer_size, size_t offset);
+    void resize(size_t byte_size) { data.resize(byte_size); }
+    size_t write(const char* buffer, size_t buffer_size, size_t offset);
+    VirtualResourceIMPL::Source* create_source(const std::string& pa,
+                                               const std::string& args);
 };
 #endif
 namespace VirtualResourceIMPL {
-size_t search_string(const std::string& s, char character,
-                     size_t begin, size_t end) {
+size_t search_string(const std::string& s, char character, size_t begin,
+                     size_t end) {
     if (end == 0)
         end = s.size();
     if (end == 0)
@@ -137,8 +111,7 @@ size_t search_string(const std::string& s, char character,
     }
     return end;
 }
-size_t advance_whitespace(const std::string& s,
-                          size_t begin, size_t end) {
+size_t advance_whitespace(const std::string& s, size_t begin, size_t end) {
     if (end == 0)
         end = s.size();
     if (end == 0)
@@ -152,8 +125,7 @@ size_t advance_whitespace(const std::string& s,
     }
     return end;
 }
-size_t trim_whitespace(const std::string& s, size_t begin,
-                       size_t end) {
+size_t trim_whitespace(const std::string& s, size_t begin, size_t end) {
     if (end == 0)
         end = s.size();
     if (end == 0)
@@ -167,8 +139,7 @@ size_t trim_whitespace(const std::string& s, size_t begin,
     }
     return begin;
 }
-size_t parse_arguments(const std::string& s,
-                       std::string& args, size_t begin,
+size_t parse_arguments(const std::string& s, std::string& args, size_t begin,
                        size_t end) {
     size_t i = advance_whitespace(s, begin, end);
     if (s[i] == '{') {
@@ -179,8 +150,7 @@ size_t parse_arguments(const std::string& s,
     }
     return i;
 }
-size_t search_string_reverse(const std::string& s,
-                             char character, size_t begin,
+size_t search_string_reverse(const std::string& s, char character, size_t begin,
                              size_t end) {
     if (end == 0)
         end = s.size();
@@ -249,22 +219,16 @@ void Pointer::set_data(Data* d, bool reload) {
 
 std::map<std::string, VirtualResourceIMPL::Pointer>&
 VirtualResource::all_nodes() {
-    static std::map<std::string,
-                    VirtualResourceIMPL::Pointer>
-        p;
+    static std::map<std::string, VirtualResourceIMPL::Pointer> p;
     return p;
 }
 std::map<std::string, VirtualResourceIMPL::Source*>&
 VirtualResource::all_sources() {
-    static std::map<std::string,
-                    VirtualResourceIMPL::Source*>
-        p;
+    static std::map<std::string, VirtualResourceIMPL::Source*> p;
     return p;
 }
-std::map<std::string, VirtualResourceIMPL::Data*>&
-VirtualResource::all_data() {
-    static std::map<std::string, VirtualResourceIMPL::Data*>
-        p;
+std::map<std::string, VirtualResourceIMPL::Data*>& VirtualResource::all_data() {
+    static std::map<std::string, VirtualResourceIMPL::Data*> p;
     return p;
 }
 
@@ -286,15 +250,13 @@ void VirtualResource::set(VirtualResourceIMPL::Pointer* p) {
     }
 }
 
-void VirtualResource::set_source(const std::string& s,
-                                 bool reload) {
+void VirtualResource::set_source(const std::string& s, bool reload) {
     size_t i = VirtualResourceIMPL::search_string(s, ':');
 
     std::string s2(&s[0], i + 1);
 
     std::string args;
-    i = VirtualResourceIMPL::parse_arguments(s, args, i + 1,
-                                             s.size());
+    i = VirtualResourceIMPL::parse_arguments(s, args, i + 1, s.size());
     std::string path;
     int depth = 0;
     while (i < s.size()) {
@@ -315,8 +277,8 @@ void VirtualResource::set_source(const std::string& s,
     if (sor) {
         sor = sor->create_source(path, args);
     } else
-        PLOGW << "No source handler found for source: "
-              << s2 << " in path: " << s;
+        PLOGW << "No source handler found for source: " << s2
+              << " in path: " << s;
 
     p_node->set_source(sor, reload);
 }
@@ -324,10 +286,8 @@ void VirtualResource::initialize() {
     VirtualResource::all_sources()["virtual:"] =
         VirtualResource::all_sources()["string:"] =
             new VirtualResourceStringSource("");
-    VirtualResource::all_sources()["append:"] =
-        new VirtualResourceAppended("");
-    VirtualResource::all_sources()["file:"] =
-        new VirtualResourceIO("/", true);
+    VirtualResource::all_sources()["append:"] = new VirtualResourceAppended("");
+    VirtualResource::all_sources()["file:"] = new VirtualResourceIO("/", true);
 
 #ifdef USE_CURL
 
@@ -366,19 +326,17 @@ void VirtualResource::initialize() {
         new VirtualResourceCURL("ldap:/", true);
 #endif
 
-    VirtualResource::all_data()[".jpg"] = VirtualResource::
-        all_data()[".jpeg"] = VirtualResource::all_data()
-            [".png"] = VirtualResource::all_data()[".tga"] =
+    VirtualResource::all_data()[".jpg"] = VirtualResource::all_data()[".jpeg"] =
+        VirtualResource::all_data()[".png"] =
+            VirtualResource::all_data()[".tga"] =
                 VirtualResource::all_data()[".psd"] =
                     VirtualResource::all_data()[".gif"] =
                         VirtualResource::all_data()[".hd"
                                                     "r"] =
-                            VirtualResource::all_data()
-                                [".pic"] = VirtualResource::
-                                    all_data()[".tex"] =
-                                        new VirtualResourceImage(
-                                            0, 0,
-                                            kTextureRGB8);
+                            VirtualResource::all_data()[".pic"] =
+                                VirtualResource::all_data()[".tex"] =
+                                    new VirtualResourceImage(0, 0,
+                                                             kTextureRGB8);
     VirtualResource::all_data()[".json"] = new JsonResource;
 
     VirtualResource::all_data()[".ahf"] = new AHFResource;
@@ -415,8 +373,7 @@ void VirtualResource::initialize() {
         IF_PLOG(plog::info) {
             std::stringstream str;
             str << "The Virtual Resource System has "
-                << VirtualResource::all_data().size()
-                << " known data types:\n";
+                << VirtualResource::all_data().size() << " known data types:\n";
             size_t max = 0;
             for (auto& a : VirtualResource::all_data()) {
                 if (max < a.first.size() + 1)
@@ -444,17 +401,13 @@ void VirtualResource::initialize() {
     ReflectionBase::print_registered_factories();
 }
 
-void VirtualResource::set_data(const std::string& ext,
-                               bool reload) {
-    size_t i = VirtualResourceIMPL::search_string_reverse(
-        ext, '.');
+void VirtualResource::set_data(const std::string& ext, bool reload) {
+    size_t i = VirtualResourceIMPL::search_string_reverse(ext, '.');
     if (i == 0)
         return;
-    size_t i2 = VirtualResourceIMPL::search_string(
-        ext, '{', i, ext.size());
+    size_t i2 = VirtualResourceIMPL::search_string(ext, '{', i, ext.size());
     std::string args;
-    VirtualResourceIMPL::parse_arguments(ext, args, i2,
-                                         ext.size());
+    VirtualResourceIMPL::parse_arguments(ext, args, i2, ext.size());
     std::string extension(&ext[i], i2 - i);
     for (auto& c : extension)
         c = std::tolower(c);
@@ -507,11 +460,9 @@ std::string VirtualResource::get_data_as_string() {
     read(&s[0], s.size(), 0);
     return s;
 }
-std::map<std::string,
-         VirtualResourceIMPL::Pointer>::iterator
+std::map<std::string, VirtualResourceIMPL::Pointer>::iterator
 VirtualResource::get_pointer_iter() {
-    std::map<std::string,
-             VirtualResourceIMPL::Pointer>::iterator it =
+    std::map<std::string, VirtualResourceIMPL::Pointer>::iterator it =
         all_nodes().begin();
     while (it != all_nodes().end()) {
         if (&(it->second) == p_node)
@@ -520,12 +471,10 @@ VirtualResource::get_pointer_iter() {
     }
     return all_nodes().end();
 }
-std::map<std::string,
-         VirtualResourceIMPL::Pointer>::const_iterator
+std::map<std::string, VirtualResourceIMPL::Pointer>::const_iterator
 VirtualResource::get_pointer_iter() const {
-    std::map<std::string,
-             VirtualResourceIMPL::Pointer>::const_iterator
-        it = all_nodes().begin();
+    std::map<std::string, VirtualResourceIMPL::Pointer>::const_iterator it =
+        all_nodes().begin();
     while (it != all_nodes().end()) {
         if (&(it->second) == p_node)
             return it;
@@ -534,8 +483,7 @@ VirtualResource::get_pointer_iter() const {
     return all_nodes().end();
 }
 
-size_t VirtualResourceStringSource::read(char* buffer,
-                                         size_t buffer_size,
+size_t VirtualResourceStringSource::read(char* buffer, size_t buffer_size,
                                          size_t offset) {
     if (offset > data.size())
         return 0;
@@ -546,8 +494,8 @@ size_t VirtualResourceStringSource::read(char* buffer,
     memcpy(buffer, &data[offset], read);
     return read;
 }
-size_t VirtualResourceStringSource::write(
-    const char* buffer, size_t buffer_size, size_t offset) {
+size_t VirtualResourceStringSource::write(const char* buffer,
+                                          size_t buffer_size, size_t offset) {
     size_t write_end = offset + buffer_size;
     if (write_end > data.size())
         data.resize(write_end);
@@ -555,17 +503,13 @@ size_t VirtualResourceStringSource::write(
     return 0;
 }
 
-VirtualResourceAppended::VirtualResourceAppended(
-    const std::string& str) {
+VirtualResourceAppended::VirtualResourceAppended(const std::string& str) {
     size_t i = 0;
     size_t end = str.size();
     while (i < end) {
-        size_t i2 = VirtualResourceIMPL::search_string(
-            str, ',', i, end);
-        i = VirtualResourceIMPL::advance_whitespace(str, i,
-                                                    i2);
-        i2 = VirtualResourceIMPL::trim_whitespace(str, i,
-                                                  i2);
+        size_t i2 = VirtualResourceIMPL::search_string(str, ',', i, end);
+        i = VirtualResourceIMPL::advance_whitespace(str, i, i2);
+        i2 = VirtualResourceIMPL::trim_whitespace(str, i, i2);
 
         std::string s(&str[i], i2 - i);
         resources.push_back(s);
@@ -574,23 +518,20 @@ VirtualResourceAppended::VirtualResourceAppended(
 }
 size_t VirtualResourceAppended::size() const {
     size_t val = 0;
-    std::vector<VirtualResource>::const_iterator it =
-        resources.begin();
+    std::vector<VirtualResource>::const_iterator it = resources.begin();
     while (it != resources.end()) {
         val += it->size();
         ++it;
     }
     return val;
 }
-size_t VirtualResourceAppended::read(char* buffer,
-                                     size_t buffer_size,
+size_t VirtualResourceAppended::read(char* buffer, size_t buffer_size,
                                      size_t offset) {
     size_t b_off = 0;
     size_t val = offset;
     size_t end = offset + buffer_size;
 
-    std::vector<VirtualResource>::iterator it =
-        resources.begin();
+    std::vector<VirtualResource>::iterator it = resources.begin();
     while (it != resources.end() && b_off != buffer_size) {
         size_t next = it->size();
         if (next > end)
@@ -611,9 +552,8 @@ size_t VirtualResourceAppended::read(char* buffer,
 bool VirtualResourceIO::save() {
     if (!allow_write)
         return false;
-    std::fstream str(path.c_str(),
-                     (std::ios::in | std::ios::out |
-                      std::ios::binary | std::ios::trunc));
+    std::fstream str(path.c_str(), (std::ios::in | std::ios::out |
+                                    std::ios::binary | std::ios::trunc));
     str.write(&data[0], data.size());
     PLOGV << "Save " << path;
     return true;
@@ -625,8 +565,7 @@ bool VirtualResourceIO::reload() {
 
     std::fstream str(path.c_str(),
                      allow_write
-                         ? (std::ios::in | std::ios::out |
-                            std::ios::binary)
+                         ? (std::ios::in | std::ios::out | std::ios::binary)
                          : std::ios::in | std::ios::binary);
 
     str.seekg(0, std::ios::end);
@@ -652,15 +591,13 @@ size_t VirtualResourceIO::update_id() {
 #ifdef PLATFORM_WINDOWS
     std::wstring filename;
     filename.assign(path.begin(), path.end());
-    HANDLE file = CreateFile(
-        filename.c_str(), GENERIC_READ, FILE_SHARE_READ,
-        NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    HANDLE file = CreateFile(filename.c_str(), GENERIC_READ, FILE_SHARE_READ,
+                             NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 
     if (file == INVALID_HANDLE_VALUE) {
         std::cerr << "\n\nERROR: File \"";
         std::cerr << path;
-        std::cerr
-            << "\" not found when update_id called\n\n";
+        std::cerr << "\" not found when update_id called\n\n";
         CloseHandle(file);
         return 0;
     }
@@ -683,8 +620,7 @@ size_t VirtualResourceIO::update_id() {
     return 0;
 }
 
-size_t VirtualResourceIO::write(const char* buffer,
-                                size_t buffer_size,
+size_t VirtualResourceIO::write(const char* buffer, size_t buffer_size,
                                 size_t offset) {
     size_t begin = offset;
     size_t end = offset + buffer_size;
@@ -695,8 +631,7 @@ size_t VirtualResourceIO::write(const char* buffer,
     memcpy((void*)&data[begin], (const void*)buffer, size);
     return size;
 }
-size_t VirtualResourceIO::read(char* buffer,
-                               size_t buffer_size,
+size_t VirtualResourceIO::read(char* buffer, size_t buffer_size,
                                size_t offset) {
 
     size_t begin = offset;
@@ -721,12 +656,9 @@ VirtualResourceIO::create_source(const std::string& pa,
 }
 
 #ifdef USE_CURL
-size_t VirtualResourceCURL::write_function(char* ptr,
-                                           size_t size,
-                                           size_t nmemb,
+size_t VirtualResourceCURL::write_function(char* ptr, size_t size, size_t nmemb,
                                            void* resource) {
-    VirtualResourceCURL* source =
-        (VirtualResourceCURL*)resource;
+    VirtualResourceCURL* source = (VirtualResourceCURL*)resource;
     size_t bs = size * nmemb;
     if (source->write_offset + bs > source->data.size()) {
         bs = source->data.size() - source->write_offset;
@@ -735,23 +667,17 @@ size_t VirtualResourceCURL::write_function(char* ptr,
     source->write_offset += bs;
     return bs;
 }
-size_t VirtualResourceCURL::read_function(char* ptr,
-                                          size_t size,
-                                          size_t nmemb,
+size_t VirtualResourceCURL::read_function(char* ptr, size_t size, size_t nmemb,
                                           void* resource) {
-    VirtualResourceCURL* source =
-        (VirtualResourceCURL*)resource;
+    VirtualResourceCURL* source = (VirtualResourceCURL*)resource;
     char* d_ptr = (char*)ptr;
     source->data.append(d_ptr, size * nmemb);
     return size * nmemb;
 }
-int VirtualResourceCURL::status_function(void* resource,
-                                         double dltotal,
-                                         double dlnow,
-                                         double ultotal,
+int VirtualResourceCURL::status_function(void* resource, double dltotal,
+                                         double dlnow, double ultotal,
                                          double ulnow) {
-    VirtualResourceCURL* source =
-        (VirtualResourceCURL*)resource;
+    VirtualResourceCURL* source = (VirtualResourceCURL*)resource;
     source->transfer_current = dlnow + ulnow;
     source->transfer_total = dltotal + dlnow;
     return 0;
@@ -768,11 +694,9 @@ bool VirtualResourceCURL::save() {
         curl_easy_setopt(curl, CURLOPT_UPLOAD, 1);
         curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE,
                          (curl_off_t)data.size());
-        curl_easy_setopt(curl, CURLOPT_READFUNCTION,
-                         write_function);
+        curl_easy_setopt(curl, CURLOPT_READFUNCTION, write_function);
         curl_easy_setopt(curl, CURLOPT_READDATA, this);
-        curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION,
-                         status_function);
+        curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, status_function);
         curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0);
         curl_easy_setopt(curl, CURLOPT_PROGRESSDATA, this);
         curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
@@ -790,11 +714,9 @@ bool VirtualResourceCURL::reload() {
     curl = curl_easy_init();
     if (curl) {
         curl_easy_setopt(curl, CURLOPT_URL, path.c_str());
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION,
-                         read_function);
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, read_function);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, this);
-        curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION,
-                         status_function);
+        curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, status_function);
         curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0);
         curl_easy_setopt(curl, CURLOPT_PROGRESSDATA, this);
         curl_easy_perform(curl);
@@ -802,8 +724,7 @@ bool VirtualResourceCURL::reload() {
     }
     return true;
 }
-size_t VirtualResourceCURL::write(const char* buffer,
-                                  size_t buffer_size,
+size_t VirtualResourceCURL::write(const char* buffer, size_t buffer_size,
                                   size_t offset) {
     size_t begin = offset;
     size_t end = offset + buffer_size;
@@ -814,8 +735,7 @@ size_t VirtualResourceCURL::write(const char* buffer,
     memcpy((void*)&data[begin], (const void*)buffer, size);
     return size;
 }
-size_t VirtualResourceCURL::read(char* buffer,
-                                 size_t buffer_size,
+size_t VirtualResourceCURL::read(char* buffer, size_t buffer_size,
                                  size_t offset) {
 
     size_t begin = offset;
@@ -830,20 +750,18 @@ size_t VirtualResourceCURL::read(char* buffer,
     return size;
 }
 VirtualResourceIMPL::Source*
-VirtualResourceCURL::create_source(
-    const std::string& pa, const std::string& args) {
+VirtualResourceCURL::create_source(const std::string& pa,
+                                   const std::string& args) {
     if (pa.size() > 2) {
         std::string s(&pa[1], pa.size() - 1);
-        return new VirtualResourceCURL(path + s,
-                                       allow_write);
+        return new VirtualResourceCURL(path + s, allow_write);
     }
     return new VirtualResourceCURL(path + pa, allow_write);
 }
 #endif
 
-void get_argument_map(
-    const std::string& args,
-    std::map<std::string, std::string>& arg_map) {
+void get_argument_map(const std::string& args,
+                      std::map<std::string, std::string>& arg_map) {
     int state = 0;
     std::vector<std::string> arguments;
     std::string value;

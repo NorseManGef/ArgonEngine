@@ -23,14 +23,11 @@ inline std::string renderer_name(Renderer renderer) {
     }
 }
 
-inline std::unordered_map<std::string, Renderer>
-get_renderers() {
+inline std::unordered_map<std::string, Renderer> get_renderers() {
     std::unordered_map<std::string, Renderer> renderers;
-    for (Renderer renderer = Renderer::OGL;
-         renderer <= Renderer::VULKAN;
+    for (Renderer renderer = Renderer::OGL; renderer <= Renderer::VULKAN;
          renderer = (Renderer)((int)renderer + 1)) {
-        renderers.insert(std::make_pair(
-            renderer_name(renderer), renderer));
+        renderers.insert(std::make_pair(renderer_name(renderer), renderer));
     }
     return renderers;
 }

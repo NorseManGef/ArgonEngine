@@ -35,11 +35,9 @@ enum type {
 };
 namespace Argon {
 void ReflectionBase::read(VirtualResource res) {
-    VisitableResource* r =
-        res.get_data<VisitableResource*>();
+    VisitableResource* r = res.get_data<VisitableResource*>();
     if (!r) {
-        PLOGE << "Virtual Resource "
-              << res.get_path_string()
+        PLOGE << "Virtual Resource " << res.get_path_string()
               << " is not visitable";
         return;
     }
@@ -50,11 +48,9 @@ void ReflectionBase::read(VirtualResource res) {
 }
 
 void ReflectionBase::write(VirtualResource res) {
-    VisitableResource* r =
-        res.get_data<VisitableResource*>();
+    VisitableResource* r = res.get_data<VisitableResource*>();
     if (!r) {
-        PLOGE << "Virtual Resource "
-              << res.get_path_string()
+        PLOGE << "Virtual Resource " << res.get_path_string()
               << " is not visitable";
         return;
     }
@@ -102,8 +98,7 @@ bool PrintVisitor::handle_string(std::string& key) {
     if (key.size() < 400 || print_long_strings)
         s << "\"" << key << "\"";
     else
-        s << "Long string with: " << key.size()
-          << " characters.";
+        s << "Long string with: " << key.size() << " characters.";
     strings.push_back(s.str());
     return true;
 }
@@ -123,8 +118,8 @@ void PrintVisitor::print_string(std::ostream& s, size_t x,
             indent(s, indent_level + 1);
     }
 }
-void PrintVisitor::print(std::ostream& s, size_t& x,
-                         size_t indent_level, int recurse) {
+void PrintVisitor::print(std::ostream& s, size_t& x, size_t indent_level,
+                         int recurse) {
     recurse--;
     bool was_array = false;
     bool was_key = false;
@@ -150,8 +145,7 @@ void PrintVisitor::print(std::ostream& s, size_t& x,
         if (strings[x] == "*KEY*") {
             if (was_array) {
                 if (print_key_elements == 0) {
-                    s << "... "
-                      << key_size - print_key_elements
+                    s << "... " << key_size - print_key_elements
                       << " More Elements";
                 }
                 s << "]";
@@ -260,12 +254,9 @@ struct JsonReader : public Visitor {
 
     bool can_unpack_value() {
         auto& b = stack.back();
-        return !b.value.isNull() &&
-               b.value.isValidIndex(b.size);
+        return !b.value.isNull() && b.value.isValidIndex(b.size);
     }
-    bool has_unhandled_keys() {
-        return stack.back().read_members.size();
-    }
+    bool has_unhandled_keys() { return stack.back().read_members.size(); }
     std::string get_unhandled_key() {
         return *stack.back().read_members.begin();
     };
@@ -282,8 +273,7 @@ struct JsonReader : public Visitor {
 bool JsonReader::read(std::string& data) {
     Json::Reader r;
 
-    bool success =
-        r.parse(data, stack.back().map_value, false);
+    bool success = r.parse(data, stack.back().map_value, false);
     if (!success) {
         PLOGE << "Failed to parse JSON from string. ERROR: "
               << r.getFormatedErrorMessages();
@@ -294,12 +284,11 @@ bool JsonReader::read(std::string& data) {
 
 bool JsonReader::read(VirtualResource res) {
     Json::Reader r;
-    bool success = r.parse(res.get_data_as_string(),
-                           stack.back().map_value, false);
+    bool success =
+        r.parse(res.get_data_as_string(), stack.back().map_value, false);
     if (!success) {
-        PLOGE << "Failed to parse JSON from Resource: "
-              << res << "\nError: "
-              << r.getFormatedErrorMessages();
+        PLOGE << "Failed to parse JSON from Resource: " << res
+              << "\nError: " << r.getFormatedErrorMessages();
     }
     return success && !stack.back().map_value.isNull();
 }
@@ -396,9 +385,7 @@ struct JsonWriter::StackFrame {
     }
 };
 
-JsonWriter::JsonWriter() {
-    stack_back = std::make_shared<StackFrame>();
-}
+JsonWriter::JsonWriter() { stack_back = std::make_shared<StackFrame>(); }
 
 bool JsonWriter::write(VirtualResource res) {
     std::stringstream str;
@@ -434,8 +421,8 @@ bool JsonWriter::set_key(const char* key) {
 
 bool JsonWriter::handle_int(intmax_t& v) {
     auto& b = *stack_back;
-    Json::Value val = v > INT32_MAX ? Json::Value(double(v))
-                                    : Json::Value(int(v));
+    Json::Value val =
+        v > INT32_MAX ? Json::Value(double(v)) : Json::Value(int(v));
     b.add_value(val);
     return true;
 }
@@ -479,8 +466,7 @@ bool JsonWriter::finish_map() {
 }
 
 std::shared_ptr<Visitor> JsonResource::read_visitor() {
-    std::shared_ptr<JsonReader> json_read =
-        std::make_shared<JsonReader>();
+    std::shared_ptr<JsonReader> json_read = std::make_shared<JsonReader>();
     std::string str;
     str.resize(source->size());
 
@@ -493,13 +479,11 @@ std::shared_ptr<Visitor> JsonResource::read_visitor() {
 }
 
 std::shared_ptr<Visitor> JsonResource::write_visitor() {
-    std::shared_ptr<JsonWriter> json_write =
-        std::make_shared<JsonWriter>();
+    std::shared_ptr<JsonWriter> json_write = std::make_shared<JsonWriter>();
     return json_write;
 }
 
-void JsonResource::write_visitor_finish(
-    std::shared_ptr<Visitor>& v) {
+void JsonResource::write_visitor_finish(std::shared_ptr<Visitor>& v) {
     std::shared_ptr<JsonWriter> json_write =
         std::static_pointer_cast<JsonWriter>(v);
     std::string str;
@@ -533,22 +517,18 @@ struct AHFReader : public Visitor {
         };
         uint64_t total_size;
         std::map<std::string, KeyData> keys;
-        inline bool
-        read_buffer(VirtualResourceIMPL::Source* stream,
-                    char* c, int size) {
+        inline bool read_buffer(VirtualResourceIMPL::Source* stream, char* c,
+                                int size) {
             stream->read(c, size, key_data->current_off);
             key_data->current_off += size;
             return true;
         }
         KeyData* key_data;
-        bool unpack_map(VirtualResourceIMPL::Source* stream,
-                        size_t offset);
+        bool unpack_map(VirtualResourceIMPL::Source* stream, size_t offset);
         bool set_key(const char* k);
-        inline bool
-        unpack_int(intmax_t& val,
-                   VirtualResourceIMPL::Source* stream) {
-            if (!key_data ||
-                key_data->current_off >= key_data->end) {
+        inline bool unpack_int(intmax_t& val,
+                               VirtualResourceIMPL::Source* stream) {
+            if (!key_data || key_data->current_off >= key_data->end) {
                 return false;
             }
             val = 0;
@@ -565,8 +545,7 @@ struct AHFReader : public Visitor {
                 return read_buffer(stream, (char*)&val, 8);
             case kInt8: {
                 int8_t v;
-                bool b =
-                    read_buffer(stream, (char*)&val, 1);
+                bool b = read_buffer(stream, (char*)&val, 1);
                 val = v;
                 return b;
             }
@@ -592,21 +571,16 @@ struct AHFReader : public Visitor {
             }
             return false;
         }
-        bool
-        unpack_double(double& error,
-                      VirtualResourceIMPL::Source* stream);
-        bool
-        unpack_string(std::string& error,
-                      VirtualResourceIMPL::Source* stream);
+        bool unpack_double(double& error, VirtualResourceIMPL::Source* stream);
+        bool unpack_string(std::string& error,
+                           VirtualResourceIMPL::Source* stream);
         bool can_unpack_value() {
-            return key_data &&
-                   key_data->current_off < key_data->end;
+            return key_data && key_data->current_off < key_data->end;
         }
         size_t get_min_remaining_items() {
             if (!key_data)
                 return 0;
-            size_t bytes =
-                key_data->end - key_data->current_off;
+            size_t bytes = key_data->end - key_data->current_off;
             switch (key_data->type) {
             case kInt8:
             case kUInt8:
@@ -717,9 +691,7 @@ AHFWriter::AHFWriter() {
     stack = new std::vector<WriterStackData>();
     stack->push_back(WriterStackData());
 }
-bool AHFWriter::handle_int(intmax_t& v) {
-    return stack->back().pack_int(v);
-}
+bool AHFWriter::handle_int(intmax_t& v) { return stack->back().pack_int(v); }
 bool AHFWriter::handle_double(double& v) {
     return stack->back().pack_double(v);
 }
@@ -736,8 +708,7 @@ uint64_t WriterStackData::get_key_size() {
     offset = 0;
     return x;
 }
-WriterStackData::WriterStackData()
-    : offset(0), type(0), table(""), data("") {
+WriterStackData::WriterStackData() : offset(0), type(0), table(""), data("") {
     table.clear();
     table.write("AHF", 3);
 }
@@ -792,8 +763,7 @@ bool AHFWriter::set_key(const char* key) {
     stack->back().key = key;
     return true;
 }
-void AHFWriter::write_to_file(
-    VirtualResourceIMPL::Source* p) {
+void AHFWriter::write_to_file(VirtualResourceIMPL::Source* p) {
     if (!p)
         return;
     p->write((char*)stack->back().data.str().c_str(),
@@ -803,16 +773,15 @@ void AHFWriter::write_to_file(
 bool AHFWriter::finish_map() {
     if (stack->size() > 1) {
         stack->back().finalize_key();
-        bool b =
-            (stack->end() - 2)->pack_map(stack->back());
+        bool b = (stack->end() - 2)->pack_map(stack->back());
         stack->pop_back();
         return b;
     }
     return true;
 }
 
-bool AHFReader::StackData::unpack_map(
-    VirtualResourceIMPL::Source* stream, size_t offset) {
+bool AHFReader::StackData::unpack_map(VirtualResourceIMPL::Source* stream,
+                                      size_t offset) {
     char b[3];
     if (!stream)
         return false;
@@ -849,8 +818,7 @@ bool AHFReader::StackData::unpack_map(
         eof |= !stream->read(&key[0], c, off);
         off += c;
 
-        keys[key].current_off = keys[key].offset =
-            data_size;
+        keys[key].current_off = keys[key].offset = data_size;
         data_size += size;
         keys[key].handled = false;
         keys[key].type = type;
@@ -860,8 +828,7 @@ bool AHFReader::StackData::unpack_map(
         off += 2;
         table_size += 12 + key.size();
     }
-    std::map<std::string, KeyData>::iterator it =
-        keys.begin();
+    std::map<std::string, KeyData>::iterator it = keys.begin();
     while (it != keys.end()) {
         it->second.offset += table_size + offset;
         it->second.end += table_size + offset;
@@ -882,10 +849,9 @@ bool AHFReader::StackData::set_key(const char* k) {
     return true;
 }
 
-bool AHFReader::StackData::unpack_double(
-    double& val, VirtualResourceIMPL::Source* stream) {
-    if (!key_data ||
-        key_data->current_off >= key_data->end) {
+bool AHFReader::StackData::unpack_double(double& val,
+                                         VirtualResourceIMPL::Source* stream) {
+    if (!key_data || key_data->current_off >= key_data->end) {
         return false;
     }
     switch (key_data->type) {
@@ -917,8 +883,8 @@ bool AHFReader::StackData::unpack_double(
     }
     return false;
 }
-bool AHFReader::StackData::unpack_string(
-    std::string& v, VirtualResourceIMPL::Source* stream) {
+bool AHFReader::StackData::unpack_string(std::string& v,
+                                         VirtualResourceIMPL::Source* stream) {
     if (!key_data || key_data->type != kString ||
         key_data->current_off >= key_data->end) {
         return false;
@@ -933,8 +899,7 @@ bool AHFReader::StackData::unpack_string(
 }
 bool AHFReader::StackData::has_unhandled_keys() {
 
-    std::map<std::string, KeyData>::iterator it =
-        keys.begin();
+    std::map<std::string, KeyData>::iterator it = keys.begin();
     while (it != keys.end()) {
         if (it->second.handled == false)
             return true;
@@ -944,8 +909,7 @@ bool AHFReader::StackData::has_unhandled_keys() {
     return false;
 }
 std::string AHFReader::StackData::get_unhandled_key() {
-    std::map<std::string, KeyData>::iterator it =
-        keys.begin();
+    std::map<std::string, KeyData>::iterator it = keys.begin();
     while (it != keys.end()) {
         if (it->second.handled == false)
             return it->first;
@@ -979,37 +943,31 @@ bool AHFReader::finish_map() {
 
     if (stack.size() > 1) {
 
-        (*(stack.end() - 2))->key_data->current_off +=
-            stack.back()->total_size;
+        (*(stack.end() - 2))->key_data->current_off += stack.back()->total_size;
         delete stack.back();
         stack.pop_back();
     }
     return true;
 }
 std::shared_ptr<Visitor> AHFResource::read_visitor() {
-    std::shared_ptr<AHFReader> read =
-        std::make_shared<AHFReader>();
+    std::shared_ptr<AHFReader> read = std::make_shared<AHFReader>();
     std::string str;
     read->source = source;
     return read;
 }
 
 std::shared_ptr<Visitor> AHFResource::write_visitor() {
-    std::shared_ptr<AHFWriter> write =
-        std::make_shared<AHFWriter>();
+    std::shared_ptr<AHFWriter> write = std::make_shared<AHFWriter>();
     return write;
 }
 
-void AHFResource::write_visitor_finish(
-    std::shared_ptr<Visitor>& v) {
-    std::shared_ptr<AHFWriter> write =
-        std::static_pointer_cast<AHFWriter>(v);
+void AHFResource::write_visitor_finish(std::shared_ptr<Visitor>& v) {
+    std::shared_ptr<AHFWriter> write = std::static_pointer_cast<AHFWriter>(v);
     write->write_to_file(source);
 }
 
 } // namespace Argon
-std::ostream& operator<<(std::ostream& s,
-                         Argon::ReflectionBase& v) {
+std::ostream& operator<<(std::ostream& s, Argon::ReflectionBase& v) {
     Argon::PrintVisitor vis;
     vis.handle(v);
     size_t x = 0;

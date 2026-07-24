@@ -11,29 +11,23 @@
 #include "RenderSystemConstants.h"
 namespace Argon {
 const StringIntern kColorAttribute = "ColorAttribute";
-const StringIntern kTextureAttribute =
-    "TextureCoordAttribute";
+const StringIntern kTextureAttribute = "TextureCoordAttribute";
 const StringIntern kNormalAttribute = "NormalAttribute";
 const StringIntern kPositionAttribute = "PositionAttribute";
 const StringIntern kIndexAttribute = "IndexAttribute";
 const StringIntern kMatrixAttribute = "MatrixAttribute";
 
-void tex_set_color(unsigned char* data, unsigned int format,
-                   Vector4f color, int x, int y, int w,
-                   int h) {
+void tex_set_color(unsigned char* data, unsigned int format, Vector4f color,
+                   int x, int y, int w, int h) {
     if (x >= w)
         x = w - 1;
     if (y >= h)
         y = h - 1;
 
-    unsigned char r =
-        std::max(std::min(color[0] * 255.f, 255.f), 0.f);
-    unsigned char g =
-        std::max(std::min(color[1] * 255.f, 255.f), 0.f);
-    unsigned char b =
-        std::max(std::min(color[2] * 255.f, 255.f), 0.f);
-    unsigned char a =
-        std::max(std::min(color[3] * 255.f, 255.f), 0.f);
+    unsigned char r = std::max(std::min(color[0] * 255.f, 255.f), 0.f);
+    unsigned char g = std::max(std::min(color[1] * 255.f, 255.f), 0.f);
+    unsigned char b = std::max(std::min(color[2] * 255.f, 255.f), 0.f);
+    unsigned char a = std::max(std::min(color[3] * 255.f, 255.f), 0.f);
     data += get_tex_format_pixel_size(format) * (x + y * w);
 
     switch (format & 0xf) {
@@ -90,9 +84,8 @@ void tex_set_color(unsigned char* data, unsigned int format,
     }
 }
 
-Vector4f tex_lookup_color(unsigned char* data,
-                          unsigned int format, int x, int y,
-                          int w, int h) {
+Vector4f tex_lookup_color(unsigned char* data, unsigned int format, int x,
+                          int y, int w, int h) {
     if (x >= w)
         x = w - 1;
     if (y >= h)
@@ -104,8 +97,7 @@ Vector4f tex_lookup_color(unsigned char* data,
     case kTextureRGB565:
         // RRRR RGGG GGGB BBBB
         color[0] = ((data[1] >> 3) & 0x1F) / 31.;
-        color[1] =
-            (((data[1] & 0x7) << 3) | (data[0] >> 5)) / 63.;
+        color[1] = (((data[1] & 0x7) << 3) | (data[0] >> 5)) / 63.;
         color[2] = (data[0] & 0x1F) / 31.;
         break;
     case kTextureRGBA8:
@@ -137,8 +129,7 @@ Vector4f tex_lookup_color(unsigned char* data,
     case kTextureRGBA5551:
         // RRRR RGGG GGBB BBBA
         color[0] = (data[1] >> 3) / 31.;
-        color[1] =
-            (((data[1] & 0x7) << 2) | data[0] >> 6) / 31.;
+        color[1] = (((data[1] & 0x7) << 2) | data[0] >> 6) / 31.;
         color[2] = ((data[0] >> 1) & 0x1F) / 31.;
         color[3] = data[0] & 0x1;
 
@@ -154,24 +145,21 @@ Vector4f tex_lookup_color(unsigned char* data,
     return color;
 }
 
-double texture_format_fitness(unsigned int tex_form1,
-                              unsigned int tex_form2) {
+double texture_format_fitness(unsigned int tex_form1, unsigned int tex_form2) {
 
     float f = 0;
-    float f2 = (tex_form1 & kTextureFormatMask) -
-               (tex_form2 & kTextureFormatMask);
+    float f2 =
+        (tex_form1 & kTextureFormatMask) - (tex_form2 & kTextureFormatMask);
     if (f2 > 0.)
         f2 *= -0.5f;
     f += f2;
     f2 = (tex_form1 & kTextureAnsiotropicMask) -
-         (tex_form2 & kTextureAnsiotropicMask) /
-             float(kTextureAnsiotropic2x);
+         (tex_form2 & kTextureAnsiotropicMask) / float(kTextureAnsiotropic2x);
     if (f2 > 0.)
         f2 *= -0.25;
     f += f2;
 
-    f -= ((tex_form1 & (~tex_form2)) & kTextureFlagMask) *
-         10.;
+    f -= ((tex_form1 & (~tex_form2)) & kTextureFlagMask) * 10.;
 
     return f;
 }

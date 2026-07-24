@@ -31,32 +31,24 @@ class AdController {
         if (b)
             show_banner();
     }
-    AdController() : banner_visible(false) {
-        show_banner();
-    }
+    AdController() : banner_visible(false) { show_banner(); }
     void hide_banner(); //!< Makes this instance hidden
     void show_banner(); //!< Makes the instance visible
     static StringIntern get_pop_up_id() {
         return pop_up_id;
     } //!< Returns the identifier of the popup
-    static void show_pop_up() {
-        show_pop_up("Untitled");
-    } //!< Shows a pop-up
+    static void show_pop_up() { show_pop_up("Untitled"); } //!< Shows a pop-up
     static void show_pop_up(
-        const StringIntern&
-            ident); //!< Shows a pop-up and gives it an id
+        const StringIntern& ident); //!< Shows a pop-up and gives it an id
 
-    static bool
-    should_show_pop_up(); //!< Returns true if a pop-up
-                          //!< should be shown
-    static bool
-    should_show_cross_app_promotion(); //!< Returns true if
-                                       //!< a cross app
-                                       //!< promotion page
-                                       //!< should be shown
-    static void
-    show_cross_app_promotion(); //!< Shows the cross app
-                                //!< promotion page
+    static bool should_show_pop_up();              //!< Returns true if a pop-up
+                                                   //!< should be shown
+    static bool should_show_cross_app_promotion(); //!< Returns true if
+                                                   //!< a cross app
+                                                   //!< promotion page
+                                                   //!< should be shown
+    static void show_cross_app_promotion();        //!< Shows the cross app
+                                                   //!< promotion page
     static bool should_show_banner() {
         return banner_users;
     } //!< returns true if ads should be shown

@@ -33,8 +33,7 @@ const float kMinVolume = 0.0001f;
 struct AudioNode : virtual public ReflectionBase {
     /// These nodes form the root of the audio tree. They
     /// control what audio is outputted on each channel.
-    static std::shared_ptr<AudioNode>
-        root_nodes[kAudioNumberOfChannels];
+    static std::shared_ptr<AudioNode> root_nodes[kAudioNumberOfChannels];
     /// The volume of the node.
     float volume;
     AudioNode() : volume(1.) {}
@@ -50,8 +49,7 @@ struct SinGenerator : public AudioNode {
     float phase;
     float frequency;
     SinGenerator() : phase(0.0), frequency(1000) {}
-    SinGenerator(float frequency)
-        : phase(0.0), frequency(frequency) {}
+    SinGenerator(float frequency) : phase(0.0), frequency(frequency) {}
 
     virtual void render(float* buffer);
     MAKE_VISIT_HEAD(SinGenerator)
@@ -62,8 +60,7 @@ struct SawGenerator : public AudioNode {
     float phase;
     float frequency;
     SawGenerator() : phase(0.0), frequency(1000) {}
-    SawGenerator(float frequency)
-        : phase(0.0), frequency(frequency) {}
+    SawGenerator(float frequency) : phase(0.0), frequency(frequency) {}
 
     virtual void render(float* buffer);
     MAKE_VISIT_HEAD(SawGenerator)
@@ -74,8 +71,7 @@ struct TriangleGenerator : public AudioNode {
     float phase;
     float frequency;
     float direction;
-    TriangleGenerator()
-        : phase(0.0), frequency(1000), direction(1) {}
+    TriangleGenerator() : phase(0.0), frequency(1000), direction(1) {}
     TriangleGenerator(float frequency)
         : phase(0.0), frequency(frequency), direction(1) {}
 
@@ -128,8 +124,7 @@ struct Resample : public AudioNode {
     float sample_pos;
     float curr_pos;
     float low_pass = 0;
-    Resample()
-        : last(0), rate(1.), sample_pos(0.), curr_pos(0.) {
+    Resample() : last(0), rate(1.), sample_pos(0.), curr_pos(0.) {
         for (int i = 0; i < kAudioBufferSize; ++i)
             sample_buffer[i] = 0;
     }
@@ -151,26 +146,22 @@ struct OggNode {
         size_t offset;
         VirtualResource resource;
     };
-    static int op_read(void* _stream, unsigned char* ptr,
-                       int nbytes) {
+    static int op_read(void* _stream, unsigned char* ptr, int nbytes) {
         OggFileData* data = (OggFileData*)_stream;
-        size_t read = data->resource.read(
-            (char*)ptr, nbytes, data->offset);
+        size_t read = data->resource.read((char*)ptr, nbytes, data->offset);
         data->offset += read;
         return read;
     }
-    static size_t ov_read(void* ptr, size_t bytes_per_comp,
-                          size_t comps, void* _stream) {
+    static size_t ov_read(void* ptr, size_t bytes_per_comp, size_t comps,
+                          void* _stream) {
         size_t nbytes = comps * bytes_per_comp;
         OggFileData* data = (OggFileData*)_stream;
-        size_t read = data->resource.read(
-            (char*)ptr, nbytes, data->offset);
+        size_t read = data->resource.read((char*)ptr, nbytes, data->offset);
         comps = read / bytes_per_comp;
         data->offset += comps * bytes_per_comp;
         return comps;
     }
-    static int op_seek(void* stream, opus_int64 offset,
-                       int whence) {
+    static int op_seek(void* stream, opus_int64 offset, int whence) {
         OggFileData* data = (OggFileData*)stream;
         if (whence == SEEK_SET)
             data->offset = offset;
@@ -183,8 +174,7 @@ struct OggNode {
 
         return 0;
     }
-    static int ov_seek(void* stream, ogg_int64_t offset,
-                       int whence) {
+    static int ov_seek(void* stream, ogg_int64_t offset, int whence) {
         OggFileData* data = (OggFileData*)stream;
         if (whence == SEEK_SET)
             data->offset = offset;
@@ -223,10 +213,8 @@ struct OggNode {
     float PCM_data[4096];
     bool loop;
     void init_opus(VirtualResource path) {
-        if (!path.get_source<
-                VirtualResourceIMPL::Source*>()) {
-            PLOGE << "Could not fing OGG file: "
-                  << path.get_path_string();
+        if (!path.get_source<VirtualResourceIMPL::Source*>()) {
+            PLOGE << "Could not fing OGG file: " << path.get_path_string();
             return;
         }
         playback_position = 0;
@@ -238,8 +226,7 @@ struct OggNode {
         opus_callbacks.seek = &op_seek;
         opus_callbacks.tell = &op_tell;
         opus_callbacks.close = &op_close;
-        opus_file = op_open_callbacks(data, &opus_callbacks,
-                                      NULL, 0, &error);
+        opus_file = op_open_callbacks(data, &opus_callbacks, NULL, 0, &error);
         vorbis_file = &vf;
         int vorbis_success = -1;
         if (!opus_file) {
@@ -250,13 +237,11 @@ struct OggNode {
             vorbis_callbacks.read_func = &ov_read;
 
             vorbis_success =
-                ov_open_callbacks(data, vorbis_file, NULL,
-                                  0, vorbis_callbacks);
+                ov_open_callbacks(data, vorbis_file, NULL, 0, vorbis_callbacks);
         }
         if (!opus_file && vorbis_success < 0) {
             vorbis_file = NULL;
-            PLOGE << "Failed to open ogg file: "
-                  << path.get_path_string();
+            PLOGE << "Failed to open ogg file: " << path.get_path_string();
         } else
             initialized = true;
     }
@@ -327,26 +312,21 @@ struct Listener : public AudioNode {
     float low_pass = 0;
 
     float delay_buffer[kAudioListenerBufferSamples];
-    RollingInt<0, kAudioListenerBufferSamples - 1>
-        delay_index;
-    float
-    intensity_at_distance_squared(float distance_squared) {
+    RollingInt<0, kAudioListenerBufferSamples - 1> delay_index;
+    float intensity_at_distance_squared(float distance_squared) {
         if (distance_squared < 0.25)
             distance_squared = 0.25;
         // http://www.sengpielaudio.com/calculator-soundpower.htm
         const float pi4 = 3.14159 / 4.;
         // FIXME This attenuation curve is way to strong,
         // needs to be softer.
-        return 0.1f / (pi4 * distance_squared + 0.00001) *
-               volume;
+        return 0.1f / (pi4 * distance_squared + 0.00001) * volume;
     }
     float intensity_at_distance(float distance) {
-        return intensity_at_distance_squared(distance *
-                                             distance);
+        return intensity_at_distance_squared(distance * distance);
     }
     float sample_delay_for_distance(float dist) {
-        return float(kAudioSampleRate) / speed_of_sound *
-               dist;
+        return float(kAudioSampleRate) / speed_of_sound * dist;
     }
 
     float interopolate(float s1, float s2, float ratio) {

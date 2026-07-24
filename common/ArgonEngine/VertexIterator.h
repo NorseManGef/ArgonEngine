@@ -17,12 +17,10 @@ struct VertexAttribPair : public ReflectionBase {
     // Just some helper functions for the
     // VertexArrayIterator
     template <typename T>
-    static void _from_float_(uint8_t* data, size_t x,
-                             float value) {
+    static void _from_float_(uint8_t* data, size_t x, float value) {
         ((T*)data)[x] = value;
     }
-    template <typename T>
-    static float _to_float_(uint8_t* data, size_t x) {
+    template <typename T> static float _to_float_(uint8_t* data, size_t x) {
         return ((T*)data)[x];
     }
 
@@ -37,8 +35,7 @@ struct VertexAttribPair : public ReflectionBase {
     float (*to_float)(uint8_t* data, size_t x);
     //! A function that set component 'x' of an attributes
     //! data.
-    void (*from_float)(uint8_t* data, size_t x,
-                       float value);
+    void (*from_float)(uint8_t* data, size_t x, float value);
     //! The type of the attribute data.
     int type;
     //! The byte offset of the start of the attributes data
@@ -89,50 +86,36 @@ class VertexIterator {
     struct IterHelper {
         VertexIterator& parent;
         IterHelper(VertexIterator& p) : parent(p) {}
-        inline IterHelper operator++() {
-            return parent.add(1.);
-        }
-        inline IterHelper operator--() {
-            return parent.add(-1.);
-        }
-        template <typename T>
-        inline IterHelper operator+=(const T& x) {
+        inline IterHelper operator++() { return parent.add(1.); }
+        inline IterHelper operator--() { return parent.add(-1.); }
+        template <typename T> inline IterHelper operator+=(const T& x) {
             return parent.add(x);
         } //!< See VertexIterator::add
-        template <typename T>
-        inline IterHelper operator-=(const T& x) {
+        template <typename T> inline IterHelper operator-=(const T& x) {
             return parent.add(-x);
         }
-        template <typename T>
-        inline IterHelper operator*=(const T& x) {
+        template <typename T> inline IterHelper operator*=(const T& x) {
             return parent.mult(x);
         } //!< See VertexIterator::mult
-        template <typename T>
-        inline IterHelper operator/=(const T& x) {
+        template <typename T> inline IterHelper operator/=(const T& x) {
             return parent.div(x);
         } //!< See VertexIterator::div
-        template <typename T>
-        inline bool operator==(const T& x) const {
+        template <typename T> inline bool operator==(const T& x) const {
             return parent.equals(x);
         } //!< See VertexIterator::equals
-        template <typename T>
-        inline bool operator!=(const T& x) const {
+        template <typename T> inline bool operator!=(const T& x) const {
             return !parent.equals(x);
         }
-        template <typename T>
-        inline bool operator<(const T& x) const {
+        template <typename T> inline bool operator<(const T& x) const {
             return parent.less(x);
         } //!< See VertexIterator::less
-        template <typename T>
-        inline bool operator>=(const T& x) const {
+        template <typename T> inline bool operator>=(const T& x) const {
             return !parent.less(x);
         }
-        template <typename T>
-        inline bool operator>(const T& x) const {
+        template <typename T> inline bool operator>(const T& x) const {
             return !parent.less(x) && !parent.equals(x);
         }
-        template <typename T>
-        inline IterHelper& operator=(const T& x) {
+        template <typename T> inline IterHelper& operator=(const T& x) {
             parent.set(x);
             return *this;
         } //!< See VertexIterator::set
@@ -205,24 +188,21 @@ class VertexIterator {
     //! Adds a scalar to the vertex values.
     IterHelper add(float value) {
         for (size_t x = 0; x < attr->components; ++x)
-            attr->from_float(
-                data, x, attr->to_float(data, x) + value);
+            attr->from_float(data, x, attr->to_float(data, x) + value);
         return IterHelper(*this);
     }
 
     //! Multiplies the vertex values against a scalar.
     IterHelper mult(float value) {
         for (size_t x = 0; x < attr->components; ++x)
-            attr->from_float(
-                data, x, attr->to_float(data, x) * value);
+            attr->from_float(data, x, attr->to_float(data, x) * value);
         return IterHelper(*this);
     }
 
     //! Divides the vertex values by a scalar.
     IterHelper div(float value) {
         for (size_t x = 0; x < attr->components; ++x)
-            attr->from_float(
-                data, x, attr->to_float(data, x) / value);
+            attr->from_float(data, x, attr->to_float(data, x) / value);
         return IterHelper(*this);
     }
 
@@ -252,38 +232,29 @@ class VertexIterator {
     //! Adds a vector the current vertex's value.
     template <typename T, size_t comps>
     IterHelper add(const VectorBase<T, comps>& v) {
-        for (size_t x = 0;
-             x < attr->components && x < comps; ++x)
-            attr->from_float(
-                data, x, attr->to_float(data, x) + v[x]);
+        for (size_t x = 0; x < attr->components && x < comps; ++x)
+            attr->from_float(data, x, attr->to_float(data, x) + v[x]);
         return IterHelper(*this);
     }
     //! Multiplies the current vertex's value by a vector.
     template <typename T, size_t comps>
     IterHelper mult(const VectorBase<T, comps>& v) {
-        for (size_t x = 0;
-             x < attr->components && x < comps; ++x)
-            attr->from_float(
-                data, x, attr->to_float(data, x) * v[x]);
+        for (size_t x = 0; x < attr->components && x < comps; ++x)
+            attr->from_float(data, x, attr->to_float(data, x) * v[x]);
         return IterHelper(*this);
     }
     //! Divides the current vertex's value by a vector.
     template <typename T, size_t comps>
     IterHelper div(const VectorBase<T, comps>& v) {
-        size_t min = attr->components < comps
-                         ? attr->components
-                         : comps;
+        size_t min = attr->components < comps ? attr->components : comps;
         for (size_t x = 0; x < min; ++x)
-            attr->from_float(
-                data, x, attr->to_float(data, x) / v[x]);
+            attr->from_float(data, x, attr->to_float(data, x) / v[x]);
         return IterHelper(*this);
     }
     //! Sets the current vertex's value to a vector.
     template <typename T, size_t comps>
     inline void set(const VectorBase<T, comps>& v) {
-        size_t min = attr->components < comps
-                         ? attr->components
-                         : comps;
+        size_t min = attr->components < comps ? attr->components : comps;
         float* d = (float*)data;
         if (attr->type == kRenderTypeFloat)
             while (min--)
@@ -296,8 +267,7 @@ class VertexIterator {
     //! the vector 'v'.
     template <typename T, size_t comps>
     bool less(const VectorBase<T, comps>& v) {
-        for (size_t x = 0;
-             x < attr->components && x < comps; ++x) {
+        for (size_t x = 0; x < attr->components && x < comps; ++x) {
             float f = attr->to_float(data, x);
             if (f != v[x])
                 return f < v[x];
@@ -308,8 +278,7 @@ class VertexIterator {
     //! to the vector 'v'.
     template <typename T, size_t comps>
     bool equals(const VectorBase<T, comps>& v) {
-        for (size_t x = 0;
-             x < attr->components && x < comps; ++x) {
+        for (size_t x = 0; x < attr->components && x < comps; ++x) {
             if (attr->to_float(data, x) != v[x])
                 return true;
         }
@@ -318,27 +287,22 @@ class VertexIterator {
     //! Adds a matrix to the vertex's values.
     template <typename T, size_t comps>
     IterHelper add(const MatrixBase<T, comps>& v) {
-        for (size_t x = 0;
-             x < attr->components && x < comps * comps; ++x)
-            attr->from_float(
-                data, x, attr->to_float(data, x) + v[x]);
+        for (size_t x = 0; x < attr->components && x < comps * comps; ++x)
+            attr->from_float(data, x, attr->to_float(data, x) + v[x]);
         return IterHelper(*this);
     }
     //! Sets the current vertex's values to the matrix 'v'.
     template <typename T, size_t comps>
     inline void set(const MatrixBase<T, comps>& v) {
 
-        for (size_t x = 0;
-             x < attr->components && x < comps * comps; ++x)
+        for (size_t x = 0; x < attr->components && x < comps * comps; ++x)
             attr->from_float(data, x, v[x]);
     }
     //! Returns true if the current vertex's values are less
     //! than matrix 'v'.
     template <typename T, size_t comps>
     bool less(const MatrixBase<T, comps>& v) {
-        for (size_t x = 0;
-             x < attr->components && x < comps * comps;
-             ++x) {
+        for (size_t x = 0; x < attr->components && x < comps * comps; ++x) {
             float f = attr->to_float(data, x);
             if (f != v[x])
                 return f < v[x];
@@ -349,27 +313,20 @@ class VertexIterator {
     //! equal to the matrix 'v'.
     template <typename T, size_t comps>
     bool equals(const MatrixBase<T, comps>& v) {
-        for (size_t x = 0;
-             x < attr->components && x < comps * comps;
-             ++x) {
+        for (size_t x = 0; x < attr->components && x < comps * comps; ++x) {
             if (attr->to_float(data, x) != v[x])
                 return true;
         }
         return true;
     }
     //! Gets the values of the current vertex in matrix 'v'.
-    template <typename T, size_t comps>
-    void get(MatrixBase<T, comps>& v) {
-        for (size_t x = 0;
-             x < attr->components && x < comps * comps; ++x)
+    template <typename T, size_t comps> void get(MatrixBase<T, comps>& v) {
+        for (size_t x = 0; x < attr->components && x < comps * comps; ++x)
             v[x] = attr->to_float(data, x);
     }
     //! Gets the values of the current vertex in vector 'v'
-    template <typename T, size_t comps>
-    void get(VectorBase<T, comps>& v) {
-        size_t x = attr->components < comps
-                       ? attr->components
-                       : comps;
+    template <typename T, size_t comps> void get(VectorBase<T, comps>& v) {
+        size_t x = attr->components < comps ? attr->components : comps;
         while (x--)
             v[x] = attr->to_float(data, x);
     }

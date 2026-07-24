@@ -53,18 +53,15 @@ namespace Argon {
  * providing a UTF-8 iterator for std::string.
  **/
 struct UTF8Iterator
-    : public std::iterator<
-          std::bidirectional_iterator_tag, uint32_t,
-          std::string::difference_type, const uint32_t*,
-          const uint32_t&> {
+    : public std::iterator<std::bidirectional_iterator_tag, uint32_t,
+                           std::string::difference_type, const uint32_t*,
+                           const uint32_t&> {
     typedef std::string::const_iterator raw_iterator;
     raw_iterator it;
     UTF8Iterator() {};
-    UTF8Iterator(const std::string::iterator it)
-        : it(it) {};
+    UTF8Iterator(const std::string::iterator it) : it(it) {};
     UTF8Iterator(const raw_iterator it) : it(it) {};
-    UTF8Iterator(const UTF8Iterator& other)
-        : it(other.it) {};
+    UTF8Iterator(const UTF8Iterator& other) : it(other.it) {};
     UTF8Iterator& operator=(const UTF8Iterator& other) {
         it = other.it;
         return *this;
@@ -84,11 +81,8 @@ struct UTF8Iterator
     UTF8Iterator& operator++() {
         const unsigned char masks[4] = {128, 32, 16, 8};
         unsigned char byte = *it;
-        int offset = byte & masks[0]
-                         ? byte & masks[1]
-                               ? byte & masks[2] ? 4 : 3
-                               : 2
-                         : 1;
+        int offset =
+            byte & masks[0] ? byte & masks[1] ? byte & masks[2] ? 4 : 3 : 2 : 1;
         it += offset;
         return *this;
     }
@@ -102,29 +96,16 @@ struct UTF8Iterator
         ++(*this);
         return t;
     }
-    bool operator==(const UTF8Iterator& other) const {
-        return it == other.it;
-    }
-    bool operator!=(const UTF8Iterator& other) const {
-        return it != other.it;
-    }
-    bool operator<(const UTF8Iterator& other) const {
-        return it < other.it;
-    }
-    bool operator>(const UTF8Iterator& other) const {
-        return it > other.it;
-    }
-    bool operator<=(const UTF8Iterator& other) const {
-        return it <= other.it;
-    }
-    bool operator>=(const UTF8Iterator& other) const {
-        return it >= other.it;
-    }
+    bool operator==(const UTF8Iterator& other) const { return it == other.it; }
+    bool operator!=(const UTF8Iterator& other) const { return it != other.it; }
+    bool operator<(const UTF8Iterator& other) const { return it < other.it; }
+    bool operator>(const UTF8Iterator& other) const { return it > other.it; }
+    bool operator<=(const UTF8Iterator& other) const { return it <= other.it; }
+    bool operator>=(const UTF8Iterator& other) const { return it >= other.it; }
     uint32_t operator*() const {
         uint32_t codePoint = 0;
 
-        char bytes[4] = {*it, *(it + 1), *(it + 2),
-                         *(it + 3)};
+        char bytes[4] = {*it, *(it + 1), *(it + 2), *(it + 3)};
         const unsigned char masks[3] = {128, 32, 16};
 
         if (bytes[0] & masks[0]) {

@@ -22,24 +22,12 @@ BasicShape::BasicShape() {
 }
 BasicShape::~BasicShape() { primitive = nullptr; }
 
-void BasicShape::set_box() {
-    primitive = model->spawn_object("Cube");
-}
-void BasicShape::set_sphere() {
-    primitive = model->spawn_object("Sphere");
-}
-void BasicShape::set_torus() {
-    primitive = model->spawn_object("Torus");
-}
-void BasicShape::set_cylinder() {
-    primitive = model->spawn_object("Cylinder");
-}
-void BasicShape::set_plane() {
-    primitive = model->spawn_object("Plane");
-}
-void BasicShape::set_ring() {
-    primitive = model->spawn_object("Circle");
-}
+void BasicShape::set_box() { primitive = model->spawn_object("Cube"); }
+void BasicShape::set_sphere() { primitive = model->spawn_object("Sphere"); }
+void BasicShape::set_torus() { primitive = model->spawn_object("Torus"); }
+void BasicShape::set_cylinder() { primitive = model->spawn_object("Cylinder"); }
+void BasicShape::set_plane() { primitive = model->spawn_object("Plane"); }
+void BasicShape::set_ring() { primitive = model->spawn_object("Circle"); }
 void BoundingCubeNode::set(const BoundingCube& c) {
     position = c.origin;
     scale = c.size;
@@ -49,12 +37,10 @@ void BoundingCubeNode::initialize() {
     vertex_array = std::make_shared<VertexArray>();
     material = std::make_shared<Material>();
     vertex_array->draw_type = kDrawLines;
-    vertex_array->add_attribute<float>(3,
-                                       kPositionAttribute);
+    vertex_array->add_attribute<float>(3, kPositionAttribute);
 
     vertex_array->set_size(8);
-    VertexIterator pos_it =
-        vertex_array->begin(kPositionAttribute);
+    VertexIterator pos_it = vertex_array->begin(kPositionAttribute);
     *(pos_it) = Vector3f(0, 0, 0);
     *(++pos_it) = Vector3f(0, 0, 1);
     *(++pos_it) = Vector3f(0, 1, 0);

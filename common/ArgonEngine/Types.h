@@ -25,8 +25,7 @@ namespace Argon {
 //! ...-5,-5,-5,-4,-3,-2,-1,0,1,2,3,3,3,3,3...
 //!
 //! @tparam T the type of number to specialize.
-template <typename T, int min, int max>
-class BoundedNumber {
+template <typename T, int min, int max> class BoundedNumber {
   private:
     T value;
 

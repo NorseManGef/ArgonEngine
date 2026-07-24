@@ -28,8 +28,8 @@ template <typename T> struct PackTree {
     }
 
     PackTree()
-        : x(0), y(0), width(0), height(0), child(NULL),
-          parent(NULL), leaf(false) {}
+        : x(0), y(0), width(0), height(0), child(NULL), parent(NULL),
+          leaf(false) {}
     PackTree* smallest_fit(T w, T h) {
         if (w > width || h > height || leaf)
             return NULL;
@@ -65,30 +65,26 @@ template <typename T> struct PackTree {
             if (width != w) {
                 child = new PackTree[2];
                 child[0].set(x, y, w, height, this);
-                child[1].set(x + w, y, width - w, height,
-                             this);
+                child[1].set(x + w, y, width - w, height, this);
                 return child[0].pack_node(w, h);
             }
             if (height != h) {
                 child = new PackTree[2];
                 child[0].set(x, y, width, h, this);
-                child[1].set(x, y + h, width, height - h,
-                             this);
+                child[1].set(x, y + h, width, height - h, this);
                 return child[0].pack_node(w, h);
             }
         } else {
             if (height != h) {
                 child = new PackTree[2];
                 child[0].set(x, y, width, h, this);
-                child[1].set(x, y + h, width, height - h,
-                             this);
+                child[1].set(x, y + h, width, height - h, this);
                 return child[0].pack_node(w, h);
             }
             if (width != w) {
                 child = new PackTree[2];
                 child[0].set(x, y, w, height, this);
-                child[1].set(x + w, y, width - w, height,
-                             this);
+                child[1].set(x + w, y, width - w, height, this);
                 return child[0].pack_node(w, h);
             }
         }

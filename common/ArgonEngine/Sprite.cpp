@@ -27,8 +27,7 @@ Sprite::Sprite() {
 
     vertex_array->set_size(4);
     vertex_array->generate_indices();
-    VertexIterator tex_it =
-        vertex_array->begin("texture_coord");
+    VertexIterator tex_it = vertex_array->begin("texture_coord");
     VertexIterator pos_it = vertex_array->begin("position");
 
     *(pos_it) = Vector2f(-0.5, -0.5);
@@ -46,16 +45,12 @@ Sprite::Sprite() {
 }
 
 void InstancedSprites::set_sprites(size_t total_sprites) {
-    int total_renders =
-        total_sprites / kSpritesPerBatch + 1;
+    int total_renders = total_sprites / kSpritesPerBatch + 1;
     while (arrays.size() < total_renders) {
         arrays.push_back(std::make_shared<VertexArray>());
-        arrays.back()->add_attribute<float>(
-            3, kPositionAttribute);
-        arrays.back()->add_attribute<float>(
-            4, kColorAttribute);
-        arrays.back()->add_attribute<float>(
-            2, kTextureAttribute);
+        arrays.back()->add_attribute<float>(3, kPositionAttribute);
+        arrays.back()->add_attribute<float>(4, kColorAttribute);
+        arrays.back()->add_attribute<float>(2, kTextureAttribute);
         arrays.back()->draw_type = kDrawTriangles;
         arrays.back()->updates_frequently = true;
         arrays.back()->recalc_stride();
@@ -66,8 +61,7 @@ void InstancedSprites::set_sprites(size_t total_sprites) {
 
     while (renders.size() < total_renders) {
         renders.push_back(std::make_shared<Renderable>());
-        std::shared_ptr<Renderable>& render =
-            renders.back();
+        std::shared_ptr<Renderable>& render = renders.back();
         render->material = material;
         render->cull_face = kCullNone;
         render->parent = this;
@@ -78,8 +72,7 @@ void InstancedSprites::set_sprites(size_t total_sprites) {
     size_t size_r = total_sprites;
     int index = 0;
     while (size_r >= kSpritesPerBatch) {
-        if (arrays[index]->vertex_count() !=
-            kVerticesPerBatch) {
+        if (arrays[index]->vertex_count() != kVerticesPerBatch) {
             arrays[index]->set_size(kVerticesPerBatch);
             arrays[index]->generate_indices_quad();
         }
@@ -93,14 +86,13 @@ void InstancedSprites::set_sprites(size_t total_sprites) {
     }
 }
 
-void InstancedSprites::set_sprite(
-    size_t index, const Vector4f& color, const Vector3f& v0,
-    const Vector3f& v1, const Vector3f& v2,
-    const Vector3f& v3, const Vector2f& min_tex,
-    const Vector2f& max_tex) {
+void InstancedSprites::set_sprite(size_t index, const Vector4f& color,
+                                  const Vector3f& v0, const Vector3f& v1,
+                                  const Vector3f& v2, const Vector3f& v3,
+                                  const Vector2f& min_tex,
+                                  const Vector2f& max_tex) {
     VertexArray& it = *arrays[index >> 14ul];
-    float* d = ((float*)it.data_start()) +
-               (index & kSpritesMask) * 36;
+    float* d = ((float*)it.data_start()) + (index & kSpritesMask) * 36;
 
     d[0] = v0[0];
     d[1] = v0[1];
@@ -152,46 +144,37 @@ void InstancedSprites::set_sprite(
 
     it.update_id++;
 }
-void InstancedSprites::set_sprite(
-    size_t index, const Vector4f& color,
-    const Vector3f scale, const Vector3f position,
-    const Quaternionf& rotation, Vector2f min_tex,
-    Vector2f max_tex) {
+void InstancedSprites::set_sprite(size_t index, const Vector4f& color,
+                                  const Vector3f scale, const Vector3f position,
+                                  const Quaternionf& rotation, Vector2f min_tex,
+                                  Vector2f max_tex) {
     Vector3f v0(-0.5f * scale[0], 0.5f * scale[1], 0.f);
     const Vector3f v1 = rotation.transform(v0);
     v0[0] *= -1.f;
     const Vector3f v2 = rotation.transform(v0);
 
-    set_sprite(index, color, position + v1, position - v2,
-               position + v2, position - v1, min_tex,
-               max_tex);
+    set_sprite(index, color, position + v1, position - v2, position + v2,
+               position - v1, min_tex, max_tex);
 }
 
-void InstancedSprites::set_transform(size_t index,
-                                     Node& transform,
-                                     Vector2f min_tex,
-                                     Vector2f max_tex) {
+void InstancedSprites::set_transform(size_t index, Node& transform,
+                                     Vector2f min_tex, Vector2f max_tex) {
     if (transform.get_should_render()) {
         Matrix4f world_matrix = transform.world_matrix();
         Vector4f pos[4] = {Vector4f(-0.5, 0.5, 0, 1),
-                           Vector4f(-0.5, -0.5, 0, 1),
-                           Vector4f(0.5, 0.5, 0, 1),
+                           Vector4f(-0.5, -0.5, 0, 1), Vector4f(0.5, 0.5, 0, 1),
                            Vector4f(0.5, -0.5, 0, 1)};
         pos[0] = world_matrix * pos[0];
         pos[1] = world_matrix * pos[1];
         pos[2] = world_matrix * pos[2];
         pos[3] = world_matrix * pos[3];
 
-        set_sprite(index, transform.get_color(),
-                   Vector3f(pos[0] / pos[0][3]),
-                   Vector3f(pos[1] / pos[1][3]),
-                   Vector3f(pos[2] / pos[2][3]),
-                   Vector3f(pos[3] / pos[3][3]), min_tex,
-                   max_tex);
+        set_sprite(index, transform.get_color(), Vector3f(pos[0] / pos[0][3]),
+                   Vector3f(pos[1] / pos[1][3]), Vector3f(pos[2] / pos[2][3]),
+                   Vector3f(pos[3] / pos[3][3]), min_tex, max_tex);
     } else {
-        set_sprite(index, Vector4f(0, 0, 0, 0), Vector3f(),
-                   Vector3f(), Vector3f(), Vector3f(),
-                   min_tex, max_tex);
+        set_sprite(index, Vector4f(0, 0, 0, 0), Vector3f(), Vector3f(),
+                   Vector3f(), Vector3f(), min_tex, max_tex);
     }
 }
 MAKE_VISIT_IMPL(Sprite, { ADD_BASE(Renderable); })

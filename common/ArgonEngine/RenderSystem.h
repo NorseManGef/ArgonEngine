@@ -44,8 +44,7 @@ namespace Argon {
 struct Camera : public ReflectionBase {
     //! The map used to map individual render targets to
     //! cameras.
-    static std::map<VirtualResource, Camera*>&
-    all_cameras() {
+    static std::map<VirtualResource, Camera*>& all_cameras() {
         static std::map<VirtualResource, Camera*> c;
         return c;
     }
@@ -58,8 +57,7 @@ struct Camera : public ReflectionBase {
     //! Makes this camera the main one, that renders to the
     //! screen.
     void become_main_camera() {
-        all_cameras()["virtual://main_render_target.tex"] =
-            this;
+        all_cameras()["virtual://main_render_target.tex"] = this;
     }
     //! Makes this camera the main one, that renders to the
     //! screen.
@@ -70,8 +68,7 @@ struct Camera : public ReflectionBase {
     //! Returns a pointer to the camera that is currently
     //! rendering to the screen.
     static Camera* get_main_camera() {
-        return all_cameras()
-            ["virtual://main_render_target.tex"];
+        return all_cameras()["virtual://main_render_target.tex"];
     }
     static Camera* get_main_camera2D() {
         return all_cameras()["virtual://2d_camera.tex"];
@@ -143,12 +140,9 @@ struct VertexArray : public ReflectionBase {
     }
     //! Returns a bounding cube that holds the bound of all
     //! vertices' data for attribute 's'.
-    BoundingCube
-    get_attribute_bounds(const StringIntern& s);
-    BoundingCube
-    get_attribute_bounds(const StringIntern& s) const {
-        return const_cast<VertexArray*>(this)
-            ->get_attribute_bounds(s);
+    BoundingCube get_attribute_bounds(const StringIntern& s);
+    BoundingCube get_attribute_bounds(const StringIntern& s) const {
+        return const_cast<VertexArray*>(this)->get_attribute_bounds(s);
     }
     //! Returns the total number of vertices in the array.
     int vertex_count() const {
@@ -160,23 +154,19 @@ struct VertexArray : public ReflectionBase {
     //! Adds an attribute to the array. The array must be
     //! resized after this operation.
     template <typename T>
-    void add_attribute(int components,
-                       const StringIntern& attrib) {
+    void add_attribute(int components, const StringIntern& attrib) {
         VertexAttribPair pair;
         pair.attribute = attrib;
         pair.components = components;
         pair.to_float = &VertexAttribPair::_to_float_<T>;
-        pair.from_float =
-            &VertexAttribPair::_from_float_<T>;
+        pair.from_float = &VertexAttribPair::_from_float_<T>;
         pair.type = ToRenderType<T>::type;
         pair.offset = stride;
         attributes.push_back(pair);
         recalc_stride();
     }
     //! Resize the vertex array to contain 'size' vertices.
-    void set_size(size_t size) {
-        data.resize(size * stride);
-    }
+    void set_size(size_t size) { data.resize(size * stride); }
 
     //! Returns a pointer to the start of the vertices data.
     const uint8_t* data_start() const { return &data[0]; }
@@ -186,9 +176,7 @@ struct VertexArray : public ReflectionBase {
 
     //! Returns a pointer to the start of the data of vertex
     //! 'x'.
-    const uint8_t* vertex(size_t x) const {
-        return &data[x * stride];
-    }
+    const uint8_t* vertex(size_t x) const { return &data[x * stride]; }
     struct Buffer {
         const uint8_t* d;
         size_t size;
@@ -202,9 +190,7 @@ struct VertexArray : public ReflectionBase {
     void optimize_vertices();
     //! Returns a pointer to the start of the data of vertex
     //! 'x'.
-    uint8_t* data_start(size_t x) {
-        return &data[x * stride];
-    }
+    uint8_t* data_start(size_t x) { return &data[x * stride]; }
     //! Auto-generates an index array by numbering the
     //! vertices sequentially.
     void generate_indices();
@@ -236,8 +222,7 @@ struct Light : public InstanceList<Light>, public Node {
 };
 
 struct Uniforms : ReflectionBase {
-    std::map<StringIntern, std::vector<VirtualResource>>
-        textures;
+    std::map<StringIntern, std::vector<VirtualResource>> textures;
     std::map<StringIntern, std::vector<Matrix4f>> mat4;
     std::map<StringIntern, std::vector<Matrix3f>> mat3;
     std::map<StringIntern, std::vector<Matrix2f>> mat2;
@@ -333,18 +318,13 @@ struct Material : public ReflectionBase {
     //! render_flags, and controls things like masks.
     int render_flags = kRenderDefault;
     Material() = default;
-    Material(const Material& m) : Material() {
-        operator=(m);
-    }
+    Material(const Material& m) : Material() { operator=(m); }
     Material& operator=(const Material& m);
-    bool is_transparent() const {
-        return blend != kBlendReplace;
-    }
+    bool is_transparent() const { return blend != kBlendReplace; }
     MAKE_VISIT_HEAD(Material)
 };
 
-static std::shared_ptr<Material>
-    DefaultMaterial(new Material);
+static std::shared_ptr<Material> DefaultMaterial(new Material);
 static std::shared_ptr<Material> DebugMaterial() {
     static std::shared_ptr<Material> m(new Material);
     m->shader = "resource://debug.shd";
@@ -357,14 +337,7 @@ struct Frustrum : public ReflectionBase {
     std::array<Vector3f, 6> planes;
     std::array<float, 6> distances;
 
-    enum plane_mapping {
-        kLeft,
-        kRight,
-        kTop,
-        kBottom,
-        kFar,
-        kNear
-    };
+    enum plane_mapping { kLeft, kRight, kTop, kBottom, kFar, kNear };
     enum collision_mapping { kInside, kCollides, kOutside };
 
     bool should_cull(const BoundingCube& c) const {
@@ -373,8 +346,7 @@ struct Frustrum : public ReflectionBase {
             return false;
         return test_cube(c) == kOutside;
     }
-    collision_mapping
-    test_cube(const BoundingCube& c) const;
+    collision_mapping test_cube(const BoundingCube& c) const;
     MAKE_VISIT_HEAD(Frustrum)
 };
 
@@ -391,13 +363,10 @@ struct Frustrum : public ReflectionBase {
  * present in memory causes it render(as long as their is a
  * renderer present).
  **/
-struct Renderable : public InstanceList<Renderable>,
-                    public Node {
+struct Renderable : public InstanceList<Renderable>, public Node {
     Uniforms uniform;
-    Matrix4f& last_world_matrix =
-        uniform.get_mat4("matrix");
-    Matrix4f& last_normal_matrix =
-        uniform.get_mat4("normal_matrix");
+    Matrix4f& last_world_matrix = uniform.get_mat4("matrix");
+    Matrix4f& last_normal_matrix = uniform.get_mat4("normal_matrix");
     Vector4f& last_color = uniform.get_fvec4("color");
 
     //! The vertex array(mesh) to use when rendering the
@@ -422,14 +391,10 @@ struct Renderable : public InstanceList<Renderable>,
     std::shared_ptr<Material> material = DefaultMaterial;
 
     //! Returns true if the Renderable needs alpha blending.
-    bool is_transparent() const {
-        return material->is_transparent();
-    }
+    bool is_transparent() const { return material->is_transparent(); }
     void update_transform();
     Renderable() = default;
-    Renderable(const Renderable& r) : Renderable() {
-        operator=(r);
-    }
+    Renderable(const Renderable& r) : Renderable() { operator=(r); }
     Renderable& operator=(const Renderable& r);
     MAKE_VISIT_HEAD(Renderable)
 };

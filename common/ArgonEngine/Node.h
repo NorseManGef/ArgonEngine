@@ -40,8 +40,8 @@ struct Node : public ReflectionBase {
 
     bool should_render = true;
     int layer = 0;
-    BoundingCube bounds = BoundingCube(
-        Vector3f(-0.5, -0.5, -0.5), Vector3f(1., 1, .1));
+    BoundingCube bounds =
+        BoundingCube(Vector3f(-0.5, -0.5, -0.5), Vector3f(1., 1, .1));
     float& red() { return color[0]; }
     float& green() { return color[1]; }
     float& blue() { return color[2]; }
@@ -60,23 +60,17 @@ struct Node : public ReflectionBase {
     float& zDimensions() { return dimensions[2]; }
 
     bool overlaps_screen_coord(Vector2f coord);
-    virtual std::shared_ptr<Node> animate(float dt) {
-        return nullptr;
-    }
+    virtual std::shared_ptr<Node> animate(float dt) { return nullptr; }
     virtual void draw() { return; }
 
     bool get_should_render() {
-        return should_render
-                   ? parent ? parent->get_should_render()
-                            : true
-                   : false;
+        return should_render ? parent ? parent->get_should_render() : true
+                             : false;
     }
     Vector4f get_color() {
         return parent ? color * parent->get_color() : color;
     }
-    int get_layer() {
-        return parent ? parent->get_layer() + layer : layer;
-    }
+    int get_layer() { return parent ? parent->get_layer() + layer : layer; }
     Node() = default;
     Node(const Node& t) : Node() { operator=(t); }
     Node& operator=(const Node& t);

@@ -71,19 +71,15 @@ bool last_screen_enabled = true;
 bool last_full_screen;
 std::string last_title;
 
-void set_manual_redraw(void (*draw)()) {
-    manual_redraw = draw;
-}
+void set_manual_redraw(void (*draw)()) { manual_redraw = draw; }
 
-static void InitVirtual(std::string organization_name,
-                        std::string app_name) {
+static void InitVirtual(std::string organization_name, std::string app_name) {
     PLOGN << "Argon Engine";
     PLOGN << "------------";
 
 #ifdef USE_SDL
     std::string base = SDL_GetBasePath();
-    char* c = SDL_GetPrefPath(organization_name.c_str(),
-                              app_name.c_str());
+    char* c = SDL_GetPrefPath(organization_name.c_str(), app_name.c_str());
     std::string doc_dir = c;
     SDL_free(c);
     std::string home = "";
@@ -106,18 +102,17 @@ static void InitVirtual(std::string organization_name,
 #endif
 #ifdef PLATFORM_MAC
     doc_dir = home + "/Documents";
-    pref_dir = home + "/Library/Application Support/" +
-               organization_name + "/" + app_name;
+    pref_dir = home + "/Library/Application Support/" + organization_name +
+               "/" + app_name;
 #endif
 #ifdef PLATFORM_WINDOWS
     char output[MAX_PATH];
     output[MAX_PATH - 1] = 0;
-    SHGetFolderPathA(NULL, CSIDL_PERSONAL, NULL,
-                     CSIDL_FLAG_NO_ALIAS, output);
+    SHGetFolderPathA(NULL, CSIDL_PERSONAL, NULL, CSIDL_FLAG_NO_ALIAS, output);
     doc_dir = output;
 
-    SHGetFolderPathA(NULL, CSIDL_LOCAL_APPDATA, NULL,
-                     CSIDL_FLAG_NO_ALIAS, output);
+    SHGetFolderPathA(NULL, CSIDL_LOCAL_APPDATA, NULL, CSIDL_FLAG_NO_ALIAS,
+                     output);
     pref_dir = output;
 #endif
     PLOGN << "Save files are stored in " << doc_dir;
@@ -143,8 +138,7 @@ static void InitVirtual(std::string organization_name,
 }
 void update_frame() {
     Argon::Listener::current_frame++;
-    Argon::AudioSource3D* curr =
-        Argon::AudioSource3D::root_source;
+    Argon::AudioSource3D* curr = Argon::AudioSource3D::root_source;
     while (curr) {
         curr->finalize_data();
         curr = curr->next_source;
@@ -175,138 +169,108 @@ int audio_buffer_index = 0;
 static float audio_buffer[Argon::kAudioNumberOfChannels]
                          [Argon::kAudioBufferSize];
 
-void audio_callback(void* userdata, Uint8* stream,
-                    int len) {
+void audio_callback(void* userdata, Uint8* stream, int len) {
     float* buffer = (float*)stream;
     len = len / 4;
     for (int o = 0; o < len;) {
         if (audio_buffer_index == Argon::kAudioBufferSize) {
-            for (size_t c = 0;
-                 c < Argon::kAudioNumberOfChannels; ++c)
-                for (size_t i = 0;
-                     i < Argon::kAudioBufferSize; ++i)
+            for (size_t c = 0; c < Argon::kAudioNumberOfChannels; ++c)
+                for (size_t i = 0; i < Argon::kAudioBufferSize; ++i)
                     audio_buffer[c][i] = 0;
 
-            for (size_t i = 0;
-                 i < Argon::kAudioNumberOfChannels; ++i)
+            for (size_t i = 0; i < Argon::kAudioNumberOfChannels; ++i)
                 if (Argon::AudioNode::root_nodes[i])
-                    Argon::AudioNode::root_nodes[i]->render(
-                        audio_buffer[i]);
+                    Argon::AudioNode::root_nodes[i]->render(audio_buffer[i]);
             audio_buffer_index = 0;
         }
-        for (size_t c = 0;
-             c < Argon::kAudioNumberOfChannels; ++c) {
-            buffer[o++] =
-                audio_buffer[c][audio_buffer_index];
+        for (size_t c = 0; c < Argon::kAudioNumberOfChannels; ++c) {
+            buffer[o++] = audio_buffer[c][audio_buffer_index];
         }
         ++audio_buffer_index;
     }
     update_frame();
 }
 
-void SDLCALL SdlAudioCallback(void* userdata,
-                              SDL_AudioStream* stream,
-                              int additional_amount,
-                              int total_amount) {
+void SDLCALL SdlAudioCallback(void* userdata, SDL_AudioStream* stream,
+                              int additional_amount, int total_amount) {
     if (additional_amount > 0) {
-        Uint8* data =
-            SDL_stack_alloc(Uint8, additional_amount);
+        Uint8* data = SDL_stack_alloc(Uint8, additional_amount);
         if (data) {
-            audio_callback(userdata, data,
-                           additional_amount);
-            SDL_PutAudioStreamData(stream, data,
-                                   additional_amount);
+            audio_callback(userdata, data, additional_amount);
+            SDL_PutAudioStreamData(stream, data, additional_amount);
             SDL_stack_free(data);
         }
     }
 }
 
 void init_audio() {
-    SDL_AudioSpec spec = {SDL_AUDIO_F32,
-                          Argon::kAudioNumberOfChannels,
-                          48000};
+    SDL_AudioSpec spec = {SDL_AUDIO_F32, Argon::kAudioNumberOfChannels, 48000};
     SDL_AudioStream* stream = SDL_OpenAudioDeviceStream(
-        SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec,
-        SdlAudioCallback, nullptr);
+        SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, SdlAudioCallback, nullptr);
     if (!stream) {
         PLOGE << "Failed to open audio: " << SDL_GetError();
     }
     SDL_ResumeAudioDevice(SDL_GetAudioStreamDevice(stream));
 }
 
-void initialize_engine(std::string organization_name,
-                       std::string app_name, int argc,
-                       const char** argv) {
+void initialize_engine(std::string organization_name, std::string app_name,
+                       int argc, const char** argv) {
 
     using LogFlag = args::ConstantFlag<plog::Severity>;
 
     args::ArgumentParser argparser("Argon Engine");
 
-    args::HelpFlag help(argparser, "help",
-                        "Display this help menu.",
+    args::HelpFlag help(argparser, "help", "Display this help menu.",
                         {'h', "help"});
 
-    args::Group loglevel(
-        argparser, "Logging levels:",
-        args::Group::Validators::AtMostOne);
-    LogFlag lError(loglevel, "error", "Log errors.",
-                   {'e', "error"}, plog::Severity::error);
+    args::Group loglevel(argparser,
+                         "Logging levels:", args::Group::Validators::AtMostOne);
+    LogFlag lError(loglevel, "error", "Log errors.", {'e', "error"},
+                   plog::Severity::error);
 
-    LogFlag lWarn(loglevel, "warning", "Log warnings.",
-                  {'w', "warning"},
+    LogFlag lWarn(loglevel, "warning", "Log warnings.", {'w', "warning"},
                   plog::Severity::warning);
 
-    LogFlag lInfo(loglevel, "info",
-                  "Log engine information.", {'i', "info"},
+    LogFlag lInfo(loglevel, "info", "Log engine information.", {'i', "info"},
                   plog::Severity::info);
 
-    LogFlag lDebug(loglevel, "debug", "Log debug details.",
-                   {'d', "debug"}, plog::Severity::debug);
+    LogFlag lDebug(loglevel, "debug", "Log debug details.", {'d', "debug"},
+                   plog::Severity::debug);
 
-    LogFlag lVerbose(loglevel, "verbose",
-                     "Log all details.", {'v', "verbose"},
+    LogFlag lVerbose(loglevel, "verbose", "Log all details.", {'v', "verbose"},
                      plog::Severity::verbose);
 
-    args::Group logoption(
-        argparser, "Logging options",
-        args::Group::Validators::AtMostOne);
+    args::Group logoption(argparser, "Logging options",
+                          args::Group::Validators::AtMostOne);
 
     args::Flag lconsole(logoption, "console",
-                        "Send log messages to the console.",
-                        {"console"});
+                        "Send log messages to the console.", {"console"});
 
-    args::Group logfileoptions(
-        logoption, "Log file options",
-        args::Group::Validators::AtLeastOne);
+    args::Group logfileoptions(logoption, "Log file options",
+                               args::Group::Validators::AtLeastOne);
 
-    args::ValueFlag<std::string> lfile(
-        logfileoptions, "log file",
-        "Name of a file in the log directory to "
-        "log to.",
-        args::Matcher{"logfile"},
-        std::string(ARGON_LOG_NAME));
+    args::ValueFlag<std::string> lfile(logfileoptions, "log file",
+                                       "Name of a file in the log directory to "
+                                       "log to.",
+                                       args::Matcher{"logfile"},
+                                       std::string(ARGON_LOG_NAME));
 
     args::ValueFlag<std::string> ldir(
-        logfileoptions, "log directory",
-        "Name of a the log file directory.",
-        args::Matcher{"logdir"},
-        std::string(ARGON_LOG_DIR));
+        logfileoptions, "log directory", "Name of a the log file directory.",
+        args::Matcher{"logdir"}, std::string(ARGON_LOG_DIR));
 
-    args::ValueFlag<int> fcontroller(
-        argparser, "controller",
-        "Enable/disable controller (will not "
-        "override developer options).",
-        {"controller"}, 1);
+    args::ValueFlag<int> fcontroller(argparser, "controller",
+                                     "Enable/disable controller (will not "
+                                     "override developer options).",
+                                     {"controller"}, 1);
 
     auto renderers = get_renderers();
     std::string rendererHelp = get_renderer_help();
 
     args::MapFlag<std::string, Renderer> frenderer(
-        argparser, "graphics", rendererHelp, {"graphics"},
-        renderers);
+        argparser, "graphics", rendererHelp, {"graphics"}, renderers);
 
-    args::ValueFlag<int> fhpd(argparser, "HPD",
-                              "Enable High Pixel Density",
+    args::ValueFlag<int> fhpd(argparser, "HPD", "Enable High Pixel Density",
                               {"hpd"}, 1);
 
     try {
@@ -331,34 +295,27 @@ void initialize_engine(std::string organization_name,
 
     plog::Severity severity = plog::fatal;
     if (loglevel.Matched()) {
-        auto flags =
-            loglevel.GetFilteredChildren<LogFlag>(true);
+        auto flags = loglevel.GetFilteredChildren<LogFlag>(true);
         if (!flags.empty()) {
             severity = flags[0]->Get();
         }
     }
 
     if (lconsole.Get()) {
-        plog::init<plog::ArgonFormatter>(
-            severity, plog::streamStdOut);
+        plog::init<plog::ArgonFormatter>(severity, plog::streamStdOut);
     } else {
-        const char* fdir = ldir.Matched()
-                               ? ldir.Get().c_str()
-                               : ARGON_LOG_DIR;
-        const char* fname = lfile.Matched()
-                                ? lfile.Get().c_str()
-                                : ARGON_LOG_NAME;
+        const char* fdir = ldir.Matched() ? ldir.Get().c_str() : ARGON_LOG_DIR;
+        const char* fname =
+            lfile.Matched() ? lfile.Get().c_str() : ARGON_LOG_NAME;
         init_log_directory(fdir);
         std::stringstream lognamer;
         lognamer << fdir << '/' << fname;
-        plog::init<plog::ArgonFormatter>(
-            severity, lognamer.str().c_str(),
-            ARGON_LOG_MAX_SIZE, ARGON_LOG_MAX_FILES);
+        plog::init<plog::ArgonFormatter>(severity, lognamer.str().c_str(),
+                                         ARGON_LOG_MAX_SIZE,
+                                         ARGON_LOG_MAX_FILES);
     }
 
-    Renderer renderer = frenderer.Matched()
-                            ? frenderer.Get()
-                            : Renderer::OGL;
+    Renderer renderer = frenderer.Matched() ? frenderer.Get() : Renderer::OGL;
     // TODO: Use this value
 
     bool hpd = fhpd.Matched() ? fhpd.Get() : 1;
@@ -367,8 +324,7 @@ void initialize_engine(std::string organization_name,
 
 #ifdef ARGON_INIT_GAMEPAD
     if (!fcontroller.Matched() || fcontroller.Get()) {
-        if (!SDL_Init(SDL_INIT_AUDIO | SDL_INIT_VIDEO |
-                      SDL_INIT_GAMEPAD)) {
+        if (!SDL_Init(SDL_INIT_AUDIO | SDL_INIT_VIDEO | SDL_INIT_GAMEPAD)) {
             PLOGF << SDL_GetError();
             terminate_engine();
         }
@@ -387,8 +343,7 @@ void initialize_engine(std::string organization_name,
 
     // Enable VSync
     if (!SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1")) {
-        PLOGE << "Warning: VSync not enabled!\n"
-              << SDL_GetError();
+        PLOGE << "Warning: VSync not enabled!\n" << SDL_GetError();
     }
 
     InitVirtual(organization_name, app_name);
@@ -409,30 +364,23 @@ void initialize_engine(std::string organization_name,
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 
     SDL_PropertiesID props = SDL_CreateProperties();
-    SDL_SetStringProperty(
-        props, SDL_PROP_WINDOW_CREATE_TITLE_STRING, "test");
-    SDL_SetNumberProperty(props,
-                          SDL_PROP_WINDOW_CREATE_X_NUMBER,
+    SDL_SetStringProperty(props, SDL_PROP_WINDOW_CREATE_TITLE_STRING, "test");
+    SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X_NUMBER,
                           Screen::position[0]);
-    SDL_SetNumberProperty(props,
-                          SDL_PROP_WINDOW_CREATE_Y_NUMBER,
+    SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_Y_NUMBER,
                           Screen::position[1]);
-    SDL_SetNumberProperty(
-        props, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER,
-        Screen::logical_size[0]);
-    SDL_SetNumberProperty(
-        props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER,
-        Screen::logical_size[1]);
+    SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER,
+                          Screen::logical_size[0]);
+    SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER,
+                          Screen::logical_size[1]);
 
     if (hpd) {
-        SDL_SetNumberProperty(
-            props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER,
-            SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE |
-                SDL_WINDOW_HIGH_PIXEL_DENSITY);
+        SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER,
+                              SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE |
+                                  SDL_WINDOW_HIGH_PIXEL_DENSITY);
     } else {
-        SDL_SetNumberProperty(
-            props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER,
-            SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+        SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER,
+                              SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
     }
 
     win = SDL_CreateWindowWithProperties(props);
@@ -450,8 +398,7 @@ void initialize_engine(std::string organization_name,
     context = SDL_GL_CreateContext(win);
     PLOGI << "OpenGL Version: " << glGetString(GL_VERSION);
     if (!context) {
-        PLOGF << "SDL_GL_CreateContext failed: "
-              << SDL_GetError();
+        PLOGF << "SDL_GL_CreateContext failed: " << SDL_GetError();
         terminate_engine();
     }
     SDL_GL_MakeCurrent(win, context);
@@ -476,8 +423,7 @@ void initialize_engine(std::string organization_name,
     if (SDL_GL_SetSwapInterval(-1)) {
     } else if (SDL_GL_SetSwapInterval(1)) {
     } else {
-        PLOGE << "Could not enable VSync: "
-              << SDL_GetError();
+        PLOGE << "Could not enable VSync: " << SDL_GetError();
     }
 
     SDL_SetEventFilter(handle_event, NULL);
@@ -488,8 +434,7 @@ uint32_t sdl_key_to_argon(SDL_Keycode key) {
     else if (key >= SDLK_F13 && key <= SDLK_F24)
         return kInputIDF13 + key - SDLK_F13;
     else if (key >= SDLK_KP_1 && key <= SDLK_KP_9)
-        return kInputKeyboard |
-               uint16_t(key - SDLK_KP_1 + 321);
+        return kInputKeyboard | uint16_t(key - SDLK_KP_1 + 321);
 
     switch (key) {
     case SDLK_KP_0:
@@ -582,31 +527,24 @@ void handle_joy_axis_event(SDL_Event& e) {
         ++axis;
     if (axis > 5)
         ++axis;
-    uint32_t id = kInputJoy |
-                  (kInputDeviceIncrement * e.jaxis.which) |
-                  (kInputAxisIncrement * axis +
-                   kInputAxisAnalogStart);
+    uint32_t id = kInputJoy | (kInputDeviceIncrement * e.jaxis.which) |
+                  (kInputAxisIncrement * axis + kInputAxisAnalogStart);
     Argon::Input::push_update(id, e.jaxis.value / 32768.f);
 }
 void handle_joy_button_event(SDL_Event& e) {
     uint32_t id =
-        kInputJoy |
-        (kInputDeviceIncrement * e.jbutton.which) |
-        (kInputAxisIncrement * e.jbutton.button +
-         kInputAxisButtonStart);
+        kInputJoy | (kInputDeviceIncrement * e.jbutton.which) |
+        (kInputAxisIncrement * e.jbutton.button + kInputAxisButtonStart);
     Argon::Input::push_update(id, e.jbutton.down);
 }
 void handle_joy_hat_event(SDL_Event& e) {
-    uint32_t id = kInputJoy |
-                  (kInputDeviceIncrement * e.jhat.which) |
-                  (kInputAxisIncrement * e.jhat.hat +
-                   kInputAxisHatStart);
+    uint32_t id = kInputJoy | (kInputDeviceIncrement * e.jhat.which) |
+                  (kInputAxisIncrement * e.jhat.hat + kInputAxisHatStart);
     Argon::Input::push_update(id, e.jhat.value);
 }
 
 void handle_resize(SDL_Event& e) {
-    Screen::logical_size =
-        Vector2f(e.window.data1, e.window.data2);
+    Screen::logical_size = Vector2f(e.window.data1, e.window.data2);
     int w, h;
     SDL_GetWindowSizeInPixels(win, &w, &h);
     Screen::framebuffer_size = Vector2f(w, h);
@@ -617,43 +555,36 @@ void handle_resize(SDL_Event& e) {
 void handle_window_event(SDL_Event& e) {
     switch (e.window.type) {
     case SDL_EVENT_WINDOW_MOVED:
-        Screen::position =
-            Vector2f(e.window.data1, e.window.data2);
+        Screen::position = Vector2f(e.window.data1, e.window.data2);
         last_position = Screen::position;
         break;
     case SDL_EVENT_WINDOW_RESIZED:
         handle_resize(e);
         break;
     case SDL_EVENT_WINDOW_MINIMIZED:
-        Argon::Input::push_update(kInputIDWindowMinimized,
-                                  1);
+        Argon::Input::push_update(kInputIDWindowMinimized, 1);
         break;
 
     case SDL_EVENT_WINDOW_MAXIMIZED:
     case SDL_EVENT_WINDOW_RESTORED:
-        Argon::Input::push_update(kInputIDWindowMinimized,
-                                  0);
+        Argon::Input::push_update(kInputIDWindowMinimized, 0);
         break;
 
     case SDL_EVENT_WINDOW_MOUSE_ENTER:
-        Argon::Input::push_update(kInputIDWindowHasMouse,
-                                  1);
+        Argon::Input::push_update(kInputIDWindowHasMouse, 1);
         break;
     case SDL_EVENT_WINDOW_MOUSE_LEAVE:
-        Argon::Input::push_update(kInputIDWindowHasMouse,
-                                  0);
+        Argon::Input::push_update(kInputIDWindowHasMouse, 0);
         break;
     case SDL_EVENT_WINDOW_EXPOSED:
     case SDL_EVENT_WINDOW_SHOWN:
     case SDL_EVENT_WINDOW_FOCUS_GAINED:
-        Argon::Input::push_update(kInputIDWindowInactive,
-                                  0);
+        Argon::Input::push_update(kInputIDWindowInactive, 0);
 
         break;
     case SDL_EVENT_WINDOW_HIDDEN:
     case SDL_EVENT_WINDOW_FOCUS_LOST:
-        Argon::Input::push_update(kInputIDWindowInactive,
-                                  1);
+        Argon::Input::push_update(kInputIDWindowInactive, 1);
 
         break;
     case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
@@ -721,34 +652,25 @@ bool handle_event(void* userdata, SDL_Event* event) {
             j = NULL;
         } else if (e.type == SDL_EVENT_MOUSE_MOTION) {
             Argon::Input::push_update(
-                kInputIDMouseX,
-                e.motion.x / Screen::logical_size[0] * 2. -
-                    1.);
+                kInputIDMouseX, e.motion.x / Screen::logical_size[0] * 2. - 1.);
             Argon::Input::push_update(
                 kInputIDMouseY,
-                e.motion.y / Screen::logical_size[1] * -2. +
-                    1.);
+                e.motion.y / Screen::logical_size[1] * -2. + 1.);
         } else if (e.type == SDL_EVENT_MOUSE_BUTTON_UP ||
                    e.type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
             Argon::Input::push_update(
-                kInputIDMouseX,
-                e.button.x / Screen::logical_size[0] * 2. -
-                    1.);
+                kInputIDMouseX, e.button.x / Screen::logical_size[0] * 2. - 1.);
             Argon::Input::push_update(
                 kInputIDMouseY,
-                e.button.y / Screen::logical_size[1] * -2. +
-                    1.);
-            Argon::Input::push_update(
-                kInputMouse | e.button.button,
-                SDL_EVENT_MOUSE_BUTTON_DOWN == e.type);
+                e.button.y / Screen::logical_size[1] * -2. + 1.);
+            Argon::Input::push_update(kInputMouse | e.button.button,
+                                      SDL_EVENT_MOUSE_BUTTON_DOWN == e.type);
 
-        } else if (e.type == SDL_EVENT_KEY_DOWN ||
-                   e.type == SDL_EVENT_KEY_UP) {
-            SDL_Keycode key_c = SDL_GetKeyFromScancode(
-                e.key.scancode, e.key.mod, e.key.down);
+        } else if (e.type == SDL_EVENT_KEY_DOWN || e.type == SDL_EVENT_KEY_UP) {
+            SDL_Keycode key_c =
+                SDL_GetKeyFromScancode(e.key.scancode, e.key.mod, e.key.down);
             uint32_t key = sdl_key_to_argon(key_c);
-            Argon::Input::push_update(key, e.key.down ? 1.0
-                                                      : 0.);
+            Argon::Input::push_update(key, e.key.down ? 1.0 : 0.);
 
         } else if (is_sdl_window_event(e))
             handle_window_event(e);
@@ -764,12 +686,10 @@ bool handle_event(void* userdata, SDL_Event* event) {
         else if (e.type == SDL_EVENT_MOUSE_WHEEL) {
             if (e.wheel.which != SDL_TOUCH_MOUSEID) {
 
-                Argon::Input::push_update(
-                    kInputIDMouseHorzScroll,
-                    mousex += e.wheel.x);
-                Argon::Input::push_update(
-                    kInputIDMouseVertScroll,
-                    mousey += e.wheel.y);
+                Argon::Input::push_update(kInputIDMouseHorzScroll,
+                                          mousex += e.wheel.x);
+                Argon::Input::push_update(kInputIDMouseVertScroll,
+                                          mousey += e.wheel.y);
             }
         }
     }
@@ -793,17 +713,13 @@ void slow_poll() {
     int secs = 0, pct = 0;
     int state = SDL_GetPowerInfo(&secs, &pct);
     if (state == SDL_POWERSTATE_CHARGING)
-        Input::push_update(kInputIDBatteryState,
-                           kBatteryCharging);
+        Input::push_update(kInputIDBatteryState, kBatteryCharging);
     else if (state == SDL_POWERSTATE_CHARGED)
-        Input::push_update(kInputIDBatteryState,
-                           kBatteryFull);
+        Input::push_update(kInputIDBatteryState, kBatteryFull);
     else if (state == SDL_POWERSTATE_ON_BATTERY)
-        Input::push_update(kInputIDBatteryState,
-                           kBatteryDischarging);
+        Input::push_update(kInputIDBatteryState, kBatteryDischarging);
     else
-        Input::push_update(kInputIDBatteryState,
-                           kNoBattery);
+        Input::push_update(kInputIDBatteryState, kNoBattery);
     Input::push_update(kInputIDBatteryTimeRemaining, secs);
     Input::push_update(kInputIDBatteryPercent, pct);
 }
@@ -828,16 +744,13 @@ bool poll_events() {
     }
     if (last_minimum_size != Screen::minimum_size) {
 
-        SDL_SetWindowMinimumSize(win,
-                                 Screen::minimum_size[0],
+        SDL_SetWindowMinimumSize(win, Screen::minimum_size[0],
                                  Screen::minimum_size[1]);
         last_minimum_size = Screen::minimum_size;
     }
     if (last_full_screen != Screen::full_screen) {
         SDL_SetWindowFullscreen(
-            win, Screen::full_screen
-                     ? SDL_GetWindowFullscreenMode(win)
-                     : 0);
+            win, Screen::full_screen ? SDL_GetWindowFullscreenMode(win) : 0);
         last_full_screen = Screen::full_screen;
         last_screen = Screen::logical_size;
 
@@ -848,8 +761,7 @@ bool poll_events() {
     }
     if (last_position != Screen::position) {
         last_position = Screen::position;
-        SDL_SetWindowPosition(win, last_position[0],
-                              last_position[1]);
+        SDL_SetWindowPosition(win, last_position[0], last_position[1]);
     }
     slow_poll();
 

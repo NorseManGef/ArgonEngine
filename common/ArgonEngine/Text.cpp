@@ -18,26 +18,20 @@ struct TTFFont : public Font {
     stbtt_fontinfo font;
     std::string data;
     TTFFont();
-    virtual void get_font_size_ratio(float& w_r,
-                                     float& h_r);
-    virtual void get_glyph_size_ratio(int glyph, float& w_r,
-                                      float& h_r);
+    virtual void get_font_size_ratio(float& w_r, float& h_r);
+    virtual void get_glyph_size_ratio(int glyph, float& w_r, float& h_r);
 
     virtual void get_glyph_size(int glyph, Glyph& g);
 
     virtual float get_advance(int last_glyph, int glyph);
-    virtual void get_glyph_bitmap(int glyph, uint8_t* d,
-                                  int w, int h,
+    virtual void get_glyph_bitmap(int glyph, uint8_t* d, int w, int h,
                                   int border = 0);
 
-    virtual bool
-    reload(Argon::VirtualResourceIMPL::Source* s);
+    virtual bool reload(Argon::VirtualResourceIMPL::Source* s);
 
-    virtual Data*
-    clone_type(const std::string& arguments) const;
+    virtual Data* clone_type(const std::string& arguments) const;
     virtual bool loaded() { return has_loaded; }
-    virtual bool
-    save(Argon::VirtualResourceIMPL::Source* s) {
+    virtual bool save(Argon::VirtualResourceIMPL::Source* s) {
         has_loaded = false;
         return false;
     }
@@ -51,21 +45,17 @@ void TTFFont::get_font_size_ratio(float& w_r, float& h_r) {
     if (has_loaded == false)
         return;
     int ascent, descent, linegap;
-    stbtt_GetFontVMetrics(&font, &ascent, &descent,
-                          &linegap);
+    stbtt_GetFontVMetrics(&font, &ascent, &descent, &linegap);
     w_r = 1. / float(ascent - descent);
     h_r = 1.;
 }
-void TTFFont::get_glyph_size_ratio(int glyph, float& w_r,
-                                   float& h_r) {
+void TTFFont::get_glyph_size_ratio(int glyph, float& w_r, float& h_r) {
     if (has_loaded == false)
         return;
     int ix, iy, ix2, iy2;
-    stbtt_GetCodepointBitmapBox(&font, glyph, 1, 1, &ix,
-                                &iy, &ix2, &iy2);
+    stbtt_GetCodepointBitmapBox(&font, glyph, 1, 1, &ix, &iy, &ix2, &iy2);
     int ascent, descent, linegap;
-    stbtt_GetFontVMetrics(&font, &ascent, &descent,
-                          &linegap);
+    stbtt_GetFontVMetrics(&font, &ascent, &descent, &linegap);
     w_r = float(ix2 - ix) / float(ascent - descent);
     h_r = float(iy2 - iy) / float(ascent - descent);
 }
@@ -75,11 +65,9 @@ void TTFFont::get_glyph_size(int glyph, Glyph& g) {
         return;
 
     int ix, iy, ix2, iy2;
-    stbtt_GetCodepointBitmapBox(&font, glyph, 1, 1, &ix,
-                                &iy, &ix2, &iy2);
+    stbtt_GetCodepointBitmapBox(&font, glyph, 1, 1, &ix, &iy, &ix2, &iy2);
     int ascent, descent, linegap;
-    stbtt_GetFontVMetrics(&font, &ascent, &descent,
-                          &linegap);
+    stbtt_GetFontVMetrics(&font, &ascent, &descent, &linegap);
     float scale = 1. / float(ascent - descent);
     g.xmin = ix * scale;
     g.xmax = ix2 * scale;
@@ -94,33 +82,28 @@ float TTFFont::get_advance(int last_glyph, int glyph) {
     int advance = 0;
     int left_bearing = 0;
     float scale = stbtt_ScaleForPixelHeight(&font, 1);
-    stbtt_GetCodepointHMetrics(&font, last_glyph, &advance,
-                               &left_bearing);
+    stbtt_GetCodepointHMetrics(&font, last_glyph, &advance, &left_bearing);
     float f = advance;
     // stbtt_GetCodepointHMetrics(&font, glyph, &advance,
     // &left_bearing); f-=left_bearing;
-    f += stbtt_GetCodepointKernAdvance(&font, last_glyph,
-                                       glyph);
+    f += stbtt_GetCodepointKernAdvance(&font, last_glyph, glyph);
     return f * scale;
     ;
 }
-void TTFFont::get_glyph_bitmap(int glyph, uint8_t* d, int w,
-                               int h, int border) {
+void TTFFont::get_glyph_bitmap(int glyph, uint8_t* d, int w, int h,
+                               int border) {
     if (has_loaded == false)
         return;
     int ix, iy, ix2, iy2;
-    stbtt_GetCodepointBitmapBox(&font, glyph, 1, 1, &ix,
-                                &iy, &ix2, &iy2);
+    stbtt_GetCodepointBitmapBox(&font, glyph, 1, 1, &ix, &iy, &ix2, &iy2);
     float s1 = float(w - border * 2) / float(ix2 - ix);
     float s2 = float(h - border * 2) / float(iy2 - iy);
 
-    stbtt_MakeCodepointBitmap(
-        &font, d + w * border + border, w - border,
-        h - border, w, s1, s2, glyph);
+    stbtt_MakeCodepointBitmap(&font, d + w * border + border, w - border,
+                              h - border, w, s1, s2, glyph);
 };
 
-bool TTFFont::reload(
-    Argon::VirtualResourceIMPL::Source* s) {
+bool TTFFont::reload(Argon::VirtualResourceIMPL::Source* s) {
     if (s->size() == 0) {
         PLOGE << "Font Resource is empty";
         return false;
@@ -132,8 +115,7 @@ bool TTFFont::reload(
         data.resize(s->size());
         s->read(&data[0], data.size(), 0);
 
-        stbtt_InitFont(
-            &font, (const unsigned char*)data.c_str(), 0);
+        stbtt_InitFont(&font, (const unsigned char*)data.c_str(), 0);
     }
     has_loaded = true;
     return true;
@@ -149,11 +131,9 @@ GlyphCache::GlyphCache() {
     texture = "virtual://glyph_cache/texture.png{w=h=1024; "
               "f=RGBA8; mip=0; ansiotropic:4}";
 
-    image =
-        texture.get_data<Argon::VirtualResourceImage*>();
+    image = texture.get_data<Argon::VirtualResourceImage*>();
 };
-inline void GlyphCache::set_val(const int x, int y,
-                                unsigned char* array) {
+inline void GlyphCache::set_val(const int x, int y, unsigned char* array) {
 
     typedef const unsigned char vt;
     const int x2 = x - 1;
@@ -177,18 +157,15 @@ inline void GlyphCache::set_val(const int x, int y,
     vt c4 = array[x];
     vt c9 = array[x3];
 
-    int c5 =
-        std::max(std::max(c1, c2), std::max(c3, c4)) * 120;
-    int c10 =
-        std::max(std::max(c6, c7), std::max(c8, c9)) * 119;
+    int c5 = std::max(std::max(c1, c2), std::max(c3, c4)) * 120;
+    int c10 = std::max(std::max(c6, c7), std::max(c8, c9)) * 119;
     int c11 = (std::max(c10, c5) + 80) >> 7;
 
     c11 -= 2;
     if (c11 > c)
         c = c11;
 }
-unsigned char GlyphCache::interpolate(float x, float y,
-                                      unsigned char* bu) {
+unsigned char GlyphCache::interpolate(float x, float y, unsigned char* bu) {
     int x1 = x;
     int x2 = x1 + 1;
     int y1 = y;
@@ -200,15 +177,12 @@ unsigned char GlyphCache::interpolate(float x, float y,
     float b = y - y1;
     y1 *= kGlyphRenderRes;
     y2 *= kGlyphRenderRes;
-    float v1 =
-        bu[x1 + y1] + (bu[x2 + y1] - bu[x1 + y1]) * a;
-    float v2 =
-        bu[x1 + y2] + (bu[x2 + y2] - bu[x1 + y2]) * a;
+    float v1 = bu[x1 + y1] + (bu[x2 + y1] - bu[x1 + y1]) * a;
+    float v2 = bu[x1 + y2] + (bu[x2 + y2] - bu[x1 + y2]) * a;
 
     return std::min(v1 + (v2 - v1) * b + 0.5f, 255.f);
 }
-void GlyphCache::build_distance_field(uint8_t* bu,
-                                      int pos) {
+void GlyphCache::build_distance_field(uint8_t* bu, int pos) {
     int c = pos % 4;
     pos /= 4;
     int x = pos * kGlyphWidth;
@@ -217,11 +191,9 @@ void GlyphCache::build_distance_field(uint8_t* bu,
     x -= y * kGlyphTextureSize;
     y *= kGlyphHeight;
 
-    for (int y = 0; y < kGlyphRenderRes * kGlyphRenderRes;
-         ++y)
+    for (int y = 0; y < kGlyphRenderRes * kGlyphRenderRes; ++y)
         if (bu[y] != 0)
-            bu[y] = (1.f - 1.f / (bu[y] * bu[y])) * 255.f +
-                    0.5f;
+            bu[y] = (1.f - 1.f / (bu[y] * bu[y])) * 255.f + 0.5f;
     for (int i = 0; i < 2; ++i) {
         for (int y = kGlyphRenderRes - 2; y > 2; --y)
             for (int x = 1; x < kGlyphRenderRes - 2; ++x)
@@ -247,22 +219,18 @@ void GlyphCache::build_distance_field(uint8_t* bu,
 
     for (int yi = 0; yi < kGlyphHeight; ++yi) {
         for (int xi = 0; xi < kGlyphWidth; ++xi) {
-            Argon::Vector4f co =
-                image->get_pixel_color(x + xi, y + yi);
-            co[c] = interpolate((xi * x_factor),
-                                (yi * y_factor), bu) /
-                    float(255.);
+            Argon::Vector4f co = image->get_pixel_color(x + xi, y + yi);
+            co[c] =
+                interpolate((xi * x_factor), (yi * y_factor), bu) / float(255.);
             ;
             image->set_pixel_color(x + xi, y + yi, co);
         }
     }
 }
-Glyph* GlyphCache::get_glyph(Argon::VirtualResource font,
-                             int glyph) {
+Glyph* GlyphCache::get_glyph(Argon::VirtualResource font, int glyph) {
     Font* f = font.get_data<Font*>();
     if (!f) {
-        PLOGE << font.get_path_string()
-              << " is not a valid ttf.";
+        PLOGE << font.get_path_string() << " is not a valid ttf.";
         return NULL;
     }
     GlyphKey k;
@@ -272,11 +240,9 @@ Glyph* GlyphCache::get_glyph(Argon::VirtualResource font,
     if (g.glyph != glyph || g.font != font) {
         size_t pos = glyphs.get_cache_position(k);
         uint8_t buffer[kGlyphRenderRes * kGlyphRenderRes];
-        for (int i = 0;
-             i < kGlyphRenderRes * kGlyphRenderRes; ++i)
+        for (int i = 0; i < kGlyphRenderRes * kGlyphRenderRes; ++i)
             buffer[i] = 0;
-        f->get_glyph_bitmap(glyph, buffer, kGlyphRenderRes,
-                            kGlyphRenderRes,
+        f->get_glyph_bitmap(glyph, buffer, kGlyphRenderRes, kGlyphRenderRes,
                             kGlyphCacheBorder);
         build_distance_field(buffer, pos);
         image->update_id_++;
@@ -315,8 +281,7 @@ Label::Label() {
 
     material = std::make_shared<Argon::Material>();
     material->shader = TEXT_SHADER;
-    uniform.get_texture("texture") =
-        GlyphCache::get_cache().texture;
+    uniform.get_texture("texture") = GlyphCache::get_cache().texture;
     material = material;
     cull_face = Argon::kCullNone;
     material->blend = Argon::kBlendAlpha;
@@ -325,8 +290,7 @@ Label::Label() {
     max_width = 0.;
     isMultiLine = false;
 }
-void Label::render_str(const char* string,
-                       Argon::VirtualResource font,
+void Label::render_str(const char* string, Argon::VirtualResource font,
                        LineStyle style) {
     line_style = style;
     std::vector<Line> lines;
@@ -344,15 +308,11 @@ void Label::render_str(const char* string,
             float width = offset;
 
             if (s != lineBegin) {
-                Glyph* g =
-                    GlyphCache::get_cache().get_glyph(
-                        font, last_glyph);
+                Glyph* g = GlyphCache::get_cache().get_glyph(font, last_glyph);
                 width += g->xmax;
             }
 
-            lines.push_back(
-                {lineBegin, s,
-                 width}); // struct initialization
+            lines.push_back({lineBegin, s, width}); // struct initialization
 
             if (*s == '\0')
                 break;
@@ -397,21 +357,14 @@ void Label::render_str(const char* string,
     vertex_array->set_size(size * 6);
     vertex_array->generate_indices();
 
-    Argon::VertexIterator p =
-        vertex_array->begin("position");
-    Argon::VertexIterator t =
-        vertex_array->begin("texture_coord");
-    Argon::VertexIterator mc =
-        vertex_array->begin("map_location");
+    Argon::VertexIterator p = vertex_array->begin("position");
+    Argon::VertexIterator t = vertex_array->begin("texture_coord");
+    Argon::VertexIterator mc = vertex_array->begin("map_location");
 
-    Argon::VertexIterator m =
-        vertex_array->begin("modifiers");
-    Argon::VertexIterator fc =
-        vertex_array->begin("fill_color");
-    Argon::VertexIterator gc =
-        vertex_array->begin("glow_color");
-    Argon::VertexIterator sc =
-        vertex_array->begin("stroke_color");
+    Argon::VertexIterator m = vertex_array->begin("modifiers");
+    Argon::VertexIterator fc = vertex_array->begin("fill_color");
+    Argon::VertexIterator gc = vertex_array->begin("glow_color");
+    Argon::VertexIterator sc = vertex_array->begin("stroke_color");
 
     s = string;
     last_glyph = '\0';
@@ -428,8 +381,7 @@ void Label::render_str(const char* string,
         last_glyph = '\0';
 
         while (s < line.end) {
-            Glyph* g =
-                GlyphCache::get_cache().get_glyph(font, *s);
+            Glyph* g = GlyphCache::get_cache().get_glyph(font, *s);
 
             if (s != line.begin)
                 offset += f->get_advance(last_glyph, *s);
@@ -450,14 +402,8 @@ void Label::render_str(const char* string,
             float xm = g->tex_x + off;
             float ym = g->tex_y + off;
 
-            float xmx =
-                xm +
-                float(kGlyphWidth) / kGlyphTextureSize -
-                2 * off;
-            float ymx =
-                ym +
-                float(kGlyphHeight) / kGlyphTextureSize -
-                2 * off;
+            float xmx = xm + float(kGlyphWidth) / kGlyphTextureSize - 2 * off;
+            float ymx = ym + float(kGlyphHeight) / kGlyphTextureSize - 2 * off;
 
             (t++).set(Argon::Vector2f(xm, ymx));
             (t++).set(Argon::Vector2f(xmx, ymx));
@@ -485,8 +431,6 @@ void Label::render_str(const char* string,
     bounds.size[1] = lines.size();
     vertex_array->update_id++;
 }
-MAKE_VISIT_IMPL(Label, {
-    ADD_BASE(Renderable);
-})
+MAKE_VISIT_IMPL(Label, { ADD_BASE(Renderable); })
 
 }; // namespace Argon

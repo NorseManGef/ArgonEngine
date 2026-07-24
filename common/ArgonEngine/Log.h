@@ -25,8 +25,8 @@
 #endif
 
 namespace Argon {
-inline void init_log_directory(
-    const std::string& log_directory = ARGON_LOG_DIR) {
+inline void
+init_log_directory(const std::string& log_directory = ARGON_LOG_DIR) {
     std::filesystem::path logdir(log_directory);
     if (!exists(logdir)) {
         std::filesystem::create_directory(logdir);
@@ -38,9 +38,7 @@ namespace plog {
 
 class ArgonFormatter {
   public:
-    static util::nstring header() {
-        return util::nstring();
-    }
+    static util::nstring header() { return util::nstring(); }
 
     static util::nstring format(const Record& record) {
         util::nostringstream ss;
@@ -50,17 +48,14 @@ class ArgonFormatter {
 
         auto sev = record.getSeverity();
 
-        if (sev == Severity::none ||
-            sev == Severity::info) {
+        if (sev == Severity::none || sev == Severity::info) {
             ss << record.getMessage() << "\n";
             return ss.str();
         }
 
-        ss << time.tm_hour << ":" << time.tm_min << ":"
-           << time.tm_sec;
-        ss << PLOG_NSTR(" [") << record.getFunc()
-           << PLOG_NSTR("@") << record.getLine()
-           << PLOG_NSTR("] ");
+        ss << time.tm_hour << ":" << time.tm_min << ":" << time.tm_sec;
+        ss << PLOG_NSTR(" [") << record.getFunc() << PLOG_NSTR("@")
+           << record.getLine() << PLOG_NSTR("] ");
 
         switch (record.getSeverity()) {
         case Severity::fatal:

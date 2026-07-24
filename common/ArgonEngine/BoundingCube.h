@@ -29,19 +29,15 @@ namespace Argon {
  * phase of collision detection or oclussion culling.
  **/
 struct BoundingCube : public ReflectionBase {
-    Vector3f
-        origin; /// The origin point of the bounding cube.
-    Vector3f size; /// The size of the bounding cube.
+    Vector3f origin; /// The origin point of the bounding cube.
+    Vector3f size;   /// The size of the bounding cube.
     BoundingCube() : origin(0, 0, 0), size(-1, 0, 0) {}
-    BoundingCube(Vector3f origin, Vector3f size)
-        : origin(origin), size(size) {}
+    BoundingCube(Vector3f origin, Vector3f size) : origin(origin), size(size) {}
 
     bool operator==(const BoundingCube& b) const {
         return origin == b.origin && size == b.size;
     }
-    bool operator!=(const BoundingCube& b) const {
-        return !operator==(b);
-    }
+    bool operator!=(const BoundingCube& b) const { return !operator==(b); }
     /// Returns true if the bounding cube has been assigned
     /// a valid range.
     bool is_valid() { return size[0] != -1.; }
@@ -51,8 +47,7 @@ struct BoundingCube : public ReflectionBase {
     bool overlaps_point(Vector2f point) const;
 
     /// Extend the bounding cube by adding a point to it.
-    void
-    add_point_to_bounds(const VectorBase<float, 3>& point);
+    void add_point_to_bounds(const VectorBase<float, 3>& point);
     /// Get the closeset vertex of the cube in a specific
     /// direction
     Vector3f get_positive_vertex(Vector3f normal) const;

@@ -190,12 +190,11 @@ class UIInterruption {
     static Timer timer;
 
   public:
-    static double
-        interruption_timeout; //!< The amount of time in
-                              //!< seconds before an
-                              //!< interruption becomes a
-                              //!< persistent one. Defaults
-                              //!< to 15 seconds.
+    static double interruption_timeout; //!< The amount of time in
+                                        //!< seconds before an
+                                        //!< interruption becomes a
+                                        //!< persistent one. Defaults
+                                        //!< to 15 seconds.
     UIInterruption() {}
     //! Returns true if the app is currently being
     //! interrupted. During an interruption Audio Processing
@@ -203,9 +202,7 @@ class UIInterruption {
     //! screen. Also the FPS may be reduced. One cause for
     //! this is if another app steals focus from yours or
     //! the users cursor leaves the screen.
-    bool is_interrupted() {
-        return last_tick_time + 1.0 <= timer.time();
-    }
+    bool is_interrupted() { return last_tick_time + 1.0 <= timer.time(); }
 
     //! Call this to advance the last_tick_timer. This needs
     //! to be called once a second (Normally by the HAL) to
@@ -213,13 +210,9 @@ class UIInterruption {
     static void tick() { last_tick_time = timer.time(); }
 
     //! Immediately register an interruption.
-    static void set_interrupted() {
-        last_tick_time = timer.time() - 1.0;
-    }
+    static void set_interrupted() { last_tick_time = timer.time() - 1.0; }
     //! Immediately register a persistent interruption.
-    static void set_persistent_interrupt() {
-        last_tick_time = -1e15;
-    }
+    static void set_persistent_interrupt() { last_tick_time = -1e15; }
     //! Returns true if a persistent interruption is
     //! currently happening. This can for instance, when a
     //! user minimizes your app. When this happens you
@@ -230,8 +223,7 @@ class UIInterruption {
     //! data, as this can indicate the user is about to quit
     //! the application.
     static bool is_persistent_interruption() {
-        return last_tick_time + interruption_timeout <
-               timer.time();
+        return last_tick_time + interruption_timeout < timer.time();
     }
 };
 

@@ -22,8 +22,7 @@ static inline bool is_whitespace(int c) {
     return c == '\n' || c == ' ' || c == '\r' || c == '\t';
 }
 
-template <typename T>
-static double string_to_number(T begin, T end) {
+template <typename T> static double string_to_number(T begin, T end) {
     double whole = 0;
     double part = 1.0;
     double exponent = 0.0;
@@ -38,8 +37,7 @@ static double string_to_number(T begin, T end) {
         switch (state) {
             // Whitespace
         case 0:
-            if (l != ' ' || l != '\n' || l != '\t' ||
-                l != '\r') {
+            if (l != ' ' || l != '\n' || l != '\t' || l != '\r') {
                 state = 1;
                 --i;
             }
@@ -504,11 +502,9 @@ static double string_to_number(T begin, T end) {
         }
         ++i;
     }
-    return whole * number_sign *
-           std::pow(10., exponent * exponent_sign);
+    return whole * number_sign * std::pow(10., exponent * exponent_sign);
 }
-static inline double
-string_to_number(const std::string& s) {
+static inline double string_to_number(const std::string& s) {
     return string_to_number(s.begin(), s.end());
 }
 
@@ -528,8 +524,7 @@ template <class T> class InstanceList {
         next_instance = get_root();
         get_root() = static_cast<T*>(this);
         if (next_instance)
-            next_instance->prev_instance =
-                static_cast<T*>(this);
+            next_instance->prev_instance = static_cast<T*>(this);
         mutex().unlock();
     }
     void _remove() {
@@ -548,9 +543,7 @@ template <class T> class InstanceList {
     T* prev_instance;
     InstanceList() { _add(); }
     InstanceList(const InstanceList& i) { _add(); }
-    InstanceList& operator=(InstanceList& i) {
-        return *this;
-    }
+    InstanceList& operator=(InstanceList& i) { return *this; }
     ~InstanceList() { _remove(); }
     static T*& get_root() {
         static T* r = NULL;
@@ -614,8 +607,7 @@ struct StackString16 {
             string.str[string.size++] = *(s++);
     }
     inline std::string str() const {
-        return std::string((const char*)string.str,
-                           size_t(string.size));
+        return std::string((const char*)string.str, size_t(string.size));
     }
     inline bool operator==(const StackString16& str) const {
         return data.a == str.data.a && data.b == str.data.b;
@@ -624,24 +616,22 @@ struct StackString16 {
         return data.a != str.data.a || data.b != str.data.b;
     }
     inline bool operator<(const StackString16& str) const {
-        return data.a == str.data.a ? data.b < str.data.b
-                                    : data.a < str.data.a;
+        return data.a == str.data.a ? data.b < str.data.b : data.a < str.data.a;
     }
     inline bool operator<=(const StackString16& str) const {
         return data.a == str.data.a ? data.b <= str.data.b
                                     : data.a < str.data.a;
     }
     inline bool operator>(const StackString16& str) const {
-        return data.a == str.data.a ? data.b > str.data.b
-                                    : data.a > str.data.a;
+        return data.a == str.data.a ? data.b > str.data.b : data.a > str.data.a;
     }
     inline bool operator>=(const StackString16& str) const {
         return data.a == str.data.a ? data.b >= str.data.b
                                     : data.a >= str.data.a;
     }
 };
-static inline std::ostream&
-operator<<(std::ostream& stream, const StackString16& s) {
+static inline std::ostream& operator<<(std::ostream& stream,
+                                       const StackString16& s) {
     return stream << s.str();
 }
 typedef StackString16 StringIntern;
@@ -666,8 +656,8 @@ struct StringIntern {
         TrieNode* greater;
         TrieNode* parent;
         TrieNode(char l, TrieNode* parent)
-            : parent(parent), letter(l), less(NULL),
-              equal(NULL), greater(NULL) {}
+            : parent(parent), letter(l), less(NULL), equal(NULL),
+              greater(NULL) {}
     };
     static Mutex& create_m() {
         static Mutex m;
@@ -684,36 +674,21 @@ struct StringIntern {
     StringIntern(const char* s) { set(s); }
 
     void set(const char* s, size_t size);
-    void set(const std::string& s) {
-        set(s.c_str(), s.size());
-    }
+    void set(const std::string& s) { set(s.c_str(), s.size()); }
 
     std::string str() const;
-    void print(TrieNode* s, const std::string& partial,
-               int indent);
+    void print(TrieNode* s, const std::string& partial, int indent);
     void print_all() { print(root(), "", 0); }
     const TrieNode* hash() const { return data; }
-    bool operator==(const StringIntern& str) const {
-        return data == str.data;
-    }
-    bool operator!=(const StringIntern& str) const {
-        return data != str.data;
-    }
-    bool operator<(const StringIntern& str) const {
-        return data < str.data;
-    }
-    bool operator<=(const StringIntern& str) const {
-        return data <= str.data;
-    }
-    bool operator>(const StringIntern& str) const {
-        return data > str.data;
-    }
-    bool operator>=(const StringIntern& str) const {
-        return data >= str.data;
-    }
+    bool operator==(const StringIntern& str) const { return data == str.data; }
+    bool operator!=(const StringIntern& str) const { return data != str.data; }
+    bool operator<(const StringIntern& str) const { return data < str.data; }
+    bool operator<=(const StringIntern& str) const { return data <= str.data; }
+    bool operator>(const StringIntern& str) const { return data > str.data; }
+    bool operator>=(const StringIntern& str) const { return data >= str.data; }
 };
-static inline std::ostream&
-operator<<(std::ostream& stream, const StringIntern& s) {
+static inline std::ostream& operator<<(std::ostream& stream,
+                                       const StringIntern& s) {
     return stream << s.str();
 }
 template <> struct TypeInfo<StringIntern> {
@@ -728,8 +703,7 @@ template <> struct TypeInfo<StringIntern> {
 };
 #endif
 #endif
-template <typename TData, typename TKey, size_t size>
-struct PriorityCache {
+template <typename TData, typename TKey, size_t size> struct PriorityCache {
     struct CacheNode {
         TData data;
         TKey key;
@@ -766,9 +740,7 @@ struct PriorityCache {
         n->more_fresh = NULL;
         return n;
     }
-    size_t get_cache_position(CacheNode* item) {
-        return item - cache;
-    }
+    size_t get_cache_position(CacheNode* item) { return item - cache; }
     size_t get_cache_position(TKey item) {
         return get_cache_entry(item) - cache;
     }
@@ -786,9 +758,7 @@ struct PriorityCache {
         }
     };
     bool in_cache(TKey k) { return mapping[k]; }
-    TData& operator[](TKey& k) {
-        return get_cache_entry(k)->data;
-    }
+    TData& operator[](TKey& k) { return get_cache_entry(k)->data; }
 };
 
 #if !USE_STRINGINTERN

@@ -18,18 +18,14 @@ bool ScoreController::displayLeaderboard = false;
 bool ScoreController::updateGlobalRankings = true;
 uint64_t ScoreController::total_global_scores;
 
-std::map<StringIntern, double>
-    ScoreController::achievements;
-std::map<StringIntern, ScoreControllerScore>
-    ScoreController::global_rankings;
+std::map<StringIntern, double> ScoreController::achievements;
+std::map<StringIntern, ScoreControllerScore> ScoreController::global_rankings;
 
 std::vector<ScoreControllerAchievement>
     ScoreController::unsubmitted_achievements;
 std::vector<ScoreControllerScore> ScoreController::scores;
-std::vector<ScoreControllerScore>
-    ScoreController::unsubmitted_scores;
-void ScoreController::submit_score(
-    double points, const StringIntern& board) {
+std::vector<ScoreControllerScore> ScoreController::unsubmitted_scores;
+void ScoreController::submit_score(double points, const StringIntern& board) {
     ScoreControllerScore s;
     s.score = points;
     s.leader_board = board;
@@ -40,8 +36,7 @@ void ScoreController::submit_score(
     scores.resize(it - scores.begin());
     unsubmitted_scores.push_back(s);
 }
-void ScoreController::load_score(
-    double points, const StringIntern& board) {
+void ScoreController::load_score(double points, const StringIntern& board) {
     ScoreControllerScore s;
     s.score = points;
     s.leader_board = board;
@@ -51,8 +46,8 @@ void ScoreController::load_score(
         unique(scores.begin(), scores.end());
     scores.resize(it - scores.begin());
 }
-void ScoreController::update_achievement(
-    const StringIntern& str, double percent) {
+void ScoreController::update_achievement(const StringIntern& str,
+                                         double percent) {
     double v = achievements[str];
     if (v >= percent)
         return;
@@ -72,9 +67,7 @@ void ScoreController::clear_unsubmitted_achievements() {
     ScoreController s;
     s.save_scores();
 }
-void ScoreController::save_scores() {
-    write("data://scores.ahf");
-}
+void ScoreController::save_scores() { write("data://scores.ahf"); }
 void ScoreController::reload() {
     read("data://scores.ahf");
     std::stable_sort(scores.begin(), scores.end());
@@ -82,8 +75,7 @@ void ScoreController::reload() {
         unique(scores.begin(), scores.end());
     scores.resize(it - scores.begin());
 }
-double ScoreController::get_top_local_score(
-    const StringIntern& s) {
+double ScoreController::get_top_local_score(const StringIntern& s) {
     for (size_t x = 0; x < scores.size(); ++x) {
         if (scores[x].leader_board == s)
             return scores[x].score;
@@ -91,8 +83,7 @@ double ScoreController::get_top_local_score(
     return 0;
 }
 MAKE_VISIT_IMPL(ScoreController, {
-    ADD_VAR2(unsubmitted_achievements,
-             "unsubmitted achievements");
+    ADD_VAR2(unsubmitted_achievements, "unsubmitted achievements");
     ADD_VAR2(unsubmitted_scores, "unsubmitted scores");
     ADD_VAR(scores);
 });

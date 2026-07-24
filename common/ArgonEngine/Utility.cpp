@@ -63,8 +63,7 @@ std::string StringIntern::str() const {
     }
     return s;
 }
-void StringIntern::print(StringIntern::TrieNode* s,
-                         const std::string& partial,
+void StringIntern::print(StringIntern::TrieNode* s, const std::string& partial,
                          int indent) {
 
     if (s) {

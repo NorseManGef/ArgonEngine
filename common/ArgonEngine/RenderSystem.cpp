@@ -21,8 +21,7 @@ namespace Argon {
 void VertexArray::recalc_stride() {
     int s = 0;
     for (size_t x = 0; x < attributes.size(); ++x) {
-        s += attributes[x].components *
-             kRenderTypeSize[attributes[x].type];
+        s += attributes[x].components * kRenderTypeSize[attributes[x].type];
     }
 
     stride = s;
@@ -31,8 +30,7 @@ void VertexArray::recalc_stride() {
     }
 }
 VertexArray::VertexArray()
-    : updates_frequently(false), draw_type(kDrawTriangles),
-      stride(0) {}
+    : updates_frequently(false), draw_type(kDrawTriangles), stride(0) {}
 
 bool VertexArray::has_attribute(const StringIntern& s) {
     for (size_t x = 0; x < attributes.size(); ++x) {
@@ -44,15 +42,13 @@ bool VertexArray::has_attribute(const StringIntern& s) {
 VertexIterator VertexArray::begin(const StringIntern& s) {
     for (size_t x = 0; x < attributes.size(); ++x) {
         if (attributes[x].attribute == s) {
-            return VertexIterator(data_start() +
-                                      attributes[x].offset,
+            return VertexIterator(data_start() + attributes[x].offset,
                                   &attributes[x]);
         }
     }
     return VertexIterator();
 }
-BoundingCube
-VertexArray::get_attribute_bounds(const StringIntern& s) {
+BoundingCube VertexArray::get_attribute_bounds(const StringIntern& s) {
     BoundingCube b;
     Vector3f v;
     VertexIterator it = begin(s);
@@ -83,21 +79,18 @@ void VertexArray::generate_indices_quad() {
     }
 }
 
-void VertexArray::append_data(const uint8_t* d,
-                              int bytes_size) {
+void VertexArray::append_data(const uint8_t* d, int bytes_size) {
     int old_size = data.size();
     data.resize(bytes_size + old_size);
     memcpy(&data[old_size], d, bytes_size);
     update_id++;
 }
-void VertexArray::set_data(const uint8_t* d,
-                           int bytes_size) {
+void VertexArray::set_data(const uint8_t* d, int bytes_size) {
     data.resize(bytes_size);
     memcpy(&data[0], d, bytes_size);
     update_id++;
 }
-VertexAttribPair
-VertexArray::get_attribute(const StringIntern& s) {
+VertexAttribPair VertexArray::get_attribute(const StringIntern& s) {
     for (size_t x = 0; x < attributes.size(); ++x) {
         VertexAttribPair& a = attributes[x];
         if (a.attribute == s)
@@ -114,8 +107,7 @@ Matrix4f Camera::inverse() {
 }
 
 Camera::~Camera() {
-    std::map<VirtualResource, Camera*>::iterator it =
-        all_cameras().begin();
+    std::map<VirtualResource, Camera*>::iterator it = all_cameras().begin();
     while (it != all_cameras().end()) {
         if (it->second == this)
             all_cameras().erase(it);
@@ -125,30 +117,24 @@ Camera::~Camera() {
 void Frustrum::extract_from_matrix(const Matrix4f& m) {
 
     planes[kRight] =
-        Vector3f(m(0, 3) - m(0, 0), m(1, 3) - m(1, 0),
-                 m(2, 3) - m(2, 0));
+        Vector3f(m(0, 3) - m(0, 0), m(1, 3) - m(1, 0), m(2, 3) - m(2, 0));
     distances[kRight] = m(3, 3) - m(3, 0);
     planes[kLeft] =
-        Vector3f(m(0, 3) + m(0, 0), m(1, 3) + m(1, 0),
-                 m(2, 3) + m(2, 0));
+        Vector3f(m(0, 3) + m(0, 0), m(1, 3) + m(1, 0), m(2, 3) + m(2, 0));
     distances[kLeft] = m(3, 3) + m(3, 0);
 
     planes[kTop] =
-        Vector3f(m(0, 3) - m(0, 1), m(1, 3) - m(1, 1),
-                 m(2, 3) - m(2, 1));
+        Vector3f(m(0, 3) - m(0, 1), m(1, 3) - m(1, 1), m(2, 3) - m(2, 1));
     distances[kTop] = m(3, 3) - m(3, 1);
     planes[kBottom] =
-        Vector3f(m(0, 3) + m(0, 1), m(1, 3) + m(1, 1),
-                 m(2, 3) + m(2, 1));
+        Vector3f(m(0, 3) + m(0, 1), m(1, 3) + m(1, 1), m(2, 3) + m(2, 1));
     distances[kBottom] = m(3, 3) + m(3, 1);
 
     planes[kFar] =
-        Vector3f(m(0, 3) - m(0, 2), m(1, 3) - m(1, 2),
-                 m(2, 3) - m(2, 2));
+        Vector3f(m(0, 3) - m(0, 2), m(1, 3) - m(1, 2), m(2, 3) - m(2, 2));
     distances[kFar] = m(3, 3) - m(3, 2);
     planes[kNear] =
-        Vector3f(m(0, 3) + m(0, 2), m(1, 3) + m(1, 2),
-                 m(2, 3) + m(2, 2));
+        Vector3f(m(0, 3) + m(0, 2), m(1, 3) + m(1, 2), m(2, 3) + m(2, 2));
 
     for (int i = 0; i < 6; ++i) {
         float d = length(planes[i]);
@@ -157,22 +143,18 @@ void Frustrum::extract_from_matrix(const Matrix4f& m) {
     }
 }
 
-Frustrum::collision_mapping
-Frustrum::test_cube(const BoundingCube& c) const {
+Frustrum::collision_mapping Frustrum::test_cube(const BoundingCube& c) const {
     collision_mapping result = kInside;
     // for each plane do ...
     for (int i = 0; i < 6; i++) {
 
         // is the positive vertex outside?
-        if (point_plane_distance(
-                planes[i], distances[i],
-                c.get_positive_vertex(planes[i])) < 0.f)
+        if (point_plane_distance(planes[i], distances[i],
+                                 c.get_positive_vertex(planes[i])) < 0.f)
             return kOutside;
         // is the negative vertex outside?
-        else if (point_plane_distance(
-                     planes[i], distances[i],
-                     c.get_negative_vertex(planes[i])) <
-                 0.f)
+        else if (point_plane_distance(planes[i], distances[i],
+                                      c.get_negative_vertex(planes[i])) < 0.f)
             result = kCollides;
     }
     return (result);
@@ -198,8 +180,7 @@ void VertexArray::optimize_vertices() {
         b.d = vertex(i);
         needed_indices[b] = 0;
     }
-    PLOGV << "Before: " << s
-          << " After: " << needed_indices.size();
+    PLOGV << "Before: " << s << " After: " << needed_indices.size();
 }
 
 Material& Material::operator=(const Material& m) {

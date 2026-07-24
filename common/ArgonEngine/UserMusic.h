@@ -18,18 +18,18 @@ namespace Argon {
 //! An enum to represent the current state of the music
 //! player.
 enum UserMusicState {
-    kMusicStateNone, /*!< Their is no current state*/
-    kMusicPlaying,   //!< The user is currently listening to
-                     //!< their own music.
-    kMusicPaused, //!< The user is listening to their music,
-                  //!< but it is paused.
+    kMusicStateNone,      /*!< Their is no current state*/
+    kMusicPlaying,        //!< The user is currently listening to
+                          //!< their own music.
+    kMusicPaused,         //!< The user is listening to their music,
+                          //!< but it is paused.
     kMusicCreatePlaylist, //!< The user is creating a
                           //!< playlist of their music that
                           //!< they would like to play.
     kMusicNext,           //!< Moving to the next song.
     kMusicPrevious,       //!< Moving to the previous song.
-    kMusicStopped //!< User has music, but no playlist is
-                  //!< set.
+    kMusicStopped         //!< User has music, but no playlist is
+                          //!< set.
 };
 /**
  * @brief
@@ -55,28 +55,18 @@ class UserMusic {
     //! current state.
     static void set_state_(UserMusicState s) { state = s; }
 
-    bool set_state(
-        UserMusicState
-            s); //!< Sets the users music state. Returns
-                //!< true when the operation is completed
+    bool set_state(UserMusicState s); //!< Sets the users music state. Returns
+                                      //!< true when the operation is completed
     static UserMusicState get_state() {
         return state;
     } //!< Gets the current Music State
     bool create_playlist() {
         return set_state(kMusicCreatePlaylist);
     } //!< Opens a UI for music playlist selection
-    bool play() {
-        return set_state(kMusicPlaying);
-    } //!< Plays users music
-    bool stop() {
-        return set_state(kMusicStopped);
-    } //!< stops users music
-    bool pause() {
-        return set_state(kMusicPaused);
-    } //!< pauses users music
-    bool next() {
-        return set_state(kMusicNext);
-    } //!< advances to the next song
+    bool play() { return set_state(kMusicPlaying); } //!< Plays users music
+    bool stop() { return set_state(kMusicStopped); } //!< stops users music
+    bool pause() { return set_state(kMusicPaused); } //!< pauses users music
+    bool next() { return set_state(kMusicNext); } //!< advances to the next song
     bool prev() {
         return set_state(kMusicPrevious);
     } //!< returns to the previous song
