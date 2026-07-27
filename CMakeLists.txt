@@ -912,6 +912,9 @@ set(SOURCES
     ${SRC_OS}
 )
 
+if(APPLE)
+set(CMAKE_MACOSX_BUNDLE TRUE)
+endif(APPLE)
 add_executable(argonapp ${SOURCES} ) 
 target_link_libraries(argonapp 
     PRIVATE 
