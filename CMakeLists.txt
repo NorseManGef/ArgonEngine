@@ -18,6 +18,12 @@ add_subdirectory(common/bullet3)
 add_subdirectory(common/plog)
 
 if(APPLE)
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
+set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(BUILD_LIBCURL_DOCS OFF CACHE BOOL "" FORCE)
+set(BUILD_MISC_DOCS OFF CACHE BOOL "" FORCE)
+
 add_subdirectory(mac/curl)
 endif(APPLE)
 
