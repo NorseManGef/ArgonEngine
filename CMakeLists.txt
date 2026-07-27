@@ -4,7 +4,6 @@ project(argonengine)
 find_package(OpenGL REQUIRED)
 if(APPLE)
 find_package(CURL REQUIRED)
-pkg_check_modules(GLEW REQUIRED IMPORTED_TARGET glew)  
 endif(APPLE)
 
 set(GENERATED_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated)
@@ -39,7 +38,9 @@ set(INC_OS_ADD
 endif(UNIX AND NOT APPLE)
 
 if(APPLE)
-set(INC_OS mac)
+set(INC_OS mac
+    mac/GL
+)
 set(INC_OS_ADD
     # nothing
 )
@@ -787,6 +788,7 @@ set(SRC_LINUX
 )
 
 set(SRC_MAC
+    mac/GL/glew.c
     mac/SDL3/audio/coreaudio/SDL_coreaudio.m
     mac/SDL3/camera/coremedia/SDL_camera_coremedia.m
     mac/SDL3/core/unix/SDL_appid.c
@@ -859,7 +861,6 @@ list(APPEND LIB_LINUX
 )
 
 set(LIB_MAC
-    PkgConfig::GLEW
     CURL::libcurl
     "-framework Cocoa"
     "-framework IOKit"
