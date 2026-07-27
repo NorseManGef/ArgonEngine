@@ -40,6 +40,7 @@ endif(UNIX AND NOT APPLE)
 if(APPLE)
 set(INC_OS mac
     mac/GL
+    mac/SDL3
 )
 set(INC_OS_ADD
     # nothing
