@@ -10,7 +10,7 @@
 #define ARGON_LOG_DIR "logs"
 #endif
 #ifdef APPLE
-#define ARGON_LOG_DIR "/Library/Application Support/argonapp/logs"
+#define ARGON_LOG_DIR "/Library/Application Support/ArgonSoftware/ArgonApp/logs"
 #endif
 #endif
 #ifndef ARGON_LOG_NAME
@@ -25,6 +25,9 @@
 
 namespace Argon {
     inline void init_log_directory(const std::string& log_directory = ARGON_LOG_DIR) {
+        #ifdef APPLE
+            log_directory.insert(0, getenv("HOME"));
+        #endif
         std::filesystem::path logdir(log_directory);
         if(!exists(logdir)){
             std::filesystem::create_directories(logdir);
