@@ -150,6 +150,7 @@ set(SRC_ARGONENGINE
     common/ArgonEngine/Utility.cpp
     common/ArgonEngine/VirtualResource.cpp
     common/ArgonEngine/VirtualResourceImage.cpp
+    common/ArgonEngine/Vulkan.cpp
 )
 
 set(SRC_ARGONAPP
@@ -967,6 +968,7 @@ add_compile_definitions(argonapp
         _GNU_SOURCE
         HAVE_CLOCK_GETTIME
         ARGON_WINDOW_HIGH_PIXEL_DENSITY
+        USE_VULKAN
 )
 
 if(WAYLAND_FOUND)

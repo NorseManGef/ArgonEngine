@@ -39,6 +39,8 @@
               libevdev
 
               vulkan-loader
+              vulkan-validation-layers
+              shaderc
 
               libGL
               libx11
@@ -67,6 +69,7 @@
             ] ++ (if system == "aarch64-darwin" then [ ] else [ gdb ]);
 
             VULKAN_PATH = "${pkgs.lib.getLib pkgs.vulkan-loader}/lib/libvulkan.so";
+            VK_LAYER_PATH = "${pkgs.lib.getLib pkgs.vulkan-validation-layers}/share/vulkan/explicit_layer.d";
             X11XCB_PATH = "${pkgs.lib.getLib pkgs.libx11}/lib/libX11-xcb.so";
 
             ZENITY_PATH = "${pkgs.lib.getExe pkgs.zenity}";
