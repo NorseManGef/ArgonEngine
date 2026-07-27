@@ -1951,7 +1951,6 @@ endif()
 if(Perl_FOUND)
   set(CURL_MANPAGE "${PROJECT_BINARY_DIR}/docs/cmdline-opts/curl.1")
   set(CURL_ASCIIPAGE "${PROJECT_BINARY_DIR}/docs/cmdline-opts/curl.txt")
-  add_subdirectory(docs)
 endif()
 
 add_subdirectory(scripts)  # for shell completions
