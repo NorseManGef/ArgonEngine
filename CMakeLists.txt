@@ -2,9 +2,6 @@ cmake_minimum_required(VERSION 3.20)
 project(argonengine)
 
 find_package(OpenGL REQUIRED)
-if(APPLE)
-find_package(CURL REQUIRED)
-endif(APPLE)
 
 set(GENERATED_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated)
 file(MAKE_DIRECTORY ${GENERATED_DIR})
@@ -19,6 +16,10 @@ set(BUILD_PYBULLET OFF CACHE BOOL "" FORCE)
 add_subdirectory(common/bullet3)
 
 add_subdirectory(common/plog)
+
+if(APPLE)
+add_subdirectory(mac/curl)
+endif(APPLE)
 
 set(CMAKE_BUILD_TYPE Debug)
 
@@ -43,6 +44,7 @@ set(INC_OS
 )
 set(INC_OS_ADD
     mac/GL #For GLEW
+    mac/curl/include
 )
 endif(APPLE)
 
