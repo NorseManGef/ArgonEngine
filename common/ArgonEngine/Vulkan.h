@@ -6,29 +6,60 @@
 
 #include "RenderAPI.h"
 #include "RenderSystem.h"
+#include "vulkan/vulkan_core.h"
 #include <vulkan/vulkan.h>
 #include <plog/Log.h>
 
 #ifdef USE_VULKAN
 namespace Argon {
 class Vulkan:public RenderAPI {
-    VkBuffer vertex_buffer = nullptr;
-    VkInstance instance = nullptr;
-    VkPhysicalDevice physical_device = nullptr;
-    VkDevice device = nullptr;
+    struct Instance {
+        VkInstance instance;
+        VkDebugUtilsMessengerEXT debug_messenger;
+        VkPhysicalDevice physical_device;
+        VkDevice device;
+        bool _validation;
 
-    bool _validation;
+        const std::vector<const char*> _validation_layers = {
+            "VK_LAYER_KHRONOS_validation"
+        };
+        void create_instance(const std::vector<const char*>& required_extensions);
+        void create_debug_messenger(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
+        void pick_physical_device();
+        void create_logical_device();
+        void check_validation_support();
 
-    const std::vector<const char*> _validation_layers = {
-        "VK_LAYER_KHRONOS_validation"
+        static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT severity,
+                                                            VkDebugUtilsMessageTypeFlagsEXT type,
+                                                            const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
+                                                            void* pUserData);
+        void clean();
+
+        Instance(bool validation = false):
+            _validation(validation),
+            instance(nullptr),
+            debug_messenger(nullptr),
+            physical_device(nullptr),
+            device(nullptr)
+        {
+            std::vector<const char*> reqext;
+            create_instance(reqext);
+        };
+        Instance(std::vector<const char*> reqext, bool validation = false):
+            _validation(validation),
+            instance(nullptr),
+            debug_messenger(nullptr),
+            physical_device(nullptr),
+            device(nullptr)
+        {
+            create_instance(reqext);
+        }
+        ~Instance() { clean(); }
     };
+    VkBuffer vertex_buffer;
 
     void init_vulkan();
-    void create_instance(const std::vector<const char*>& required_extensions);
-    void create_debug_messenger(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
     void create_surface();
-    void pick_physical_device();
-    void create_logical_device();
     void create_swap_chain();
     void create_image_views();
     void create_graphics_pipeline();
@@ -36,13 +67,6 @@ class Vulkan:public RenderAPI {
     void create_vertex_buffer();
     void create_command_buffers();
     void create_sync_objects();
-
-    void check_validation_support();
-
-    static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT severity,
-                                                        VkDebugUtilsMessageTypeFlagsEXT type,
-                                                        const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
-                                                        void * pUserData);
 
     void clean();
 

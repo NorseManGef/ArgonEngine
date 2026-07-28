@@ -930,7 +930,7 @@ target_link_libraries(argonapp
         ${LIB_VULKAN}
 )
 
-set_property(TARGET argonapp PROPERTY CXX_STANDARD 17)
+set_property(TARGET argonapp PROPERTY CXX_STANDARD 20)
 
 target_compile_definitions(argonapp
     PRIVATE

@@ -2,13 +2,14 @@
 #include <ranges>
 #include <algorithm>
 #include "ArgonEngine/ArgonInit.h"
+#include "plog/Severity.h"
 #include "vulkan/vulkan_core.h"
 #ifdef USE_VULKAN
 #include "VirtualResourceImage.h"
 
 namespace Argon {
 
-void Vulkan::create_instance(const std::vector<const char*>& required_extensions) {
+void Vulkan::Instance::create_instance(const std::vector<const char*>& required_extensions) {
     if(_validation)
         check_validation_support();
 
@@ -58,7 +59,7 @@ void Vulkan::create_instance(const std::vector<const char*>& required_extensions
     }
 }
 
-void Vulkan::check_validation_support() {
+void Vulkan::Instance::check_validation_support() {
     uint32_t layer_count;
     vkEnumerateInstanceLayerProperties(&layer_count, nullptr);
     std::vector<VkLayerProperties> layer_properties(layer_count);
@@ -75,14 +76,99 @@ void Vulkan::check_validation_support() {
         }
     );
 
-    if(unsupported_layers != layer_properties.end()) {
+    if(unsupported_layers != _validation_layers.end()) {
         PLOGF << "Validation layers were requested but not available";
         terminate_engine();
     }
 }
 
-void Vulkan::create_debug_messenger(VkDebugUtilsMessengerCreateInfoEXT& createInfo) {
+void Vulkan::Instance::create_debug_messenger(VkDebugUtilsMessengerCreateInfoEXT& createInfo) {
+    createInfo = {
+        .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT,
+        .messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
+                           VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT |
+                           VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+                           VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT,
+        .messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
+                       VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
+                       VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT,
+        .pfnUserCallback = debugCallback,
+        .pUserData = nullptr,
+    };
+    auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
+        instance, "vkCreateDebugUtilsMessengerEXT"
+    );
 
+    if(func != nullptr) {
+        VkResult result = func(instance, &createInfo, nullptr, &debug_messenger);
+        if(result != VK_SUCCESS) {
+            PLOGF << "Failed to set up debug messenger";
+            terminate_engine();
+        }
+    } else {
+        PLOGF << "Failed to load vkCreateDebugUtilsMessengerEXT function";
+        terminate_engine();
+    }
+}
+
+VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT severity,
+                                             VkDebugUtilsMessageTypeFlagsEXT type,
+                                             const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
+                                             void* pUserData) {
+    plog::Severity plogsev;
+    switch(severity) {
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
+            plogsev = plog::verbose;
+            break;
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
+            plogsev = plog::info;
+            break;
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
+            plogsev = plog::warning;
+            break;
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
+            plogsev = plog::error;
+            break;
+        default:
+            plogsev = plog::fatal;
+            break;
+    }
+
+    std::string sType;
+    switch(type) {
+        case VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT:
+            sType += "VULKAN GENERAL MESSAGE: ";
+            break;
+        case VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT:
+            sType += "VULKAN VALIDATION MESSAGE: ";
+            break;
+        case VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT:
+            sType += "VULKAN PERFORMANCE MESSAGE: ";
+            break;
+        default:
+            sType += "VULKAN MESSAGE: ";
+            break;
+    }
+
+    PLOG(plogsev) << sType << pCallbackData->pMessage;
+
+    return VK_FALSE;
+}
+
+void Vulkan::Instance::clean() {
+    if(debug_messenger != VK_NULL_HANDLE) {
+        auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
+            instance, "vkDestroyDebugUtilsMessengerEXT"
+        );
+        if(func!=nullptr) {
+            func(instance, debug_messenger, nullptr);
+        }
+    }
+
+    if(instance != VK_NULL_HANDLE) {
+        vkDestroyInstance(instance, nullptr);
+        instance = VK_NULL_HANDLE;
+    }
 }
 
 }
