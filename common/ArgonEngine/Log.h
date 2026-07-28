@@ -6,7 +6,12 @@
 #include <plog/Initializers/RollingFileInitializer.h>
 
 #ifndef ARGON_LOG_DIR
+#ifndef APPLE
 #define ARGON_LOG_DIR "logs"
+#endif
+#ifdef APPLE
+#define ARGON_LOG_DIR "/Library/Application Support/ArgonSoftware/ArgonApp/logs"
+#endif
 #endif
 #ifndef ARGON_LOG_NAME
 #define ARGON_LOG_NAME "argon.log"
@@ -20,9 +25,12 @@
 
 namespace Argon {
     inline void init_log_directory(const std::string& log_directory = ARGON_LOG_DIR) {
+        #ifdef APPLE
+            log_directory.insert(0, getenv("HOME"));
+        #endif
         std::filesystem::path logdir(log_directory);
         if(!exists(logdir)){
-            std::filesystem::create_directory(logdir);
+            std::filesystem::create_directories(logdir);
         }
     }
 }
