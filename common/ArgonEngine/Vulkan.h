@@ -9,15 +9,15 @@
 #include "vulkan/vulkan_core.h"
 #include <vulkan/vulkan.h>
 #include <plog/Log.h>
+#include <optional>
+#include <set>
 
 #ifdef USE_VULKAN
 namespace Argon {
 class Vulkan:public RenderAPI {
     struct Instance {
-        VkInstance instance;
+        VkInstance _instance;
         VkDebugUtilsMessengerEXT debug_messenger;
-        VkPhysicalDevice physical_device;
-        VkDevice device;
         bool _validation;
 
         const std::vector<const char*> _validation_layers = {
@@ -25,8 +25,6 @@ class Vulkan:public RenderAPI {
         };
         void create_instance(const std::vector<const char*>& required_extensions);
         void create_debug_messenger(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
-        void pick_physical_device();
-        void create_logical_device();
         void check_validation_support();
 
         static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT severity,
@@ -37,24 +35,87 @@ class Vulkan:public RenderAPI {
 
         Instance(bool validation = false):
             _validation(validation),
-            instance(nullptr),
-            debug_messenger(nullptr),
-            physical_device(nullptr),
-            device(nullptr)
+            _instance(nullptr),
+            debug_messenger(nullptr)
         {
             std::vector<const char*> reqext;
             create_instance(reqext);
         };
         Instance(std::vector<const char*> reqext, bool validation = false):
             _validation(validation),
-            instance(nullptr),
-            debug_messenger(nullptr),
-            physical_device(nullptr),
-            device(nullptr)
+            _instance(nullptr),
+            debug_messenger(nullptr)
         {
             create_instance(reqext);
         }
         ~Instance() { clean(); }
+    };
+
+    struct Device {
+        VkPhysicalDevice _physical_device;
+        VkDevice _device;
+
+        VkQueue _graphicsQ;
+        VkQueue _presentQ;
+        VkQueue _computeQ;
+        VkQueue _transferQ;
+
+        VkPhysicalDeviceProperties2 _properties;
+        VkPhysicalDeviceFeatures2 _features;
+        VkPhysicalDeviceMemoryProperties2 _memory_properties;
+
+        std::vector<const char*> _extensions = {
+            VK_KHR_SWAPCHAIN_EXTENSION_NAME
+        };
+
+        struct Queue_family_indices {
+            std::optional<uint32_t> graphics;
+            std::optional<uint32_t> present;
+            std::optional<uint32_t> compute;
+            std::optional<uint32_t> transfer;
+
+            bool is_complete() const {
+                return graphics.has_value() && present.has_value();
+            }
+
+            std::set<uint32_t> unique_queue_families() const {
+                std::set<uint32_t> unique_families;
+                if(graphics.has_value()) unique_families.insert(graphics.value());
+                if(present.has_value()) unique_families.insert(present.value());
+                if(compute.has_value()) unique_families.insert(compute.value());
+                if(transfer.has_value()) unique_families.insert(transfer.value());
+                return unique_families;
+            }
+        };
+
+        struct Swapchain_details {
+            VkSurfaceCapabilities2KHR capabilities;
+            std::vector<VkSurfaceFormat2KHR> formats;
+            std::vector<VkPresentModeKHR> presentModes;
+
+            bool is_adequate() const {
+                return !formats.empty() && !presentModes.empty();
+            }
+        };
+
+        Queue_family_indices _queue_families;
+
+        void pick_physical_device(VkInstance instance, VkSurfaceKHR surface);
+        void create_logical_device(VkSurfaceKHR surface);
+
+        uint32_t score_physical_device(VkPhysicalDevice device, VkSurfaceKHR surface);
+        Queue_family_indices find_queue_families(VkPhysicalDevice device, VkSurfaceKHR surface);
+        bool check_device_extensions(VkPhysicalDevice device);
+        Swapchain_details query_swapchain_details(VkPhysicalDevice device, VkSurfaceKHR surface) const;
+        void retrieve_queue_handles();
+
+        void query_device_info() {
+            vkGetPhysicalDeviceProperties2(_physical_device, &_properties);
+            vkGetPhysicalDeviceFeatures2(_physical_device, &_features);
+            vkGetPhysicalDeviceMemoryProperties2(_physical_device, &_memory_properties);
+        }
+
+        void clean();
     };
     VkBuffer vertex_buffer;
 
