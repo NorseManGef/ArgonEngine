@@ -115,7 +115,32 @@ class Vulkan:public RenderAPI {
             vkGetPhysicalDeviceMemoryProperties2(_physical_device, &_memory_properties);
         }
 
+        void create(VkInstance instance, VkSurfaceKHR surface) {
+            pick_physical_device(instance, surface);
+            create_logical_device(surface);
+        }
+
         void clean();
+
+        Device():
+            _device(nullptr),
+            _physical_device(nullptr),
+            _graphicsQ(nullptr),
+            _presentQ(nullptr),
+            _computeQ(nullptr),
+            _transferQ(nullptr)
+        {}
+
+        Device(VkInstance instance, VkSurfaceKHR surface):
+            Device()
+        {
+            create(instance, surface);
+        }
+
+        ~Device() {
+            clean();
+        }
+        
     };
     VkBuffer vertex_buffer;
 
