@@ -245,11 +245,123 @@ void Vulkan::Device::create_logical_device(VkSurfaceKHR surface) {
     }
 }
 
+void Vulkan::Device::create_swap_chain(VkSurfaceKHR surface, uint32_t width, uint32_t height) {
+    if(!_swapchain_support.queried)
+        _swapchain_support = query_swapchain_details(_physical_device, surface);
+
+    if(!_swapchain_support.is_adequate()) {
+        PLOGF << "Vulkan: Swapchain support is inadequate for this device";
+        terminate_engine();
+    }
+
+    VkSurfaceFormat2KHR surface_format = choose_surface_format(_swapchain_support.formats);
+    VkPresentModeKHR present_mode = choose_present_mode(_swapchain_support.presentModes);
+    VkExtent2D extent = choose_swap_extent(_swapchain_support.capabilities, width, height);
+    uint32_t image_count = choose_image_count(_swapchain_support.capabilities);
+
+    _image_format = surface_format.surfaceFormat.format;
+    _extent = extent;
+
+    VkSwapchainCreateInfoKHR createInfo{
+        .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
+        .surface = surface,
+        .minImageCount = image_count,
+        .imageColorSpace = surface_format.surfaceFormat.colorSpace,
+        .imageExtent = extent,
+        .imageArrayLayers = 1, //TODO: come up with a sane method of letting a user control this value
+                               // as it is required for stereoscopic 3d applications
+        .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+    };
+
+    uint32_t queue_array[] = {
+        _queue_families.graphics.value(),
+        _queue_families.present.value(),
+    };
+
+    if(_queue_families.graphics != _queue_families.present) {
+        createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+        createInfo.queueFamilyIndexCount = 2;
+        createInfo.pQueueFamilyIndices = queue_array;
+    } else {
+        createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    }
+
+    createInfo.preTransform = _swapchain_support.capabilities.surfaceCapabilities.currentTransform; // No transform
+    createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR; // Ignore alpha channel
+
+    createInfo.presentMode = present_mode;
+    createInfo.clipped = VK_TRUE;
+
+    createInfo.oldSwapchain = VK_NULL_HANDLE;
+    
+    {
+        VkResult result = vkCreateSwapchainKHR(_device, &createInfo, nullptr, &_swapchain);
+
+        if(result != VK_SUCCESS) {
+            PLOGF << "Vulkan: Failed to create swapchain";
+            terminate_engine();
+        }
+    }
+    uint32_t actual_image_count;
+    {
+        VkResult result = vkGetSwapchainImagesKHR(_device, _swapchain, &actual_image_count, nullptr);
+
+        if(result != VK_SUCCESS) {
+            PLOGF << "Vulkan: Failed to get swapchain image count";
+            terminate_engine();
+        }
+    }
+    _images.resize(actual_image_count);
+    {
+        VkResult result = vkGetSwapchainImagesKHR(_device, _swapchain, &actual_image_count, _images.data());    
+    }
+
+    create_image_views();
+}
+
+void Vulkan::Device::create_image_views() {
+    _image_views.resize(_images.size());
+
+    for(size_t i = 0; i < _images.size(); ++i) {
+        VkImageViewCreateInfo createInfo{
+            .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+            .image = _images[i],
+            .viewType = VK_IMAGE_VIEW_TYPE_2D, //TODO: determine if the needs to be settable by the user
+            .format = _image_format,
+            .components.r = VK_COMPONENT_SWIZZLE_IDENTITY,
+            .components.g = VK_COMPONENT_SWIZZLE_IDENTITY,
+            .components.b = VK_COMPONENT_SWIZZLE_IDENTITY,
+            .components.a = VK_COMPONENT_SWIZZLE_IDENTITY,
+            .subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, // color data
+            .subresourceRange.baseMipLevel = 0,
+            .subresourceRange.levelCount = 1,
+            .subresourceRange.baseArrayLayer = 0,
+            .subresourceRange.layerCount = 1,
+        };
+
+        VkResult result = vkCreateImageView(_device, &createInfo, nullptr, &_image_views[i]);
+
+        if(result != VK_SUCCESS) {
+            PLOGE << "Vulkan: Failed to create image view " + std::to_string(i);
+        }
+    }
+}
+
+void Vulkan::Device::destroy_image_views() {
+    for(auto image_view : _image_views) {
+        if(image_view != VK_NULL_HANDLE) {
+            vkDestroyImageView(_device, image_view, nullptr);
+        }
+    }
+    _image_views.clear();
+}
+
 uint32_t Vulkan::Device::score_physical_device(VkPhysicalDevice device, VkSurfaceKHR surface) {
     Queue_family_indices indices = find_queue_families(device, surface);
-    Swapchain_details swapchain_support = query_swapchain_details(device, surface);
+    if(!_swapchain_support.queried)
+        _swapchain_support = query_swapchain_details(device, surface);
 
-    if(!(indices.is_complete() && check_device_extensions(device) && swapchain_support.is_adequate())) {
+    if(!(indices.is_complete() && check_device_extensions(device) && _swapchain_support.is_adequate())) {
         return 0;
     }
 
@@ -361,6 +473,8 @@ Vulkan::Device::Swapchain_details Vulkan::Device::query_swapchain_details(VkPhys
         vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &present_mode_count, details.presentModes.data());
     }
 
+    details.queried = true;
+
     return details;
 }
 
@@ -371,7 +485,69 @@ void Vulkan::Device::retrieve_queue_handles() {
     vkGetDeviceQueue(_device, _queue_families.transfer.value(), 0, &_transferQ);
 }
 
+VkSurfaceFormat2KHR choose_surface_format(const std::vector<VkSurfaceFormat2KHR>& available_formats) {
+    //TODO: HDR support with sane user-settable flag
+    for(const auto& a : available_formats) {
+        if(a.surfaceFormat.format == VK_FORMAT_B8G8R8A8_SRGB &&
+           a.surfaceFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+                return a;
+    }
+
+    for(const auto& a : available_formats) {
+        if(a.surfaceFormat.format == VK_FORMAT_R8G8B8_SRGB &&
+           a.surfaceFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+                return a;
+    }
+
+    PLOGW << "Vulkan: surface format unknown: " << available_formats[0].surfaceFormat.format
+          << " with color space: " << available_formats[0].surfaceFormat.colorSpace;
+    return available_formats[0];
+}
+
+VkPresentModeKHR Vulkan::Device::choose_present_mode(const std::vector<VkPresentModeKHR>& available_present_modes) {
+    //TODO: Allow this to be user-settable
+
+    //Triple buffering
+    for(const auto& a : available_present_modes) {
+        if(a == VK_PRESENT_MODE_MAILBOX_KHR) return a;
+    }
+
+    //Vsync off
+    for(const auto& a : available_present_modes) {
+        if(a == VK_PRESENT_MODE_IMMEDIATE_KHR) return a;
+    }
+
+    // Fow now we use regular vsync as a fallback as it is guaranteed to be supported.
+    return VK_PRESENT_MODE_FIFO_KHR;
+}
+
+VkExtent2D Vulkan::Device::choose_swap_extent(const VkSurfaceCapabilities2KHR& capabilities, uint32_t width, uint32_t height) {
+    if(capabilities.surfaceCapabilities.currentExtent.width != std::numeric_limits<uint32_t>::max())
+        return capabilities.surfaceCapabilities.currentExtent;
+    VkExtent2D actual_extent = {width, height};
+    actual_extent.width = std::clamp(actual_extent.width,
+                                     capabilities.surfaceCapabilities.minImageExtent.width,
+                                     capabilities.surfaceCapabilities.maxImageExtent.width);
+    actual_extent.height = std::clamp(actual_extent.height,
+                                      capabilities.surfaceCapabilities.minImageExtent.height,
+                                      capabilities.surfaceCapabilities.maxImageExtent.height);
+    return actual_extent;
+}
+
+uint32_t Vulkan::Device::choose_image_count(const VkSurfaceCapabilities2KHR& capabilities) {
+    uint32_t image_count = capabilities.surfaceCapabilities.minImageCount + 1;
+    uint32_t max_count = capabilities.surfaceCapabilities.maxImageCount;
+
+    // Make sure image_count doesn't exceed the maximum (0 means no limit)
+    if(max_count > 0 && image_count > max_count)
+        image_count = max_count;
+
+    return image_count;
+}
+
 void Vulkan::Device::clean() {
+    clean_swapchain();
+
     if(_device != VK_NULL_HANDLE) {
         vkDeviceWaitIdle(_device);
         vkDestroyDevice(_device, nullptr);
@@ -380,6 +556,22 @@ void Vulkan::Device::clean() {
     }
 
     _physical_device = nullptr; //doesn't need to be destroyed
+}
+
+void Vulkan::Device::clean_swapchain() {
+    if(_device != VK_NULL_HANDLE) {
+        destroy_image_views();
+
+        if(_swapchain != VK_NULL_HANDLE) {
+            vkDestroySwapchainKHR(_device, _swapchain, nullptr);
+            _swapchain = VK_NULL_HANDLE;
+        }
+    }
+
+    _images.clear();
+
+    _image_format = VK_FORMAT_UNDEFINED;
+    _extent = {0,0};
 }
 
 }

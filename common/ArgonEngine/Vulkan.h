@@ -64,6 +64,13 @@ class Vulkan:public RenderAPI {
         VkPhysicalDeviceFeatures2 _features;
         VkPhysicalDeviceMemoryProperties2 _memory_properties;
 
+        VkSwapchainKHR _swapchain;
+        std::vector<VkImage> _images;
+        std::vector<VkImageView> _image_views;
+
+        VkFormat _image_format;
+        VkExtent2D _extent;
+
         std::vector<const char*> _extensions = {
             VK_KHR_SWAPCHAIN_EXTENSION_NAME
         };
@@ -93,15 +100,22 @@ class Vulkan:public RenderAPI {
             std::vector<VkSurfaceFormat2KHR> formats;
             std::vector<VkPresentModeKHR> presentModes;
 
+            bool queried = false;
+
             bool is_adequate() const {
                 return !formats.empty() && !presentModes.empty();
             }
         };
 
         Queue_family_indices _queue_families;
+        Swapchain_details _swapchain_support;
 
         void pick_physical_device(VkInstance instance, VkSurfaceKHR surface);
         void create_logical_device(VkSurfaceKHR surface);
+        void create_swap_chain(VkSurfaceKHR surface, uint32_t width, uint32_t height);
+        void create_image_views();
+
+        void destroy_image_views();
 
         uint32_t score_physical_device(VkPhysicalDevice device, VkSurfaceKHR surface);
         Queue_family_indices find_queue_families(VkPhysicalDevice device, VkSurfaceKHR surface);
@@ -109,18 +123,32 @@ class Vulkan:public RenderAPI {
         Swapchain_details query_swapchain_details(VkPhysicalDevice device, VkSurfaceKHR surface) const;
         void retrieve_queue_handles();
 
+        VkSurfaceFormat2KHR choose_surface_format(const std::vector<VkSurfaceFormat2KHR>& available_formats);
+        VkPresentModeKHR choose_present_mode(const std::vector<VkPresentModeKHR>& available_present_modes);
+        VkExtent2D choose_swap_extent(const VkSurfaceCapabilities2KHR& capabilities, uint32_t width, uint32_t height);
+        uint32_t choose_image_count(const VkSurfaceCapabilities2KHR& capabilities);
+
         void query_device_info() {
             vkGetPhysicalDeviceProperties2(_physical_device, &_properties);
             vkGetPhysicalDeviceFeatures2(_physical_device, &_features);
             vkGetPhysicalDeviceMemoryProperties2(_physical_device, &_memory_properties);
         }
 
-        void create(VkInstance instance, VkSurfaceKHR surface) {
+        void create(VkInstance instance, VkSurfaceKHR surface, uint32_t width, uint32_t height) {
             pick_physical_device(instance, surface);
             create_logical_device(surface);
+            create_swap_chain(surface, width, height);
         }
 
+        void recreate_swapchain(VkSurfaceKHR surface, uint32_t width, uint32_t height) {
+            vkDeviceWaitIdle(_device);
+            clean_swapchain();
+            create_swap_chain(surface, width, height);
+        } 
+
         void clean();
+
+        void clean_swapchain();
 
         Device():
             _device(nullptr),
@@ -128,13 +156,16 @@ class Vulkan:public RenderAPI {
             _graphicsQ(nullptr),
             _presentQ(nullptr),
             _computeQ(nullptr),
-            _transferQ(nullptr)
+            _transferQ(nullptr),
+            _swapchain(nullptr),
+            _image_format(VK_FORMAT_UNDEFINED),
+            _extent({0, 0})
         {}
 
-        Device(VkInstance instance, VkSurfaceKHR surface):
+        Device(VkInstance instance, VkSurfaceKHR surface, uint32_t width, uint32_t height):
             Device()
         {
-            create(instance, surface);
+            create(instance, surface, width, height);
         }
 
         ~Device() {
@@ -145,9 +176,6 @@ class Vulkan:public RenderAPI {
     VkBuffer vertex_buffer;
 
     void init_vulkan();
-    void create_surface();
-    void create_swap_chain();
-    void create_image_views();
     void create_graphics_pipeline();
     void create_command_pool();
     void create_vertex_buffer();
