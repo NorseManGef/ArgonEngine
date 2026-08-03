@@ -912,6 +912,9 @@ set(SOURCES
     ${SRC_OS}
 )
 
+if(APPLE)
+set(CMAKE_MACOSX_BUNDLE TRUE)
+endif(APPLE)
 add_executable(argonapp ${SOURCES} ) 
 target_link_libraries(argonapp 
     PRIVATE 
@@ -925,7 +928,6 @@ target_link_libraries(argonapp
 )
 if(APPLE)
 set_target_properties(argonapp PROPERTIES
-  CMAKE_MACOSX_BUNDLE TRUE
   MACOSX_BUNDLE_INFO_PLIST "${CMAKE_SOURCE_DIR}/mac/Info.plist.in"
 )
 endif(APPLE)
