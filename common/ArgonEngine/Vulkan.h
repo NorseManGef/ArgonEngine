@@ -173,10 +173,49 @@ class Vulkan:public RenderAPI {
         }
         
     };
+
+    struct Pipeline {
+        VkDevice _device;
+        VkPipeline _pipeline;
+        VkPipelineLayout _pipeline_layout;
+        VkDescriptorSetLayout _desc_layout;
+        VkViewport _viewport{};
+        VkRect2D scissor{};
+        std::shared_ptr<VertexArray> vertex_array;
+
+        void create_graphics_pipeline(VkDevice device,
+                                      VkRenderPass render_pass,
+                                      const VirtualResource vertex_shader_path,
+                                      const VirtualResource fragment_shader_path,
+                                      VkExtent2D extent);
+
+        bool is_valid() const {
+            return _device != VK_NULL_HANDLE &&
+                   _pipeline != VK_NULL_HANDLE &&
+                   _pipeline_layout != VK_NULL_HANDLE &&
+                   _desc_layout != VK_NULL_HANDLE;
+        }
+
+        VkShaderModule create_shader_module(const std::string shader_code);
+        VkShaderModule load_shader(const VirtualResource shader_path);
+
+        void create_desc_layout();
+        void create_pipeline_layout();
+        VkPipelineVertexInputStateCreateInfo create_vertex_input_info();
+        VkPipelineInputAssemblyStateCreateInfo create_input_assembly_info();
+        VkPipelineViewportStateCreateInfo create_viewport_info(VkExtent2D extent);
+        VkPipelineRasterizationStateCreateInfo create_rasterization_info();
+        VkPipelineMultisampleStateCreateInfo create_multisample_info();
+        VkPipelineColorBlendStateCreateInfo create_color_blend_info();
+        VkPipelineDepthStencilStateCreateInfo create_depth_stencil_info();
+
+        void clean();
+    };
+
     VkBuffer vertex_buffer;
 
+
     void init_vulkan();
-    void create_graphics_pipeline();
     void create_command_pool();
     void create_vertex_buffer();
     void create_command_buffers();

@@ -574,6 +574,174 @@ void Vulkan::Device::clean_swapchain() {
     _extent = {0,0};
 }
 
+  ///////////////////////////////////////
+ // PIPELINE ///////////////////////////
+///////////////////////////////////////
+void Vulkan::Pipeline::create_graphics_pipeline(VkDevice device, VkRenderPass render_pass,
+                                                VirtualResource vertex_shader_path, 
+                                                VirtualResource fragment_shader_path,
+                                                VkExtent2D extent) {
+    if(device == VK_NULL_HANDLE) {
+        PLOGF << "Vulkan: Invalid device handle provided to graphics pipeline";
+        terminate_engine();
+    }
+    if(render_pass == VK_NULL_HANDLE) {
+        PLOGF << "Vulkan: Invalid render pass handle provided to graphics pipeline";
+        terminate_engine();
+    }
+    if(extent.width == 0 || extent.height == 0) {
+        PLOGF << "Vulkan: Invalid extent provided to graphics pipeline";
+    }
+
+    _device = device;
+
+    VkShaderModule vertex_shader = load_shader(vertex_shader_path);
+    VkShaderModule fragment_shader = load_shader(fragment_shader_path);
+
+    VkPipelineShaderStageCreateInfo vertex_shader_stageInfo{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+        .stage = VK_SHADER_STAGE_VERTEX_BIT,
+        .module = vertex_shader,
+        .pName = "main", // entry point into the shader
+    };
+
+    VkPipelineShaderStageCreateInfo fragment_shader_stageInfo{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+        .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
+        .module = fragment_shader,
+        .pName = "main",
+    };
+
+    VkPipelineShaderStageCreateInfo shader_stages[] = {vertex_shader_stageInfo, fragment_shader_stageInfo};
+
+    create_desc_layout();
+    create_pipeline_layout();
+
+    auto vertex_input_info = create_vertex_input_info();
+    auto input_assembly_info = create_input_assembly_info();
+    auto viewport_info = create_viewport_info(extent);
+    auto rasterization_info = create_rasterization_info();
+    auto multisample_info = create_multisample_info();
+    auto depth_stencil_info = create_depth_stencil_info();
+    auto color_blend_info = create_color_blend_info();
+
+    VkGraphicsPipelineCreateInfo pipeline_createInfo{
+        .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+        .stageCount = 2, //vertex+fragment stages. TODO: Determine if other stages might be needed and allow users to set those stages if so.
+        .pStages = shader_stages,
+        .pVertexInputState = &vertex_input_info,
+        .pInputAssemblyState = &input_assembly_info,
+        .pViewportState = &viewport_info,
+        .pRasterizationState = &rasterization_info,
+        .pMultisampleState = &multisample_info,
+        .pDepthStencilState = &depth_stencil_info,
+        .pColorBlendState = &color_blend_info,
+        .pDynamicState = nullptr, //TODO: Determine if dynamic state is needed
+        .layout = _pipeline_layout,
+        .renderPass = render_pass,
+        .subpass = 0, //TODO: Determine if this should be user-settable
+        .basePipelineHandle = VK_NULL_HANDLE, //TODO: Implement base pipelines if feasible for better performance
+        .basePipelineIndex = -1,
+    };
+
+    VkResult result = vkCreateGraphicsPipelines(device,
+                                                VK_NULL_HANDLE,
+                                                1,
+                                                &pipeline_createInfo,
+                                                VK_NULL_HANDLE,
+                                                &_pipeline);
+
+    if(result != VK_SUCCESS) {
+        PLOGF << "Vulkan: Failed to create graphics pipeline";
+        terminate_engine();
+    }
+
+    vkDestroyShaderModule(device, vertex_shader, nullptr);
+    vkDestroyShaderModule(device, fragment_shader, nullptr);
+}
+
+VkShaderModule Vulkan::Pipeline::create_shader_module(const std::string shader_code) {
+    VkShaderModuleCreateInfo createInfo{
+        .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+        .codeSize = shader_code.size(),
+        .pCode = reinterpret_cast<const uint32_t*>(shader_code.c_str()),
+    };
+
+    VkShaderModule module;
+    VkResult result = vkCreateShaderModule(_device, &createInfo, nullptr, &module);
+    if(result != VK_SUCCESS) {
+        PLOGF << "Vulkan: Failed to create shader module";
+        terminate_engine();
+    }
+
+    return module;
+}
+
+VkShaderModule Vulkan::Pipeline::load_shader(VirtualResource shader_path) {
+    std::string code = shader_path.get_data_as_string();
+
+    return create_shader_module(code);
+}
+
+void Vulkan::Pipeline::create_desc_layout() {
+    VkDescriptorSetLayoutBinding ubo_layout_binding{
+        .binding = 0,
+        .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+        .descriptorCount = 1,
+        .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+        .pImmutableSamplers = nullptr, //TODO: Determine if we have texture sampling and need to use this value
+    };
+
+    VkDescriptorSetLayoutCreateInfo layout_info{
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+        .bindingCount = 1,
+        .pBindings = &ubo_layout_binding,
+    };
+
+    VkResult result = vkCreateDescriptorSetLayout(_device,
+                                                  &layout_info,
+                                                  nullptr,
+                                                  &_desc_layout);
+
+    if(result != VK_SUCCESS) {
+        PLOGF << "Vulkan: Failed to create descriptor set layout";
+        terminate_engine();
+    }
+}
+
+void Vulkan::Pipeline::create_pipeline_layout() {
+    VkPipelineLayoutCreateInfo pipeline_layout_info{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+        .setLayoutCount = 1,
+        .pSetLayouts = &_desc_layout,
+        .pushConstantRangeCount = 0, //TODO: determine if this is optimal
+        .pPushConstantRanges = nullptr,
+    };
+
+    VkResult result = vkCreatePipelineLayout(_device,
+                                             &pipeline_layout_info,
+                                             nullptr,
+                                             &_pipeline_layout);
+
+    if(result != VK_SUCCESS) {
+        PLOGF << "Vulkan: Failed to create pipeline layout";
+        terminate_engine();
+    }
+}
+
+VkPipelineVertexInputStateCreateInfo Vulkan::Pipeline::create_vertex_input_info() {
+    VkVertexInputBindingDescription binding_desc{
+        .binding = 0,
+        .stride = static_cast<uint32_t>(vertex_array->stride),
+        .inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
+    };
+
+    VkPipelineVertexInputStateCreateInfo vertex_input_info{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+    };
+
+}
+
 }
 
 #endif
