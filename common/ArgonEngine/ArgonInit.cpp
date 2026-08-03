@@ -103,6 +103,7 @@ namespace Argon{
 #ifdef PLATFORM_MAC
         doc_dir = home+"/Documents";
         pref_dir = home+"/Library/Application Support/"+organization_name+"/"+app_name;
+        base = base+"Contents/";
 #endif
 #ifdef PLATFORM_WINDOWS
         char output[MAX_PATH];
