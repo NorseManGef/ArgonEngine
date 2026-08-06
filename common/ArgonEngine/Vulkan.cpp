@@ -1,7 +1,9 @@
 #include "Vulkan.h"
+#include <cstdint>
 #include <ranges>
 #include <algorithm>
 #include "ArgonEngine/ArgonInit.h"
+#include "ArgonEngine/RenderSystemConstants.h"
 #include "plog/Severity.h"
 #include "vulkan/vulkan_core.h"
 #ifdef USE_VULKAN
@@ -732,14 +734,187 @@ void Vulkan::Pipeline::create_pipeline_layout() {
 VkPipelineVertexInputStateCreateInfo Vulkan::Pipeline::create_vertex_input_info() {
     VkVertexInputBindingDescription binding_desc{
         .binding = 0,
-        .stride = static_cast<uint32_t>(vertex_array->stride),
+        .stride = static_cast<uint32_t>(_vertex_array->stride),
         .inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
     };
 
-    VkPipelineVertexInputStateCreateInfo vertex_input_info{
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+    std::vector<VkVertexInputAttributeDescription> attribs;
+    attribs.reserve(_vertex_array->attributes.size());
+
+    auto attrib_location = [&](VertexAttribPair pair)-> uint32_t {
+        for(size_t x = 0; x<_vertex_array->attributes.size(); x++) {
+            if(_vertex_array->attributes[x].attribute == pair.attribute) {
+                return x;
+            }
+        }
+        return UINT32_MAX;
     };
 
+    auto render_format = [](int type, int components)->VkFormat {
+        switch(type) {
+            case kRenderTypeFloat:
+                switch(components) {
+                    case 1: return VK_FORMAT_R32_SFLOAT;
+                    case 2: return VK_FORMAT_R32G32_SFLOAT;
+                    case 3: return VK_FORMAT_R32G32B32_SFLOAT;
+                    case 4: return VK_FORMAT_R32G32B32A32_SFLOAT;
+                }
+            break;
+            case kRenderTypeByte:
+                switch (components) {
+                    case 1: return VK_FORMAT_R8_SINT;
+                    case 2: return VK_FORMAT_R8G8_SINT;
+                    case 4: return VK_FORMAT_R8G8B8A8_SINT;
+                }
+            break;
+            case kRenderTypeUByte:
+                switch (components) {
+                    case 1: return VK_FORMAT_R8_UINT;
+                    case 2: return VK_FORMAT_R8G8_UINT;
+                    case 4: return VK_FORMAT_R8G8B8A8_UINT;
+                }
+            break;
+            case kRenderTypeShort:
+                switch (components) {
+                    case 1: return VK_FORMAT_R16_SINT;
+                    case 2: return VK_FORMAT_R16G16_SINT;
+                    case 4: return VK_FORMAT_R16G16B16A16_SINT;
+                }
+            break;
+        }
+        PLOGE << "Vulkan: Unsupported vertex attribute format";
+        return VK_FORMAT_UNDEFINED;
+    };
+
+    for(const auto& a : _vertex_array->attributes) {
+        VkVertexInputAttributeDescription attrib{
+            .location = attrib_location(a),
+            .binding = 0,
+            .format = render_format(a.type, a.components),
+            .offset = static_cast<uint32_t>(a.offset),
+        };
+        attribs.push_back(attrib);
+    }
+
+    VkPipelineVertexInputStateCreateInfo vertex_input_info{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+        .vertexBindingDescriptionCount = 1,
+        .pVertexBindingDescriptions = &binding_desc,
+        .vertexAttributeDescriptionCount = static_cast<uint32_t>(attribs.size()),
+        .pVertexAttributeDescriptions = attribs.data(),
+    };
+
+    return vertex_input_info;
+}
+
+VkPipelineInputAssemblyStateCreateInfo Vulkan::Pipeline::create_input_assembly_info() {
+    VkPipelineInputAssemblyStateCreateInfo input_assembly_info{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
+        .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+        .primitiveRestartEnable = VK_FALSE,
+    };
+
+    return input_assembly_info;
+}
+
+VkPipelineViewportStateCreateInfo Vulkan::Pipeline::create_viewport_info(VkExtent2D extent) {
+    _viewport = {
+        .x = 0.0f,
+        .y = 0.0f,
+        .width = static_cast<float>(extent.width),
+        .height = static_cast<float>(extent.height),
+        .minDepth = 0.0f,
+        .maxDepth = 1.0f,
+    };
+    
+    _scissor.offset = {0,0};
+    _scissor.extent = extent;
+
+    VkPipelineViewportStateCreateInfo viewport_info {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
+        .viewportCount = 1,
+        .pViewports = &_viewport,
+        .scissorCount = 1,
+        .pScissors = &_scissor,
+    };
+
+    return viewport_info;
+}
+
+VkPipelineRasterizationStateCreateInfo Vulkan::Pipeline::create_rasterization_info() {
+    VkPipelineRasterizationStateCreateInfo rasterization_info {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
+        .depthClampEnable = VK_FALSE,
+        .rasterizerDiscardEnable = VK_FALSE,
+        .polygonMode = VK_POLYGON_MODE_FILL,
+        .cullMode = VK_CULL_MODE_BACK_BIT,
+        .frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE,
+        .depthBiasEnable = VK_FALSE, //TODO: detemine if we need depth bias
+        .depthBiasConstantFactor = 0.0f,
+        .depthBiasClamp = 0.0f,
+        .depthBiasSlopeFactor = 0.0f,
+        .lineWidth = 1.0f,
+    };
+
+    return rasterization_info;
+}
+
+VkPipelineMultisampleStateCreateInfo Vulkan::Pipeline::create_multisample_info() {
+    VkPipelineMultisampleStateCreateInfo multisample_info{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
+        //TODO: make this user-settable
+        .rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
+        .sampleShadingEnable = VK_FALSE,
+        .minSampleShading = 1.0f,
+        .pSampleMask = VK_NULL_HANDLE,
+        .alphaToCoverageEnable = VK_FALSE,
+        .alphaToOneEnable = VK_FALSE,
+    };
+    return multisample_info;
+}
+
+VkPipelineColorBlendStateCreateInfo Vulkan::Pipeline::create_color_blend_info() {
+    _color_blend_attachment = {
+        //TODO: make this user-settable
+        .blendEnable = VK_FALSE,
+        .srcColorBlendFactor = VK_BLEND_FACTOR_ONE,
+        .dstColorBlendFactor = VK_BLEND_FACTOR_ZERO,
+        .colorBlendOp = VK_BLEND_OP_ADD,
+        .srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE,
+        .dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
+        .alphaBlendOp = VK_BLEND_OP_ADD,
+        .colorWriteMask = VK_COLOR_COMPONENT_R_BIT |
+                          VK_COLOR_COMPONENT_G_BIT |
+                          VK_COLOR_COMPONENT_B_BIT |
+                          VK_COLOR_COMPONENT_A_BIT,
+    };
+
+    VkPipelineColorBlendStateCreateInfo color_blend_info{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
+        .logicOpEnable = VK_FALSE, //TODO: determine if this should be enabled
+        .logicOp = VK_LOGIC_OP_COPY,
+        .attachmentCount = 1,
+        .pAttachments = &_color_blend_attachment,
+        .blendConstants = {0.0f, 0.0f, 0.0f, 0.0f},
+    };
+    return color_blend_info;
+}
+
+VkPipelineDepthStencilStateCreateInfo Vulkan::Pipeline::create_depth_stencil_info() {
+    VkPipelineDepthStencilStateCreateInfo depth_stencil_info{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
+        .depthTestEnable = VK_TRUE,
+        .depthWriteEnable = VK_TRUE, //needed for depthTest
+        .depthCompareOp = VK_COMPARE_OP_LESS,
+        .depthBoundsTestEnable = VK_TRUE,
+        .stencilTestEnable = VK_TRUE, //TODO: determine if this should be implemented
+        .front = {}, //TODO: make this user-settable,
+        .back = {}, //TODO: make this user-settable
+        .minDepthBounds = 0.0f,
+        .maxDepthBounds = 1.0f,
+    };
+
+    return depth_stencil_info;
 }
 
 }

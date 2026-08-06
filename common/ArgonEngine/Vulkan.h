@@ -67,7 +67,6 @@ class Vulkan:public RenderAPI {
         VkSwapchainKHR _swapchain;
         std::vector<VkImage> _images;
         std::vector<VkImageView> _image_views;
-
         VkFormat _image_format;
         VkExtent2D _extent;
 
@@ -180,8 +179,9 @@ class Vulkan:public RenderAPI {
         VkPipelineLayout _pipeline_layout;
         VkDescriptorSetLayout _desc_layout;
         VkViewport _viewport{};
-        VkRect2D scissor{};
-        std::shared_ptr<VertexArray> vertex_array;
+        VkRect2D _scissor{};
+        std::shared_ptr<VertexArray> _vertex_array;
+        VkPipelineColorBlendAttachmentState _color_blend_attachment{};
 
         void create_graphics_pipeline(VkDevice device,
                                       VkRenderPass render_pass,
