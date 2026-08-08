@@ -210,13 +210,124 @@ class Vulkan:public RenderAPI {
         VkPipelineDepthStencilStateCreateInfo create_depth_stencil_info();
 
         void clean();
+
+        Pipeline(): 
+            _device(VK_NULL_HANDLE),
+            _pipeline(VK_NULL_HANDLE),
+            _pipeline_layout(VK_NULL_HANDLE),
+            _desc_layout(VK_NULL_HANDLE),
+            _vertex_array(nullptr)
+        {}
+
+        Pipeline(VkDevice device, VkRenderPass render_pass,
+                 const VirtualResource vertex_shader_path,
+                 const VirtualResource fragment_shader_path,
+                 VkExtent2D extent):
+            _device(device),
+            _pipeline(VK_NULL_HANDLE),
+            _pipeline_layout(VK_NULL_HANDLE),
+            _desc_layout(VK_NULL_HANDLE),
+            _vertex_array(nullptr)
+        {
+            create_graphics_pipeline(device, render_pass, vertex_shader_path, fragment_shader_path, extent);
+        }
+
+        ~Pipeline() {
+            clean();
+        }
     };
 
-    VkBuffer vertex_buffer;
+    struct CommandPool {
+        VkDevice _device;
+        std::vector<VkCommandBuffer> _allocated_buffers;
+        VkCommandPool _command_pool;
+        uint32_t _queue_family_index;
+        bool _allow_reset;
+        bool _transient;
 
+        void create_command_pool(VkDevice device, uint32_t queue_family_index,
+                                 bool allow_reset = true, bool transient = false);
+
+        std::vector<VkCommandBuffer> allocate_buffers(uint32_t count, 
+                                                      VkCommandBufferLevel level = VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+        VkCommandBuffer allocate_buffer(VkCommandBufferLevel level = VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+        void free_buffers(const std::vector<VkCommandBuffer>& buffers);
+        void free_buffer(VkCommandBuffer buffer);
+        void reset(bool release_resources = false);
+
+        void begin_buffer(VkCommandBuffer buffer, VkCommandBufferUsageFlags usage = 0,
+                          const VkCommandBufferInheritanceInfo* inheritance_info = nullptr);
+        void end_buffer(VkCommandBuffer buffer);
+
+        VkCommandBuffer begin_single_time_commands();
+        void end_single_time_commands(VkCommandBuffer buffer, VkQueue queue);
+
+        void begin_render_pass(VkCommandBuffer buffer, VkRenderPass render_pass,
+                               VkFramebuffer framebuffer, VkRect2D render_area,
+                               const std::vector<VkClearValue>& clear_values);
+        void end_render_pass(VkCommandBuffer buffer);
+
+        void bind_pipeline(VkCommandBuffer buffer, VkPipeline pipeline,
+                           VkPipelineBindPoint bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS);
+        void bind_vertex_buffers(VkCommandBuffer buffer, uint32_t first_binding,
+                                 const std::vector<VkBuffer>& buffers,
+                                 const std::vector<VkDeviceSize>& offsets);
+        void bind_index_buffer(VkCommandBuffer buffer, VkBuffer index_buffer,
+                               VkDeviceSize offset = 0, VkIndexType index_type = VK_INDEX_TYPE_UINT32);
+        void bind_desc_sets(VkCommandBuffer buffer, VkPipelineLayout pipeline_layout,
+                            uint32_t first_set, const std::vector<VkDescriptorSet>& desc_sets,
+                            const std::vector<uint32_t>& dynamic_offsets = {});
+
+        void draw(VkCommandBuffer buffer, uint32_t vertex_count, uint32_t instance_count = 1,
+                  uint32_t first_vertex = 0, uint32_t first_instance = 0);
+        void draw_indexed(VkCommandBuffer buffer, uint32_t index_count, uint32_t instance_count = 1,
+                          uint32_t first_index = 0, int32_t vertex_offset = 0, uint32_t first_instance = 0);
+        void set_viewport(VkCommandBuffer buffer, float x, float y, float width, float height, 
+                          float min_depth = 0.0f, float max_depth = 1.0f);
+        void set_scissor(VkCommandBuffer buffer, int32_t x, int32_t y, uint32_t width, uint32_t height);
+
+        void copy_buffer(VkCommandBuffer buffer, VkBuffer src_buffer, VkBuffer dst_buffer,
+                         VkDeviceSize size, VkDeviceSize src_offset = 0, VkDeviceSize dst_offset = 0);
+        void pipeline_barrier(VkCommandBuffer buffer, VkDependencyFlags dep_flags = 0,
+                              const std::vector<VkMemoryBarrier2>& memory_barriers = {},
+                              const std::vector<VkBufferMemoryBarrier2>& buffer_barriers = {},
+                              const std::vector<VkImageMemoryBarrier2>& image_barriers = {});
+        void push_constants(VkCommandBuffer buffer, VkPipelineLayout pipeline_layout,
+                            VkShaderStageFlags stage_flags, uint32_t offset, uint32_t size, const void* data);
+        void record_frame_commands(VkCommandBuffer buffer,
+                                   VkRenderPass render_pass, VkFramebuffer framebuffer,
+                                   VkPipeline pipeline, VkPipelineLayout pipeline_layout,
+                                   VkRect2D render_area, const std::vector<VkClearValue>& clear_values,
+                                   const std::vector<VkBuffer>& vertex_buffers,
+                                   const std::vector<VkDeviceSize>& vertex_offsets,
+                                   VkBuffer index_buffer = VK_NULL_HANDLE, VkDeviceSize index_offsets = 0,
+                                   const std::vector<VkDescriptorSet>& desc_sets = {},
+                                   uint32_t vertex_count = 0, uint32_t index_count = 0,
+                                   uint32_t instance_count = 1);
+        void clean();
+
+        CommandPool():
+            _device(nullptr),
+            _allocated_buffers(),
+            _command_pool(nullptr)
+        {}
+
+        CommandPool(VkDevice device, uint32_t queue_family_index,
+                    bool allow_reset = true, bool transient = false):
+            _device(device),
+            _queue_family_index(queue_family_index),
+            _allow_reset(allow_reset),
+            _transient(transient)
+        {
+            create_command_pool(device, queue_family_index);
+        }
+
+        ~CommandPool() {
+            clean();
+        }
+    };
 
     void init_vulkan();
-    void create_command_pool();
     void create_vertex_buffer();
     void create_command_buffers();
     void create_sync_objects();

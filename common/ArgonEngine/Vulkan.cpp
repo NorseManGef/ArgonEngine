@@ -908,13 +908,364 @@ VkPipelineDepthStencilStateCreateInfo Vulkan::Pipeline::create_depth_stencil_inf
         .depthCompareOp = VK_COMPARE_OP_LESS,
         .depthBoundsTestEnable = VK_TRUE,
         .stencilTestEnable = VK_TRUE, //TODO: determine if this should be implemented
-        .front = {}, //TODO: make this user-settable,
+        .front = {}, //TODO: make this user-settable
         .back = {}, //TODO: make this user-settable
         .minDepthBounds = 0.0f,
         .maxDepthBounds = 1.0f,
     };
 
     return depth_stencil_info;
+}
+
+  ///////////////////////////////////////
+ // COMMAND POOL ///////////////////////
+///////////////////////////////////////
+void Vulkan::CommandPool::create_command_pool(VkDevice device, uint32_t queue_family_index,
+                                              bool allow_reset, bool transient) {
+    _device = device;
+    _queue_family_index = queue_family_index;
+    _allow_reset = allow_reset;
+    _transient = transient;
+
+    VkCommandPoolCreateFlags flags = 0;
+
+    if(allow_reset)
+        flags |= VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+
+    if(transient)
+        flags |= VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
+
+    VkCommandPoolCreateInfo poolInfo{
+        .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+        .flags = flags,
+        .queueFamilyIndex = _queue_family_index,
+    };
+
+    VkResult result = vkCreateCommandPool(device, &poolInfo, nullptr, &_command_pool);
+
+    if(result != VK_SUCCESS) {
+        PLOGF << "Vulkan: Failed to create command pool";
+        terminate_engine();
+    }
+}
+
+std::vector<VkCommandBuffer> Vulkan::CommandPool::allocate_buffers(uint32_t count, VkCommandBufferLevel level) {
+    if(_command_pool == VK_NULL_HANDLE) {
+        PLOGF << "Vulkan: Cannot allocate buffers: command pool is null";
+        terminate_engine();
+    }
+
+    VkCommandBufferAllocateInfo allocInfo{
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+        .commandPool = _command_pool,
+        .level = level,
+        .commandBufferCount = count,
+    };
+
+    std::vector<VkCommandBuffer> command_buffers(count);
+    VkResult result = vkAllocateCommandBuffers(_device, &allocInfo, command_buffers.data());
+
+    if(result != VK_SUCCESS) {
+        PLOGF << "Vulkan: Failed to allocate command buffers";
+        terminate_engine();
+    }
+
+    _allocated_buffers.insert(_allocated_buffers.end(), command_buffers.begin(), command_buffers.end());
+
+    return command_buffers;
+}
+
+VkCommandBuffer Vulkan::CommandPool::allocate_buffer(VkCommandBufferLevel level) {
+    auto buffers = allocate_buffers(1, level);
+    return buffers[0];
+}
+
+void Vulkan::CommandPool::free_buffers(const std::vector<VkCommandBuffer>& buffers) {
+    if(_command_pool == VK_NULL_HANDLE || buffers.empty()) return;
+
+    vkFreeCommandBuffers(_device, _command_pool, static_cast<uint32_t>(buffers.size()), buffers.data());
+
+    for(const auto& buffer : buffers) {
+        auto it = std::find(_allocated_buffers.begin(), _allocated_buffers.end(), buffer);
+        if(it!=_allocated_buffers.end())
+            _allocated_buffers.erase(it);
+    }
+}
+
+void Vulkan::CommandPool::free_buffer(VkCommandBuffer buffer) {
+    free_buffers({buffer});
+}
+
+void Vulkan::CommandPool::reset(bool release_resources) {
+    if(_command_pool == VK_NULL_HANDLE) return;
+
+    VkCommandPoolResetFlags flags = 0;
+    if(release_resources)
+        flags |= VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT;
+
+    VkResult result = vkResetCommandPool(_device, _command_pool, flags);
+
+    if(result != VK_SUCCESS) {
+        PLOGF << "Vulkan: Failed to reset command pool";
+        terminate_engine();
+    }
+}
+
+void Vulkan::CommandPool::begin_buffer(VkCommandBuffer buffer, VkCommandBufferUsageFlags usage,
+                                       const VkCommandBufferInheritanceInfo* inheritance_info) {
+    VkCommandBufferBeginInfo beginInfo{
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+        .flags = usage,
+        .pInheritanceInfo = inheritance_info, // Only used for secondary command buffers
+    };
+    
+    VkResult result = vkBeginCommandBuffer(buffer, & beginInfo);
+
+    if(result != VK_SUCCESS) {
+        PLOGF << "Vulkan: Failed to begin recording command buffer";
+        terminate_engine();
+    }
+}
+
+void Vulkan::CommandPool::end_buffer(VkCommandBuffer buffer) {
+    VkResult result = vkEndCommandBuffer(buffer);
+
+    if(result != VK_SUCCESS) {
+        PLOGF << "Vulkan: Failed to end recording command buffer";
+        terminate_engine();
+    }
+}
+
+VkCommandBuffer Vulkan::CommandPool::begin_single_time_commands() {
+    VkCommandBuffer buffer = allocate_buffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+    begin_buffer(buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+    return buffer;
+}
+
+void Vulkan::CommandPool::end_single_time_commands(VkCommandBuffer buffer, VkQueue queue) {
+    end_buffer(buffer);
+
+    VkCommandBufferSubmitInfo buffer_submitInfo{
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO,
+        .commandBuffer = buffer,
+    };
+
+    VkSubmitInfo2 submitInfo{
+        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
+        .commandBufferInfoCount = 1,
+        .pCommandBufferInfos = & buffer_submitInfo,
+    };
+
+    {
+        VkResult result = vkQueueSubmit2(queue, 1, &submitInfo, VK_NULL_HANDLE);
+        
+        if(result != VK_SUCCESS) {
+            PLOGF << "Vulkan: Failed to submit single-time command buffer";
+            terminate_engine();
+        }
+    }
+    {
+        VkResult result = vkQueueWaitIdle(queue);
+
+        if(result != VK_SUCCESS) {
+            PLOGF << "Vulkan: Failed to wait for queue idle after single-time command";
+            terminate_engine();
+        }
+    }
+
+    free_buffer(buffer);
+}
+void Vulkan::CommandPool::begin_render_pass(VkCommandBuffer buffer, VkRenderPass render_pass,
+                                            VkFramebuffer framebuffer, VkRect2D render_area,
+                                            const std::vector<VkClearValue>& clear_values) {
+    VkRenderPassBeginInfo render_passInfo{
+        .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+        .renderPass = render_pass,
+        .framebuffer = framebuffer,
+        .renderArea = render_area,
+        .clearValueCount = static_cast<uint32_t>(clear_values.size()),
+        .pClearValues = clear_values.data(),
+    };
+
+    VkSubpassBeginInfo subpassInfo{
+        .sType = VK_STRUCTURE_TYPE_SUBPASS_BEGIN_INFO,
+        .contents = VK_SUBPASS_CONTENTS_INLINE,
+    };
+
+    vkCmdBeginRenderPass2(buffer, &render_passInfo, &subpassInfo);
+}
+
+void Vulkan::CommandPool::end_render_pass(VkCommandBuffer buffer) {
+    vkCmdEndRenderPass2(buffer, nullptr);
+}
+
+void Vulkan::CommandPool::bind_pipeline(VkCommandBuffer buffer, VkPipeline pipeline, VkPipelineBindPoint bind_point) {
+    vkCmdBindPipeline(buffer, bind_point, pipeline);
+}
+
+void Vulkan::CommandPool::bind_vertex_buffers(VkCommandBuffer buffer, uint32_t first_binding,
+                                              const std::vector<VkBuffer>& buffers,
+                                              const std::vector<VkDeviceSize>& offsets) {
+    if(buffers.size() != offsets.size()) {
+        PLOGF << "Vulkan: Failed to bind vertex buffers: number of buffers must match number of offsets";
+        terminate_engine();
+    }
+
+    vkCmdBindVertexBuffers(buffer, first_binding, static_cast<uint32_t>(buffers.size()), buffers.data(), offsets.data());
+}
+
+void Vulkan::CommandPool::bind_index_buffer(VkCommandBuffer buffer, VkBuffer index_buffer,
+                                            VkDeviceSize offset, VkIndexType index_type) {
+    vkCmdBindIndexBuffer(buffer, index_buffer, offset, index_type);
+}
+
+void Vulkan::CommandPool::bind_desc_sets(VkCommandBuffer buffer, VkPipelineLayout pipeline_layout,
+                                         uint32_t first_set, const std::vector<VkDescriptorSet>& desc_sets,
+                                         const std::vector<uint32_t>& dynamic_offsets) {
+    vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            pipeline_layout, first_set,
+                            static_cast<uint32_t>(desc_sets.size()),
+                            desc_sets.data(),
+                            static_cast<uint32_t>(dynamic_offsets.size()),
+                            dynamic_offsets.data());
+}
+
+void Vulkan::CommandPool::draw(VkCommandBuffer buffer, uint32_t vertex_count, uint32_t instance_count,
+                               uint32_t first_vertex, uint32_t first_instance) {
+    vkCmdDraw(buffer, vertex_count, instance_count, first_vertex, first_instance);
+}
+
+void Vulkan::CommandPool::draw_indexed(VkCommandBuffer buffer, uint32_t index_count, uint32_t instance_count,
+                                       uint32_t first_index, int32_t vertex_offset, uint32_t first_instance) {
+    vkCmdDrawIndexed(buffer, index_count, instance_count, first_index, vertex_offset, first_instance);
+}
+
+void Vulkan::CommandPool::set_viewport(VkCommandBuffer buffer, float x, float y, float width, float height,
+                                       float min_depth, float max_depth) {
+    VkViewport viewport{
+        .x = x,
+        .y = y,
+        .width = width,
+        .height = height,
+        .minDepth = min_depth,
+        .maxDepth = max_depth,
+    };
+    
+    vkCmdSetViewport(buffer, 0, 1, &viewport);
+}
+
+void Vulkan::CommandPool::set_scissor(VkCommandBuffer buffer, int32_t x, int32_t y, uint32_t width, uint32_t height) {
+    VkRect2D scissor{
+        .offset = {x, y},
+        .extent = {width, height},
+    };
+
+    vkCmdSetScissor(buffer, 0, 1, &scissor);
+}
+
+void Vulkan::CommandPool::copy_buffer(VkCommandBuffer buffer, VkBuffer src_buffer, VkBuffer dst_buffer,
+                                      VkDeviceSize size, VkDeviceSize src_offset, VkDeviceSize dst_offset) {
+    VkBufferCopy2 copy {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2,
+        .pNext = nullptr,
+        .srcOffset = src_offset,
+        .dstOffset = dst_offset,
+        .size = size,
+    };
+
+    VkCopyBufferInfo2 copyInfo {
+        .sType = VK_STRUCTURE_TYPE_COPY_BUFFER_INFO_2,
+        .pNext = nullptr,
+        .srcBuffer = src_buffer,
+        .dstBuffer = dst_buffer,
+        .regionCount = 1,
+        .pRegions = &copy,
+    };
+
+    vkCmdCopyBuffer2(buffer, &copyInfo);
+}
+
+void Vulkan::CommandPool::pipeline_barrier(VkCommandBuffer buffer, VkDependencyFlags dep_flags,
+                                           const std::vector<VkMemoryBarrier2>& memory_barriers,
+                                           const std::vector<VkBufferMemoryBarrier2>& buffer_barriers,
+                                           const std::vector<VkImageMemoryBarrier2>& image_barriers) {
+    VkDependencyInfo depInfo{
+        .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+        .pNext = nullptr,
+        .dependencyFlags = dep_flags,
+        .memoryBarrierCount = static_cast<uint32_t>(memory_barriers.size()),
+        .pMemoryBarriers = memory_barriers.data(),
+        .bufferMemoryBarrierCount = static_cast<uint32_t>(buffer_barriers.size()),
+        .pBufferMemoryBarriers = buffer_barriers.data(),
+        .imageMemoryBarrierCount = static_cast<uint32_t>(image_barriers.size()),
+        .pImageMemoryBarriers = image_barriers.data(),
+    };
+    vkCmdPipelineBarrier2(buffer, &depInfo);
+}
+
+void Vulkan::CommandPool::push_constants(VkCommandBuffer buffer, VkPipelineLayout pipeline_layout,
+                                         VkShaderStageFlags stage_flags, uint32_t offset, 
+                                         uint32_t size, const void* data) {
+    vkCmdPushConstants(buffer, pipeline_layout, stage_flags, offset, size, data);
+}
+
+void Vulkan::CommandPool::record_frame_commands(VkCommandBuffer buffer, VkRenderPass render_pass, 
+                                                VkFramebuffer framebuffer, VkPipeline pipeline,
+                                                VkPipelineLayout pipeline_layout, VkRect2D render_area,
+                                                const std::vector<VkClearValue>& clear_values,
+                                                const std::vector<VkBuffer>& vertex_buffers,
+                                                const std::vector<VkDeviceSize>& vertex_offsets,
+                                                VkBuffer index_buffer, VkDeviceSize index_offsets,
+                                                const std::vector<VkDescriptorSet>& desc_sets,
+                                                uint32_t vertex_count, uint32_t index_count,
+                                                uint32_t instance_count) {
+    begin_render_pass(buffer, render_pass, framebuffer, render_area, clear_values);
+
+    bind_pipeline(buffer, pipeline, VK_PIPELINE_BIND_POINT_GRAPHICS);
+
+    set_viewport(buffer,
+                static_cast<float>(render_area.offset.x),
+                static_cast<float>(render_area.offset.y),
+                static_cast<float>(render_area.extent.width),
+                static_cast<float>(render_area.extent.height));
+
+    set_scissor(buffer, render_area.offset.x, render_area.offset.y,
+                render_area.extent.width, render_area.extent.height);
+
+    if(!vertex_buffers.empty())
+        bind_vertex_buffers(buffer, 0, vertex_buffers, vertex_offsets);
+
+    if(index_buffer != VK_NULL_HANDLE)
+        bind_index_buffer(buffer, index_buffer);
+
+    if(!desc_sets.empty())
+        bind_desc_sets(buffer, pipeline_layout, 0, desc_sets);
+
+    if(index_buffer != VK_NULL_HANDLE && index_count > 0)
+        draw_indexed(buffer, index_count, instance_count);
+    else if(vertex_count > 0)
+        draw(buffer, vertex_count, instance_count);
+
+    end_render_pass(buffer);
+}
+
+void Vulkan::CommandPool::clean() {
+    if(_device != VK_NULL_HANDLE) {
+        if(!_allocated_buffers.empty()) {
+            vkFreeCommandBuffers(_device, _command_pool,
+                                 static_cast<uint32_t>(_allocated_buffers.size()),
+                                 _allocated_buffers.data());
+
+            _allocated_buffers.clear();
+        }
+
+        if(_command_pool != VK_NULL_HANDLE) {
+            vkDestroyCommandPool(_device, _command_pool, nullptr);
+            _command_pool = VK_NULL_HANDLE;
+        }
+
+        _device = VK_NULL_HANDLE;
+    }
 }
 
 }
