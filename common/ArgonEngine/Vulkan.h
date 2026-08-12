@@ -327,6 +327,92 @@ class Vulkan:public RenderAPI {
         }
     };
 
+    struct Buffer {
+        VkDevice _device;
+        VkBuffer _buffer;
+        VkDeviceMemory _memory;
+        VkDeviceSize _size;
+        VkBufferUsageFlags _usage;
+        VkMemoryPropertyFlags _memory_properties;
+
+        void* _mapped_memory;
+        bool _is_coherent;
+
+        void create_buffer(VkDevice device, VkPhysicalDevice physical_device, VkDeviceSize size,
+                           VkBufferUsageFlags usage, VkMemoryPropertyFlags memory_properties);
+
+        void create_buffer_with_data(VkDevice device, VkPhysicalDevice physical_device, 
+                                     const void* data, VkDeviceSize size, VkBufferUsageFlags usage, 
+                                     VkMemoryPropertyFlags memory_properties);
+
+        void* map(VkDeviceSize offset = 0, VkDeviceSize size = VK_WHOLE_SIZE);
+        void unmap();
+
+        void upload_data(const void* data, VkDeviceSize size, VkDeviceSize offset = 0);
+        void copy_to(VkDevice device, VkCommandPool command_pool, VkQueue graphics_queue,
+                     Buffer& dst_buffer, VkDeviceSize size, VkDeviceSize src_offset = 0,
+                     VkDeviceSize dst_offset = 0);
+        void flush(VkDeviceSize offset = 0, VkDeviceSize size = VK_WHOLE_SIZE);
+        void invalidate(VkDeviceSize offset = 0, VkDeviceSize size = VK_WHOLE_SIZE);
+
+        uint32_t find_mem_type(VkPhysicalDevice physical_device, uint32_t type_filter,
+                               VkMemoryPropertyFlags properties) const;
+
+        VkCommandBuffer begin_single_time_commands(VkDevice device, VkCommandPool command_pool) const;
+        void end_single_time_commands(VkDevice device, VkCommandPool command_pool,
+                                      VkCommandBuffer buffer, VkQueue queue) const;
+
+        Buffer create_vertex_buffer(VkDevice device, VkPhysicalDevice physical_device, VkCommandPool command_pool,
+                                    VkQueue graphics_queue, std::shared_ptr<VertexArray> vertex_array);
+        Buffer create_index_buffer(VkDevice device, VkPhysicalDevice physical_device, VkCommandPool command_pool,
+                                   VkQueue graphics_queue, std::shared_ptr<VertexArray> vertex_array);
+        Buffer create_uniform_buffer(VkDevice device, VkPhysicalDevice physical_device);
+        Buffer create_staging_buffer(VkDevice device, VkPhysicalDevice physical_device, VkDeviceSize size);
+
+        std::vector<Buffer> create_attrib_buffers(VkDevice device, VkPhysicalDevice physical_device,
+                                                  VkCommandPool command_pool, VkQueue graphicsQueue,
+                                                  std::shared_ptr<VertexArray> vertex_array);
+        void update_vertex_buffer(Buffer& buffer, VkDevice device, VkPhysicalDevice physical_device,
+                                  VkCommandPool command_pool, VkQueue graphics_queue,
+                                  std::shared_ptr<VertexArray> vertex_array,
+                                  VkDeviceSize offset = 0);
+
+        std::vector<Buffer> create_uniform_buffers_in_flight(VkDevice device, VkPhysicalDevice physical_device,
+                                                             uint32_t frames_in_flight);
+        Buffer create_dynamic_uniform_buffer(VkDevice device, VkPhysicalDevice physical_device, uint32_t object_count);
+        void update_dynamic_uniform_buffer(Buffer& dynamic_ubuffer, VkPhysicalDevice physical_device,
+                                           uint32_t object_index, Uniforms uniform);
+
+        static VkMemoryRequirements2 get_mem_requirements(VkDevice device, VkDeviceSize size,
+                                                          VkBufferUsageFlags usage);
+
+        void clean();
+
+        Buffer():
+            _device(nullptr),
+            _buffer(nullptr),
+            _memory(nullptr),
+            _size(0),
+            _mapped_memory(nullptr)
+        {}
+
+        Buffer(VkDevice device, VkPhysicalDevice physical_device, VkDeviceSize size,
+               VkBufferUsageFlags usage, VkMemoryPropertyFlags memory_properties):
+            _device(device),
+            _size(size),
+            _usage(usage),
+            _memory_properties(memory_properties),
+            _mapped_memory(nullptr),
+            _buffer(nullptr)
+        {
+            create_buffer(device, physical_device, size, usage, memory_properties);
+        }
+        
+        ~Buffer() {
+            clean();
+        }
+    };
+
     void init_vulkan();
     void create_vertex_buffer();
     void create_command_buffers();

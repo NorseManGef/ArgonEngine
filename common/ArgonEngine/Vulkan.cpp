@@ -1268,6 +1268,511 @@ void Vulkan::CommandPool::clean() {
     }
 }
 
+  ///////////////////////////////////////
+ // MEMORY BUFFERS /////////////////////
+///////////////////////////////////////
+void Vulkan::Buffer::create_buffer(VkDevice device, VkPhysicalDevice physical_device, VkDeviceSize size,
+                                   VkBufferUsageFlags usage, VkMemoryPropertyFlags memory_properties) {
+    _device = device;
+    _size = size;
+    _usage = usage;
+    _memory_properties = memory_properties;
+
+    VkBufferCreateInfo bufferInfo{
+        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+        .size = size,
+        .usage = usage,
+        .sharingMode = VK_SHARING_MODE_EXCLUSIVE, //TODO: Make this user settable
+    };
+
+    {
+        VkResult result = vkCreateBuffer(device, &bufferInfo, nullptr, &_buffer);
+
+        if(result != VK_SUCCESS) {
+            PLOGF << "Vulkan: Failed to create buffer";
+            terminate_engine();
+        }
+    }
+
+    VkMemoryRequirements2 mem_reqs;
+    VkBufferMemoryRequirementsInfo2 mem_reqInfo{
+        .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_REQUIREMENTS_INFO_2,
+        .pNext = nullptr,
+        .buffer = _buffer,
+    };
+    vkGetBufferMemoryRequirements2(device, &mem_reqInfo, &mem_reqs);
+
+    uint32_t mem_index = find_mem_type(physical_device, mem_reqs.memoryRequirements.memoryTypeBits, memory_properties);
+
+    VkPhysicalDeviceMemoryProperties2 physical_mem_props;
+    vkGetPhysicalDeviceMemoryProperties2(physical_device, &physical_mem_props);
+    _is_coherent = (physical_mem_props.memoryProperties.memoryTypes[mem_index].propertyFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) != 0;
+
+    VkMemoryAllocateInfo allocInfo{
+        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+        .allocationSize = mem_reqs.memoryRequirements.size,
+        .memoryTypeIndex = mem_index,
+    };
+    {
+        VkResult result = vkAllocateMemory(device, &allocInfo, nullptr, &_memory);
+
+        if(result != VK_SUCCESS) {
+            PLOGF << "Vulkan: Failed to allocate buffer memory";
+            terminate_engine();
+        }
+    }
+
+    VkBindBufferMemoryInfo bind_bufferInfo{
+        .sType = VK_STRUCTURE_TYPE_BIND_BUFFER_MEMORY_INFO,
+        .buffer = _buffer,
+        .memory = _memory,
+        .memoryOffset = 0,
+    };
+    {
+        VkResult result = vkBindBufferMemory2(device, 1, &bind_bufferInfo);
+
+        if(result != VK_SUCCESS) {
+            PLOGF << "Vulkan: Failed to bind buffer memory";
+            terminate_engine();
+        }
+    }
+}
+
+void Vulkan::Buffer::create_buffer_with_data(VkDevice device, VkPhysicalDevice physical_device,
+                                             const void * data, VkDeviceSize size, VkBufferUsageFlags usage,
+                                             VkMemoryPropertyFlags memory_properties) {
+    create_buffer(device, physical_device, size, usage, memory_properties);
+
+    if(data != nullptr && size > 0) {
+        upload_data(data, size);
+    }
+}
+
+void* Vulkan::Buffer::map(VkDeviceSize offset, VkDeviceSize size) {
+    if(_mapped_memory != nullptr) {
+        PLOGW << "Vulkan: Buffer is already mapped";
+        return _mapped_memory;
+    }
+
+    if(!(_memory_properties & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)) {
+        PLOGF << "Vulkan: Buffer cannot map non-host-visible memory";
+        terminate_engine();
+    }
+
+    VkResult result = vkMapMemory(_device, _memory, offset, size, _memory_properties, &_mapped_memory);
+
+    if(result != VK_SUCCESS) {
+        PLOGF << "Vulkan: Failed to map buffer memory";
+        terminate_engine();
+    }
+
+    return _mapped_memory;
+}
+    
+void Vulkan::Buffer::unmap() {
+    if(_mapped_memory != nullptr) {
+        vkUnmapMemory(_device, _memory);
+        _mapped_memory = nullptr;
+    }
+}
+
+void Vulkan::Buffer::upload_data(const void* data, VkDeviceSize size, VkDeviceSize offset) {
+    if(data == nullptr || size == 0) {
+        return;
+    }
+
+    void* mapped_data = map(offset, size);
+    std::memcpy(mapped_data, data, static_cast<size_t>(size));
+
+    if(!_is_coherent) {
+        flush(offset, size);
+    }
+
+    unmap();
+}
+
+void Vulkan::Buffer::copy_to(VkDevice device, VkCommandPool command_pool, VkQueue graphics_queue,
+                             Buffer& dst_buffer, VkDeviceSize size, VkDeviceSize src_offset, 
+                             VkDeviceSize dst_offset) {
+    VkCommandBuffer buffer = begin_single_time_commands(device, command_pool);
+
+    VkBufferCopy2 copy{
+        .sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2,
+        .srcOffset = src_offset,
+        .dstOffset = dst_offset,
+        .size = size,
+    };
+
+    VkCopyBufferInfo2 copyInfo{
+        .sType = VK_STRUCTURE_TYPE_COPY_BUFFER_INFO_2,
+        .pNext = nullptr,
+        .srcBuffer = _buffer,
+        .dstBuffer = dst_buffer._buffer,
+        .regionCount = 1,
+        .pRegions = &copy,
+    };
+
+    vkCmdCopyBuffer2(buffer, &copyInfo);
+}
+
+void Vulkan::Buffer::flush(VkDeviceSize offset, VkDeviceSize size) {
+    if(_is_coherent) {
+        return;
+    }
+
+    VkMappedMemoryRange mapped_range{
+        .sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
+        .memory = _memory,
+        .offset = offset,
+        .size = size,
+    };
+
+    VkResult result = vkFlushMappedMemoryRanges(_device, 1, &mapped_range);
+
+    if(result != VK_SUCCESS) {
+        PLOGF << "Vulkan: Failed to flush mapped memory range";
+        terminate_engine();
+    }
+}
+
+void Vulkan::Buffer::invalidate(VkDeviceSize offset, VkDeviceSize size) {
+    if(_is_coherent) {
+        return;
+    }
+
+    VkMappedMemoryRange memory_range{
+        .sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
+        .memory = _memory,
+        .offset = offset,
+        .size = size,
+    };
+
+    VkResult result = vkInvalidateMappedMemoryRanges(_device, 1, &memory_range);
+    if(result != VK_SUCCESS) {
+        PLOGF << "Vulkan: Failed to invalidate mapped memory range";
+        terminate_engine();
+    }
+}
+
+uint32_t find_mem_type(VkPhysicalDevice physical_device, uint32_t type_filter,
+                       VkMemoryPropertyFlags properties) {
+    VkPhysicalDeviceMemoryProperties2 mem_props;
+    vkGetPhysicalDeviceMemoryProperties2(physical_device, &mem_props);
+
+    for(uint32_t i = 0; i < mem_props.memoryProperties.memoryTypeCount; ++i) {
+        bool type_supported = (type_filter & (1 << i)) != 0;
+
+        bool has_required_props = (mem_props.memoryProperties.memoryTypes[i].propertyFlags & properties) == 
+                                   properties;
+
+        if(type_supported && has_required_props) {
+            return i;
+        }
+    }
+
+    PLOGF << "Vulkan: Failed to find suitable memory type for buffer";
+    terminate_engine();
+
+    return -1; //For lsp
+}
+
+VkCommandBuffer Vulkan::Buffer::begin_single_time_commands(VkDevice device, VkCommandPool command_pool) const {
+    VkCommandBufferAllocateInfo allocInfo{
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+        .commandPool = command_pool,
+        .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+        .commandBufferCount = 1,
+    };
+
+    VkCommandBuffer buffer;
+    {
+        VkResult result = vkAllocateCommandBuffers(device, &allocInfo, &buffer);
+
+        if(result != VK_SUCCESS) {
+            PLOGF << "Vulkan: Failed to allocate single-time command buffer";
+            terminate_engine();
+        }
+    }
+    VkCommandBufferBeginInfo beginInfo{
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+        .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+    };
+    VkResult result = vkBeginCommandBuffer(buffer, &beginInfo);
+
+    if(result != VK_SUCCESS) {
+        PLOGF << "Vulkan: Failed to begin recording single-time command buffer";
+        terminate_engine();
+    }
+    return buffer;
+}
+
+void Vulkan::Buffer::end_single_time_commands(VkDevice device, VkCommandPool command_pool,
+                                              VkCommandBuffer buffer, VkQueue queue) const {
+    {
+        VkResult result = vkEndCommandBuffer(buffer);
+
+        if(result != VK_SUCCESS) {
+            PLOGF << "Vulkan: Failed to end recording single-time command buffer";
+            terminate_engine();
+        }
+    }
+
+    VkSubmitInfo submitInfo{
+        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+        .commandBufferCount = 1,
+        .pCommandBuffers = &buffer,
+    };
+
+    {
+        VkResult result = vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE);
+
+        if(result != VK_SUCCESS) {
+            PLOGF << "Vulkan: Failed to submit single-time command buffer";
+            terminate_engine();
+        }
+    }
+    {
+        VkResult result = vkQueueWaitIdle(queue);
+
+        if(result != VK_SUCCESS) {
+            PLOGF << "Vulkan: Failed to wait for idle queue after single-time command";
+            terminate_engine();
+        }
+    }
+
+    vkFreeCommandBuffers(device, command_pool, 1, &buffer);
+}
+
+Vulkan::Buffer Vulkan::Buffer::create_vertex_buffer(VkDevice device, VkPhysicalDevice physical_device,
+                                                    VkCommandPool command_pool, VkQueue graphics_queue,
+                                                    std::shared_ptr<VertexArray> vertex_array) {
+    VkDeviceSize buffer_size = vertex_array->data.size();
+    Buffer staging_buffer;
+    staging_buffer.create_buffer_with_data(device, physical_device, &vertex_array->data, buffer_size,
+                                           VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
+                                           VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | 
+                                           VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+    Buffer vertex_buffer;
+    vertex_buffer.create_buffer(device, physical_device, buffer_size,
+                         VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+    staging_buffer.copy_to(device, command_pool, graphics_queue, vertex_buffer, buffer_size);
+
+    staging_buffer.clean();
+
+    return vertex_buffer;
+}
+
+Vulkan::Buffer Vulkan::Buffer::create_index_buffer(VkDevice device, VkPhysicalDevice physical_device,
+                                                   VkCommandPool command_pool, VkQueue graphics_queue, 
+                                                   std::shared_ptr<VertexArray> vertex_array) {
+    VkDeviceSize buffer_size = vertex_array->index_data.size();
+
+    Buffer staging_buffer;
+    staging_buffer.create_buffer_with_data(device, physical_device, &vertex_array->index_data, buffer_size, 
+                                           VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
+                                           VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                           VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+    Buffer index_buffer;
+    index_buffer.create_buffer(device, physical_device, buffer_size, 
+                               VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                               VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+    staging_buffer.copy_to(device, command_pool, graphics_queue, index_buffer, buffer_size);
+    staging_buffer.clean();
+
+    return index_buffer;
+}
+
+Vulkan::Buffer Vulkan::Buffer::create_uniform_buffer(VkDevice device, VkPhysicalDevice physical_device) {
+    Buffer uniform_buffer;
+    uniform_buffer.create_buffer(device, physical_device, sizeof(Uniforms), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+    return uniform_buffer;
+}
+
+Vulkan::Buffer Vulkan::Buffer::create_staging_buffer(VkDevice device, VkPhysicalDevice physical_device, 
+                                                     VkDeviceSize size) {
+    Buffer staging_buffer;
+    staging_buffer.create_buffer(device, physical_device, size, 
+                                 VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
+                                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                 VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+    return staging_buffer;
+}
+
+std::vector<Vulkan::Buffer> Vulkan::Buffer::create_attrib_buffers(VkDevice device, VkPhysicalDevice physical_device,
+                                                                  VkCommandPool command_pool, VkQueue graphics_queue,
+                                                                  std::shared_ptr<VertexArray> vertex_array) {
+    std::vector<Buffer> attrib_buffers;
+    attrib_buffers.reserve(vertex_array->attributes.size());
+
+    for(auto attrib : vertex_array->attributes) {
+        VkDeviceSize attrib_buffer_size = attrib.stride * vertex_array->data.size();
+
+        // TODO: This function creates horribly inefficient buffers that store a bunch of extra data.
+        // performing a calculation to extract only the data relevant to attrib would be more memory efficient.
+        auto attrib_data = vertex_array->data_start() + attrib.offset;
+        
+        Buffer staging_buffer;
+        staging_buffer.create_buffer_with_data(device, physical_device, &attrib_data,
+                                               attrib_buffer_size, 
+                                               VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
+                                               VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                               VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+        Buffer vertex_buffer;
+        vertex_buffer.create_buffer(device, physical_device, 
+                                    attrib_buffer_size,
+                                    VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                                    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+        staging_buffer.copy_to(device, command_pool, graphics_queue, vertex_buffer, attrib_buffer_size);
+        staging_buffer.clean();
+
+        attrib_buffers.push_back(std::move(vertex_buffer));
+    }
+
+    return attrib_buffers;
+}
+
+void Vulkan::Buffer::update_vertex_buffer(Buffer& buffer, VkDevice device, VkPhysicalDevice physical_device,
+                                          VkCommandPool command_pool, VkQueue graphics_queue,
+                                          std::shared_ptr<VertexArray> vertex_array, VkDeviceSize offset) {
+    VkDeviceSize size = vertex_array->stride * vertex_array->data.size();
+
+    if(offset + size > buffer._size) {
+        PLOGF << "Vulkan: Vertex buffer update exceeds buffer size";
+        terminate_engine();
+    }
+
+    if(buffer._memory_properties == VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) {
+        Buffer staging_buffer;
+        staging_buffer.create_buffer_with_data(device, physical_device, &vertex_array->data, size,
+                                               VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                                               VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                               VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+        staging_buffer.copy_to(device, command_pool, graphics_queue, buffer, size, 0, offset);
+        staging_buffer.clean();
+    } else {
+        buffer.upload_data(&vertex_array->data, size);
+    }
+}
+
+std::vector<Vulkan::Buffer> Vulkan::Buffer::create_uniform_buffers_in_flight(VkDevice device,
+                                                                     VkPhysicalDevice physical_device,
+                                                                     uint32_t frames_in_flight) {
+    std::vector<Buffer> uniform_buffers;
+    uniform_buffers.reserve(frames_in_flight);
+
+    for(uint32_t i = 0; i < frames_in_flight; ++i) {
+        Buffer uniform_buffer;
+        uniform_buffer.create_buffer(device, physical_device, sizeof(Uniforms),
+                                     VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                                     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | 
+                                     VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+        uniform_buffers.push_back(uniform_buffer);
+    }
+
+    return uniform_buffers;
+}
+
+Vulkan::Buffer Vulkan::Buffer::create_dynamic_uniform_buffer(VkDevice device, VkPhysicalDevice physical_device,
+                                                             uint32_t object_count) {
+    VkPhysicalDeviceProperties2 properties;
+    vkGetPhysicalDeviceProperties2(physical_device, &properties);
+
+    size_t min_uniform_alignment = properties.properties.limits.minUniformBufferOffsetAlignment;
+    size_t dynamic_alignment = sizeof(Uniforms);
+
+    if(min_uniform_alignment > 0) {
+        dynamic_alignment = (dynamic_alignment + min_uniform_alignment - 1) & ~(min_uniform_alignment - 1);
+    }
+
+    VkDeviceSize buffer_size = object_count * dynamic_alignment;
+
+    Buffer dynamic_buffer;
+    dynamic_buffer.create_buffer(device, physical_device, buffer_size,
+                                 VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | 
+                                 VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+    return dynamic_buffer;
+}
+
+void Vulkan::Buffer::update_dynamic_uniform_buffer(Buffer& dynamic_buffer, VkPhysicalDevice physical_device,
+                                                   uint32_t object_index, Uniforms uniform) {
+    VkPhysicalDeviceProperties2 props;
+    vkGetPhysicalDeviceProperties2(physical_device, &props);
+
+    size_t min_uniform_alignment = props.properties.limits.minUniformBufferOffsetAlignment;
+    size_t dynamic_alignment = sizeof(uniform);
+
+    if(min_uniform_alignment) {
+         dynamic_alignment = (dynamic_alignment + min_uniform_alignment -1) & ~(min_uniform_alignment - 1);
+    }
+
+    VkDeviceSize offset = object_index + dynamic_alignment;
+
+    dynamic_buffer.upload_data(&uniform, sizeof(uniform), offset);
+}
+
+VkMemoryRequirements2 Vulkan::Buffer::get_mem_requirements(VkDevice device, VkDeviceSize size, 
+                                                           VkBufferUsageFlags usage) {
+    VkBufferCreateInfo bufferInfo{
+        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+        .size = size,
+        .usage = usage,
+        .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+    };
+
+    VkBuffer temp_buffer;
+
+    VkResult result = vkCreateBuffer(device, &bufferInfo, nullptr, &temp_buffer);
+
+    if(result != VK_SUCCESS) {
+        PLOGF << "Vulkan: Failed to create temporary buffer for memery requirements query";
+        terminate_engine();
+    }
+
+    VkBufferMemoryRequirementsInfo2 mem_reqInfo{
+        .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_REQUIREMENTS_INFO_2,
+        .buffer = temp_buffer,
+    };
+    
+    VkMemoryRequirements2 mem_reqs;
+    vkGetBufferMemoryRequirements2(device, &mem_reqInfo, &mem_reqs);
+
+    vkDestroyBuffer(device, temp_buffer, nullptr);
+
+    return mem_reqs;
+}
+
+void Vulkan::Buffer::clean() {
+    if(_device != VK_NULL_HANDLE) {
+        unmap();
+        
+        if(_buffer != VK_NULL_HANDLE) {
+            vkDestroyBuffer(_device, _buffer, nullptr);
+            _buffer = VK_NULL_HANDLE;
+        }
+
+        if(_memory != VK_NULL_HANDLE) {
+            vkFreeMemory(_device, _memory, nullptr);
+            _memory = VK_NULL_HANDLE;
+        }
+
+        _device = VK_NULL_HANDLE; // the device is managed by the device struct and does not need to be destroyed
+    }
+}
+
 }
 
 #endif
