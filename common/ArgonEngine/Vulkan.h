@@ -413,10 +413,47 @@ class Vulkan:public RenderAPI {
         }
     };
 
+    struct RenderPass {
+        VkDevice _device;
+        VkRenderPass _render_pass;
+        std::vector<VkFramebuffer> framebuffers;
+        VkExtent2D _extent{};
+
+        void create_render_pass(VkDevice device, VkFormat color_format, VkFormat depth_format,
+                                VkSampleCountFlagBits msaa_samples = VK_SAMPLE_COUNT_1_BIT);
+
+        void create_framebuffers(const std::vector<VkImageView>& swapchain_image_views,
+                                 VkImageView depth_image_view, VkExtent2D extent);
+
+        void recreate_framebuffers(const std::vector<VkImageView>& swapchain_image_views,
+                                   VkImageView depth_image_view, VkExtent2D extent);
+
+        void destroy_framebuffers();
+
+        void clean();
+
+        RenderPass():
+            _device(nullptr),
+            _render_pass(nullptr)
+        {}
+
+        RenderPass(VkDevice device, VkFormat color_format, VkFormat depth_format,
+                   VkSampleCountFlagBits msaa_samples = VK_SAMPLE_COUNT_1_BIT):
+            _device(device),
+            _render_pass(nullptr)
+        {
+            create_render_pass(device, color_format, depth_format, msaa_samples);
+        }
+
+        ~RenderPass() {
+            clean();
+        }
+
+        RenderPass(const RenderPass&) = delete;
+        RenderPass& operator=(const RenderPass&) = delete;
+    };
+
     void init_vulkan();
-    void create_vertex_buffer();
-    void create_command_buffers();
-    void create_sync_objects();
 
     void clean();
 

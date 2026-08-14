@@ -1773,6 +1773,147 @@ void Vulkan::Buffer::clean() {
     }
 }
 
+  ///////////////////////////////////////
+ // RENDER PASS ////////////////////////
+///////////////////////////////////////
+void Vulkan::RenderPass::create_render_pass(VkDevice device, VkFormat color_format, VkFormat depth_format,
+                                            VkSampleCountFlagBits msaa_samples) {
+    _device = device;
+
+    VkAttachmentDescription2 color_attachment{
+        .sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2,
+        .format = color_format,
+        .samples = msaa_samples,
+        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+        .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE, // TODO: potentially implement in future
+        .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+        .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+    };
+
+    VkAttachmentDescription2 depth_attachment{
+        .sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2,
+        .format = depth_format,
+        .samples = msaa_samples,
+        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+        .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+        .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+        .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+        .finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+    };
+
+    VkAttachmentReference2 color_attachment_ref{
+        .sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2,
+        .attachment = 0,
+        .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+    };
+
+    VkAttachmentReference2 depth_attachment_ref{
+        .sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2,
+        .attachment = 1,
+        .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+    };
+
+    VkSubpassDescription2 subpass{
+        .sType = VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION_2,
+        .colorAttachmentCount = 1,
+        .pColorAttachments = &color_attachment_ref,
+        .pDepthStencilAttachment = &depth_attachment_ref,
+    };
+
+    VkSubpassDependency2 subpass_dependency{
+        .sType = VK_STRUCTURE_TYPE_SUBPASS_DEPENDENCY_2,
+        .srcSubpass = VK_SUBPASS_EXTERNAL,
+        .srcSubpass = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | 
+                      VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+        .dstSubpass = 0,
+        .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
+                        VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+        .srcAccessMask = 0,
+        .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
+                         VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+    };
+
+    std::array<VkAttachmentDescription2, 2> attachments = {color_attachment, depth_attachment};
+
+    VkRenderPassCreateInfo2 render_passInfo{
+        .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO_2,
+        .attachmentCount = static_cast<uint32_t>(attachments.size()),
+        .pAttachments = attachments.data(),
+        .subpassCount = 1,
+        .pSubpasses = &subpass,
+        .dependencyCount = 1,
+        .pDependencies = &subpass_dependency,
+    };
+
+    VkResult result = vkCreateRenderPass2(device, &render_passInfo, nullptr, &_render_pass);
+    if(result != VK_SUCCESS) {
+        PLOGF << "Vulkan: Failed to create render pass";
+        terminate_engine();
+    }
+}
+
+void Vulkan::RenderPass::create_framebuffers(const std::vector<VkImageView>& swapchain_image_views,
+                                             VkImageView depth_image_view, VkExtent2D extent) {
+    _extent = extent;
+
+    framebuffers.resize(swapchain_image_views.size());
+
+    for(size_t i = 0; i < swapchain_image_views.size(); ++i) {
+        std::array<VkImageView, 2> attachments = {
+            swapchain_image_views[i],
+            depth_image_view,
+        };
+
+        VkFramebufferCreateInfo framebufferInfo{
+            .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+            .renderPass = _render_pass,
+            .attachmentCount = static_cast<uint32_t>(attachments.size()),
+            .pAttachments = attachments.data(),
+            .width = extent.width,
+            .height = extent.height,
+            .layers = 1,
+        };
+
+        VkResult result = vkCreateFramebuffer(_device, &framebufferInfo, nullptr, &framebuffers[i]);
+        if(result != VK_SUCCESS) {
+            PLOGF << "Vulkan: Failed to create framebuffer " << std::to_string(i);
+            terminate_engine();
+        }
+    }
+}
+
+void Vulkan::RenderPass::recreate_framebuffers(const std::vector<VkImageView>& swapchain_image_views,
+                                               VkImageView depth_image_view, VkExtent2D extent) {
+    vkDeviceWaitIdle(_device);
+    destroy_framebuffers();
+    create_framebuffers(swapchain_image_views, depth_image_view, extent);
+}
+
+void Vulkan::RenderPass::destroy_framebuffers() {
+    for(VkFramebuffer framebuffer : framebuffers) {
+        if(framebuffer != VK_NULL_HANDLE) {
+            vkDestroyFramebuffer(_device, framebuffer, nullptr);
+        }
+    }
+    framebuffers.clear();
+}
+
+void Vulkan::RenderPass::clean() {
+    if(_device != VK_NULL_HANDLE) {
+        destroy_framebuffers();
+
+        if(_render_pass != VK_NULL_HANDLE) {
+            vkDestroyRenderPass(_device, _render_pass, nullptr);
+            _render_pass = VK_NULL_HANDLE;
+        }
+
+        _device = VK_NULL_HANDLE;
+    }
+}
+
 }
 
 #endif
