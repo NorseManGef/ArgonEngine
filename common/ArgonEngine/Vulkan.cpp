@@ -1914,6 +1914,312 @@ void Vulkan::RenderPass::clean() {
     }
 }
 
+  ///////////////////////////////////////
+ // SYNCRONIZAITON /////////////////////
+///////////////////////////////////////
+void Vulkan::Synchronization::create_sync(VkDevice device, uint32_t max_frames_in_flight) {
+    _device = device;
+    _max_frames_in_flight = max_frames_in_flight;
+
+    _frame_sync_objects.resize(max_frames_in_flight);
+
+    for(uint32_t i = 0; i < max_frames_in_flight; ++i) {
+        _frame_sync_objects[i].image_available_semaphore = 
+            create_semaphore(device);
+
+        _frame_sync_objects[i].render_finished_semaphore = 
+            create_semaphore(device);
+
+        _frame_sync_objects[i].in_flight_fence =
+            create_fence(device, true);
+    }
+}
+
+bool Vulkan::Synchronization::wait_for_frame(uint32_t frame_index, uint64_t timeout) {
+    if(frame_index >= _frame_sync_objects.size()) {
+        PLOGF << "Vulkan: Frame index out of range";
+        terminate_engine();
+    }
+
+    VkFence fence = _frame_sync_objects[frame_index].in_flight_fence;
+    VkResult result = vkWaitForFences(_device, 1, &fence, VK_TRUE, timeout);
+
+    if(result == VK_SUCCESS) {
+        return true;
+    } else if (result == VK_TIMEOUT) {
+        PLOGW << "Vulkan: Timeout waiting for frame " << frame_index;
+        return false;
+    } else {
+        PLOGF << "Vulkan: Failed to wait for frame fence";
+        terminate_engine();
+        return false;
+    }
+}
+
+void Vulkan::Synchronization::reset_frame_fence(uint32_t frame_index) {
+    if (frame_index >= _frame_sync_objects.size()) {
+        PLOGF << "Vulkan: Frame index out of range";
+        terminate_engine();
+    }
+
+    VkFence fence = _frame_sync_objects[frame_index].in_flight_fence;
+    VkResult result = vkResetFences(_device, 1, &fence);
+
+    if(result != VK_SUCCESS) {
+        PLOGF << "Vulkan: Failed to reset fences";
+        terminate_engine();
+    }
+}
+
+bool Vulkan::Synchronization::wait_for_all_frames(uint64_t timeout) {
+    if(_frame_sync_objects.empty()) {
+        return true;
+    }
+
+    std::vector<VkFence> all_fences;
+    all_fences.reserve(_frame_sync_objects.size());
+    for (const auto& frame_sync : _frame_sync_objects) {
+        all_fences.push_back(frame_sync.in_flight_fence);
+    }
+
+    VkResult result = vkWaitForFences(_device, static_cast<uint32_t>(all_fences.size()), 
+                                      all_fences.data(), VK_TRUE, timeout);
+
+    if(result == VK_SUCCESS) {
+        return true;
+    } else if (result == VK_TIMEOUT) {
+        PLOGW << "Vulkan: Timed out waiting for frames";
+        return false;
+    } else {
+        PLOGF << "Vulkan: Failed to wait for frames";
+        terminate_engine();
+        return false;
+    }
+}
+
+VkSemaphore Vulkan::Synchronization::create_semaphore(VkDevice device) {
+    VkSemaphoreCreateInfo semaphoreInfo{
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+    };
+
+    VkSemaphore semaphore;
+    VkResult result = vkCreateSemaphore(device, &semaphoreInfo, nullptr, &semaphore);
+    if(result != VK_SUCCESS) {
+        PLOGF << "Vulkan: Failed to create semaphore";
+        terminate_engine();
+    }
+
+    return semaphore;
+}
+
+VkFence Vulkan::Synchronization::create_fence(VkDevice device, bool signaled) {
+    VkFenceCreateInfo fenceInfo{
+        .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+    };
+
+    if(signaled)
+        fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+    VkFence fence;
+    VkResult result = vkCreateFence(device, &fenceInfo, nullptr, &fence);
+    if(result != VK_SUCCESS) {
+        PLOGF << "Vulkan: Failed to create fence";
+        terminate_engine();
+    }
+
+    return fence;
+}
+
+void Vulkan::Synchronization::destroy_semaphore(VkDevice device, VkSemaphore semaphore) {
+    if (semaphore != VK_NULL_HANDLE) {
+        vkDestroySemaphore(device, semaphore, nullptr);
+
+        auto it = std::find(_semaphores.begin(), _semaphores.end(), semaphore);
+        if(it != _semaphores.end()) {
+            _semaphores.erase(it);
+        }
+    }
+}
+
+void Vulkan::Synchronization::destroy_fence(VkDevice device, VkFence fence) {
+    if (fence != VK_NULL_HANDLE) {
+        vkDestroyFence(device, fence, nullptr);
+
+        auto it = std::find(_fences.begin(), _fences.end(), fence);
+        if(it != _fences.end()) {
+            _fences.erase(it);
+        }
+    }
+}
+
+void Vulkan::Synchronization::submit_command_buffers(VkQueue queue,
+                                                     const std::vector<VkCommandBuffer>& buffers,
+                                                     const std::vector<VkSemaphore>& wait_semaphores,
+                                                     const std::vector<VkPipelineStageFlags>& wait_stages,
+                                                     const std::vector<VkSemaphore>& signal_semaphores,
+                                                     VkFence fence) {
+    if (wait_semaphores.size() != wait_stages.size()) {
+        PLOGF << "Vulkan: Number of semaphores must match number of wait stages";
+        terminate_engine();
+    }
+
+    VkSubmitInfo submitInfo{
+        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
+        .waitSemaphoreCount = static_cast<uint32_t>(wait_semaphores.size()),
+        .pWaitSemaphores = wait_semaphores.empty() ? nullptr : wait_semaphores.data(),
+        .pWaitDstStageMask = wait_stages.empty() ? nullptr : wait_stages.data(),
+        .commandBufferCount = static_cast<uint32_t>(buffers.size()),
+        .pCommandBuffers = buffers.data(),
+        .signalSemaphoreCount = static_cast<uint32_t>(signal_semaphores.size()),
+        .pSignalSemaphores = signal_semaphores.empty() ? nullptr : signal_semaphores.data(),
+    };
+
+    VkResult result = vkQueueSubmit(queue, 1, &submitInfo, fence);
+    if(result != VK_SUCCESS) {
+        PLOGF << "Vulkan: Failed to submit buffers to queue";
+        terminate_engine();
+    }
+}
+
+VkResult Vulkan::Synchronization::present_image(VkQueue present_queue, VkSwapchainKHR swapchain,
+                                                uint32_t image_index, const std::vector<VkSemaphore>& wait_semaphores) {
+    VkPresentInfoKHR presentInfo{
+        .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+        .waitSemaphoreCount = static_cast<uint32_t>(wait_semaphores.size()),
+        .pWaitSemaphores = wait_semaphores.empty() ? nullptr : wait_semaphores.data(),
+        .swapchainCount = 1,
+        .pSwapchains = &swapchain,
+        .pImageIndices = &image_index,
+        .pResults = nullptr,
+    };
+
+    return vkQueuePresentKHR(present_queue, &presentInfo);
+}
+
+VkResult Vulkan::Synchronization::acquire_next_image(VkDevice device, VkSwapchainKHR swapchain,
+                                                     uint64_t timeout, VkSemaphore semaphore,
+                                                     VkFence fence, uint32_t* image_index) {
+    VkAcquireNextImageInfoKHR next_imageInfo{
+        .sType = VK_STRUCTURE_TYPE_ACQUIRE_NEXT_IMAGE_INFO_KHR,
+        .swapchain = swapchain,
+        .timeout = timeout,
+        .semaphore = semaphore,
+        .fence = fence,
+        .deviceMask = 1, // TODO: don't hard code this
+    };
+    return vkAcquireNextImage2KHR(device, &next_imageInfo, image_index);
+}
+
+VkSubmitInfo Vulkan::Synchronization::create_submit_info(VkCommandBuffer buffer,
+                                                         VkSemaphore wait_semaphore,
+                                                         VkPipelineStageFlags wait_stage,
+                                                         VkSemaphore signal_semaphores) {
+    VkSubmitInfo submitInfo{
+        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+        .commandBufferCount = 1,
+        .pCommandBuffers = &buffer,
+    };
+
+    if(wait_semaphore != VK_NULL_HANDLE) {
+        submitInfo.waitSemaphoreCount = 1;
+        submitInfo.pWaitSemaphores = &wait_semaphore;
+        submitInfo.pWaitDstStageMask = &wait_stage;
+    }
+
+    if(signal_semaphores != VK_NULL_HANDLE) {
+        submitInfo.signalSemaphoreCount = 1;
+        submitInfo.pSignalSemaphores = &signal_semaphores;
+    }
+
+    return submitInfo;
+}
+
+VkPresentInfoKHR Vulkan::Synchronization::create_present_info(VkSwapchainKHR swapchain, uint32_t image_index,
+                                                              VkSemaphore wait_semaphore) {
+    VkPresentInfoKHR presentInfo{
+        .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+    };
+
+    if(wait_semaphore != VK_NULL_HANDLE) {
+        presentInfo.waitSemaphoreCount = 1;
+        presentInfo.pWaitSemaphores = &wait_semaphore;
+    }
+
+    presentInfo.swapchainCount = 1;
+    presentInfo.pSwapchains = &swapchain;
+    presentInfo.pImageIndices = &image_index;
+
+    return presentInfo;
+}
+
+VkResult wait_for_fences(VkDevice device, const std::vector<VkFence>& fences,
+                         bool wait_all, uint64_t timeout) {
+    if(fences.empty()) {
+        return VK_SUCCESS;
+    }
+
+    return vkWaitForFences(device, static_cast<uint32_t>(fences.size()), fences.data(), wait_all, timeout);
+}
+
+void reset_fences(VkDevice device, const std::vector<VkFence>& fences) {
+    if(!fences.empty()) {
+        VkResult result = vkResetFences(device, static_cast<uint32_t>(fences.size()), fences.data());
+
+        if(result != VK_SUCCESS) {
+            PLOGF << "Vulkan: Failed to reset fences";
+            terminate_engine();
+        }
+    }
+}
+
+void Vulkan::Synchronization::clean() {
+    if(_device != VK_NULL_HANDLE) {
+        wait_for_all_frames();
+
+        for(auto& fs : _frame_sync_objects) {
+            if(fs.image_available_semaphore != VK_NULL_HANDLE) {
+                vkDestroySemaphore(_device, fs.image_available_semaphore, nullptr);
+                fs.image_available_semaphore = VK_NULL_HANDLE;
+            }
+
+            if(fs.render_finished_semaphore != VK_NULL_HANDLE) {
+                vkDestroySemaphore(_device, fs.render_finished_semaphore, nullptr);
+                fs.render_finished_semaphore = VK_NULL_HANDLE;
+            }
+
+            if(fs.in_flight_fence != VK_NULL_HANDLE) {
+                vkDestroyFence(_device, fs.in_flight_fence, nullptr);
+                fs.in_flight_fence = VK_NULL_HANDLE;
+            }
+        }
+
+        if(!_frame_sync_objects.empty()) {
+            _frame_sync_objects.clear();
+        }
+
+        for(VkSemaphore sp : _semaphores) {
+            if(sp != VK_NULL_HANDLE) {
+                vkDestroySemaphore(_device, sp, nullptr);
+            }
+        }
+        if(!_semaphores.empty()) {
+            _semaphores.clear();
+        }
+
+        for(VkFence f : _fences) {
+            if(f != VK_NULL_HANDLE) {
+                vkDestroyFence(_device, f, nullptr);
+            }
+        }
+        if(!_fences.empty()) {
+            _fences.clear();
+        }
+
+        _device = VK_NULL_HANDLE;
+        _max_frames_in_flight = 0;
+    }
+}
+
 }
 
 #endif

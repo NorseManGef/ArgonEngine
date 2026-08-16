@@ -13,6 +13,7 @@
 #include <set>
 
 #ifdef USE_VULKAN
+#define MAX_FRAMES_IN_FLIGHT 2
 namespace Argon {
 class Vulkan:public RenderAPI {
     struct Instance {
@@ -451,6 +452,75 @@ class Vulkan:public RenderAPI {
 
         RenderPass(const RenderPass&) = delete;
         RenderPass& operator=(const RenderPass&) = delete;
+    };
+
+    struct Synchronization {
+        struct FrameSyncObjects {
+            VkSemaphore image_available_semaphore;
+            VkSemaphore render_finished_semaphore;
+            VkFence in_flight_fence;
+
+            FrameSyncObjects():
+                image_available_semaphore(VK_NULL_HANDLE),
+                render_finished_semaphore(VK_NULL_HANDLE),
+                in_flight_fence(VK_NULL_HANDLE)
+            {}
+        };
+
+        VkDevice _device;
+        std::vector<FrameSyncObjects> _frame_sync_objects;
+        uint32_t _max_frames_in_flight;
+        std::vector<VkSemaphore> _semaphores;
+        std::vector<VkFence> _fences;
+
+        void create_sync(VkDevice device, uint32_t max_frames_in_flight = MAX_FRAMES_IN_FLIGHT);
+
+        bool wait_for_frame(uint32_t frame_index, uint64_t timeout = UINT64_MAX);
+        void reset_frame_fence(uint32_t frame_index);
+        bool wait_for_all_frames(uint64_t timeout = UINT64_MAX);
+        VkResult wait_for_fences(VkDevice device, const std::vector<VkFence>& fences,
+                                 bool wait_all = true, uint64_t timeout = UINT64_MAX);
+
+        void reset_fences(VkDevice device, const std::vector<VkFence>& fences);
+
+        VkSemaphore create_semaphore(VkDevice device);
+        VkFence create_fence(VkDevice device, bool signaled = true);
+        void destroy_semaphore(VkDevice device, VkSemaphore semaphore);
+        void destroy_fence(VkDevice device, VkFence fence);
+
+        VkSubmitInfo create_submit_info(VkCommandBuffer buffer,
+                                        VkSemaphore wait_semaphore,
+                                        VkPipelineStageFlags wait_stage,
+                                        VkSemaphore signal_semaphore);
+
+        VkPresentInfoKHR create_present_info(VkSwapchainKHR swapchain, uint32_t image_index,
+                                             VkSemaphore wait_semaphore);
+
+        void submit_command_buffers(VkQueue queue,
+                                    const std::vector<VkCommandBuffer>& command_buffers,
+                                    const std::vector<VkSemaphore>& wait_semaphores = {},
+                                    const std::vector<VkPipelineStageFlags>& wait_stages = {},
+                                    const std::vector<VkSemaphore>& signal_semaphores = {},
+                                    VkFence fence = VK_NULL_HANDLE);
+
+        VkResult present_image(VkQueue present_queue, VkSwapchainKHR swapchain,
+                               uint32_t image_index, const std::vector<VkSemaphore>& wait_semaphores = {});
+
+        VkResult acquire_next_image(VkDevice device, VkSwapchainKHR swapchain,
+                                    uint64_t timeout, VkSemaphore semaphore,
+                                    VkFence fence, uint32_t* image_index);
+
+        void clean();
+
+        Synchronization():
+            _device(nullptr)
+        {}
+
+        Synchronization(VkDevice device, uint32_t max_frames_in_flight = MAX_FRAMES_IN_FLIGHT):
+            _device(device)
+        {
+            create_sync(device, max_frames_in_flight);
+        }
     };
 
     void init_vulkan();
