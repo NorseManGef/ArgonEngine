@@ -14,6 +14,7 @@
 #include "ArgonAppBase.h"
 #include "ArgonEngine/Hardware.h"
 #include "ArgonEngine/OpenGLES.h"
+#include "ArgonEngine/Vulkan.h"
 #include <ArgonEngine/ForwardRenderer.h>
 #include "DeferredRenderer.h"
 #include "FontTest.h"
@@ -89,15 +90,31 @@ public:
         if(node)current_node=node;
     }
     bool draw(){
-        static Argon::OpenGLES render_api;
-        render.viewport=Argon::Screen::framebuffer_size;
-        animate();
-        if(input[' '])opus->playback_position=0.95;
+        #ifdef USE_OPENGL
+        {
+            static Argon::OpenGLES render_api;
+            render.viewport=Argon::Screen::framebuffer_size;
+            animate();
+            if(input[' '])opus->playback_position=0.95;
 
-        auto i = input.get_last_update();
-       // std::cout<<"Last update: "<<input.get_full_input_string(i.input_id)<<" @ "<<i.time<<std::endl;
-        render.draw(render_api);
-        return true;
+            auto i = input.get_last_update();
+           // std::cout<<"Last update: "<<input.get_full_input_string(i.input_id)<<" @ "<<i.time<<std::endl;
+            render.draw(render_api);
+            return true;
+        }
+        #endif
+        #ifdef USE_VULKAN
+        {
+            static Argon::Vulkan render_api_vlk;
+            render_api_vlk.begin_frame();
+            render.viewport=Argon::Screen::framebuffer_size;
+            animate();
+            auto i = input.get_last_update();
+            render.draw(render_api_vlk);
+            render_api_vlk.end_frame();
+            return true;
+        }
+        #endif
     }
 
 };

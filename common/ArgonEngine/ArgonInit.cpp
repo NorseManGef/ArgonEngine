@@ -32,6 +32,11 @@
 #endif
 #endif
 
+#ifdef USE_VULKAN
+#include "ArgonEngine/Vulkan.h"
+#endif
+
+
 #ifdef PLATFORM_UNIX
 #include <unistd.h>
 #include <pwd.h>
@@ -145,7 +150,7 @@ namespace Argon{
     static SDL_Window *win = nullptr;
     bool handle_event(void* userdata,SDL_Event* event);
 
-    void terminate_engine(){
+    void terminate_engine(int status){
         if (context) {
             /* SDL_GL_MakeCurrent(0, NULL); *//* doesn't do anything */
             SDL_GL_DestroyContext(context);
@@ -154,7 +159,7 @@ namespace Argon{
 
         PLOGN << "Process Terminated";
 
-        exit(0);
+        exit(status);
     }
     SDL_AudioDeviceID dev;
     int audio_buffer_index=0;
@@ -675,9 +680,10 @@ namespace Argon{
         }
         accumulator += 0.01666666666666666;
         if (accumulator < -0.5)accumulator = -0.5;
+        #ifdef USE_OPENGL
         SDL_GL_MakeCurrent(win, context);
         SDL_GL_SwapWindow(win);
-
+        #endif
     }
 #endif
 

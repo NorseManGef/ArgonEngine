@@ -732,14 +732,13 @@ void Vulkan::Pipeline::create_pipeline_layout() {
 }
 
 VkPipelineVertexInputStateCreateInfo Vulkan::Pipeline::create_vertex_input_info() {
-    VkVertexInputBindingDescription binding_desc{
+    _binding_desc = {
         .binding = 0,
         .stride = static_cast<uint32_t>(_vertex_array->stride),
         .inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
     };
 
-    std::vector<VkVertexInputAttributeDescription> attribs;
-    attribs.reserve(_vertex_array->attributes.size());
+    _attribs.reserve(_vertex_array->attributes.size());
 
     auto attrib_location = [&](VertexAttribPair pair)-> uint32_t {
         for(size_t x = 0; x<_vertex_array->attributes.size(); x++) {
@@ -793,15 +792,15 @@ VkPipelineVertexInputStateCreateInfo Vulkan::Pipeline::create_vertex_input_info(
             .format = render_format(a.type, a.components),
             .offset = static_cast<uint32_t>(a.offset),
         };
-        attribs.push_back(attrib);
+        _attribs.push_back(attrib);
     }
 
     VkPipelineVertexInputStateCreateInfo vertex_input_info{
         .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
         .vertexBindingDescriptionCount = 1,
-        .pVertexBindingDescriptions = &binding_desc,
-        .vertexAttributeDescriptionCount = static_cast<uint32_t>(attribs.size()),
-        .pVertexAttributeDescriptions = attribs.data(),
+        .pVertexBindingDescriptions = &_binding_desc,
+        .vertexAttributeDescriptionCount = static_cast<uint32_t>(_attribs.size()),
+        .pVertexAttributeDescriptions = _attribs.data(),
     };
 
     return vertex_input_info;
@@ -915,6 +914,42 @@ VkPipelineDepthStencilStateCreateInfo Vulkan::Pipeline::create_depth_stencil_inf
     };
 
     return depth_stencil_info;
+}
+
+VkPipelineDynamicStateCreateInfo Vulkan::Pipeline::create_dynamic_state_info() {
+    std::vector<VkDynamicState> dynamic_states = {
+        VK_DYNAMIC_STATE_PRIMITIVE_TOPOLOGY,
+    };
+
+    VkPipelineDynamicStateCreateInfo dynamicInfo{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
+        .dynamicStateCount = static_cast<uint32_t>(dynamic_states.size()),
+        .pDynamicStates = dynamic_states.data()
+    };
+
+    return dynamicInfo;
+}
+
+void Vulkan::Pipeline::clean() {
+    if(_device != VK_NULL_HANDLE) {
+        if(_pipeline != VK_NULL_HANDLE) {
+            vkDestroyPipeline(_device, _pipeline, nullptr);
+            _pipeline = VK_NULL_HANDLE;
+        }
+
+        if(_pipeline_layout != VK_NULL_HANDLE) {
+            vkDestroyPipelineLayout(_device, _pipeline_layout, nullptr);
+            _pipeline_layout = VK_NULL_HANDLE;
+        }
+
+        if(_desc_layout != VK_NULL_HANDLE) {
+            vkDestroyDescriptorSetLayout(_device, _desc_layout, nullptr);
+            _desc_layout = VK_NULL_HANDLE;
+        }
+
+        _binding_desc = {};
+        _attribs.clear();
+    }
 }
 
   ///////////////////////////////////////
@@ -1247,6 +1282,10 @@ void Vulkan::CommandPool::record_frame_commands(VkCommandBuffer buffer, VkRender
         draw(buffer, vertex_count, instance_count);
 
     end_render_pass(buffer);
+}
+
+void Vulkan::CommandPool::set_primitive_topology(VkCommandBuffer buffer, VkPrimitiveTopology topology) {
+    vkCmdSetPrimitiveTopology(buffer, topology);
 }
 
 void Vulkan::CommandPool::clean() {
@@ -2218,6 +2257,288 @@ void Vulkan::Synchronization::clean() {
         _device = VK_NULL_HANDLE;
         _max_frames_in_flight = 0;
     }
+}
+
+  ///////////////////////////////////////
+ // VULKAN /////////////////////////////
+///////////////////////////////////////
+
+void Vulkan::init_vulkan(const std::vector<const char*>& required_extensions, VkSurfaceKHR surface,
+                         uint32_t width, uint32_t height, uint32_t queue_family_index, VkFormat color_format,
+                         VkFormat depth_format, VkSampleCountFlagBits msaa_samples, uint32_t max_frames_in_flight, 
+                         bool allow_command_pool_reset, bool command_pool_transient) {
+    _instance->create_instance(required_extensions);
+    _device->create(_instance->_instance, surface, width, height);
+    _render_pass->create_render_pass(_device->_device, color_format, depth_format);
+
+    VkFormat depth_formats[] = {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT};
+    VkFormat chosen_depth_format;
+
+    for (VkFormat format : depth_formats) {
+        VkFormatProperties2 props;
+        vkGetPhysicalDeviceFormatProperties2(_device->_physical_device, format, &props);
+
+        if((props.formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) == VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
+            chosen_depth_format = format;
+        }
+    }
+
+    VkImageCreateInfo imageInfo{
+        .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+        .imageType = VK_IMAGE_TYPE_2D,
+        .format = chosen_depth_format,
+        .extent.width = _device->_extent.width,
+        .extent.height = _device->_extent.height,
+        .extent.depth = 1,
+        .mipLevels = 1,
+        .arrayLayers = 1,
+        .samples = VK_SAMPLE_COUNT_1_BIT,
+        .tiling = VK_IMAGE_TILING_OPTIMAL,
+        .usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+        .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+    };
+
+    VkImage depth_image;
+
+    VkResult result = vkCreateImage(_device->_device, &imageInfo, nullptr, &depth_image);
+
+    if(result != VK_SUCCESS) {
+        PLOGF << "Vulkan: Failed to create depth image";
+        terminate_engine();
+    }
+
+    VkMemoryRequirements mem_reqs;
+    vkGetImageMemoryRequirements(_device->_device, depth_image,  &mem_reqs);
+
+    VkPhysicalDeviceMemoryProperties mem_props;
+    vkGetPhysicalDeviceMemoryProperties(_device->_physical_device, &mem_props);
+
+    uint32_t memory_type_index = UINT32_MAX;
+    for (uint32_t i = 0; i < mem_props.memoryTypeCount; ++i) {
+        if ((mem_reqs.memoryTypeBits & (1 << i)) &&
+            (mem_props.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) ==
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) {
+            memory_type_index = 1;
+            break;
+        }
+    }
+
+    if(memory_type_index == UINT32_MAX) {
+        PLOGF << "Vulkan: Failed to find suitable memory type for depth buffer";
+        terminate_engine();
+    }
+
+    VkMemoryAllocateInfo allocInfo{
+        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+        .allocationSize = mem_reqs.size,
+        .memoryTypeIndex = memory_type_index,
+    };
+
+    VkDeviceMemory depth_image_mem;
+
+    result = vkAllocateMemory(_device->_device, &allocInfo, nullptr, &depth_image_mem);
+    
+    if(result != VK_SUCCESS) {
+        PLOGF << "Vulkan: Failed to allocate depth image memory";
+        terminate_engine();
+    }
+
+    vkBindImageMemory(_device->_device, depth_image, depth_image_mem, 0);
+
+    VkImageViewCreateInfo viewInfo{
+        .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+        .image = depth_image,
+        .viewType = VK_IMAGE_VIEW_TYPE_2D,
+        .format = depth_format,
+        .subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
+        .subresourceRange.baseMipLevel = 0,
+        .subresourceRange.levelCount = 1,
+        .subresourceRange.baseArrayLayer = 0,
+        .subresourceRange.layerCount = 1,
+    };
+
+    VkImageView depth_image_view;
+    result = vkCreateImageView(_device->_device, &viewInfo, nullptr, &depth_image_view);
+
+    if(result != VK_SUCCESS) {
+        PLOGF << "Vulkan: Failed to craete depth image view";
+        terminate_engine();
+    }
+
+    _render_pass->create_framebuffers(_device->_image_views, depth_image_view, _device->_extent);
+    _command_pool->create_command_pool(_device->_device, queue_family_index);
+    for(int i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
+        _cmd_buffers[i] = _command_pool->allocate_buffer();
+    }
+    _sync->create_sync(_device->_device);
+}
+
+void Vulkan::ensure_recording() {
+    if(cmdstate == CmdState::Recording)return;
+
+    assert(cmdstate == CmdState::Idle);
+
+    _command_pool->begin_buffer(_cmd_buffers[_current_frame]);
+
+    cmdstate = CmdState::Recording;
+}
+
+void Vulkan::ensure_idle() {
+    if(cmdstate == CmdState::Idle)return;
+
+    assert(cmdstate == CmdState::Recording);
+
+    _command_pool->end_buffer(_cmd_buffers[_current_frame]);
+
+    cmdstate = CmdState::Idle;
+}
+
+uint32_t Vulkan::acquire_next_image() {
+    uint32_t image_index;
+    VkResult result = _sync->acquire_next_image(_device->_device, 
+                                                _device->_swapchain, UINT64_MAX, 
+                                                _sync->_frame_sync_objects[_current_frame].image_available_semaphore,
+                                                VK_NULL_HANDLE, &image_index);
+
+    if(result == VK_ERROR_OUT_OF_DATE_KHR) {
+        _device->recreate_swapchain(_device->_surface, _device->_extent.width, _device->_extent.height);
+        return acquire_next_image();
+    } else if(result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
+        PLOGF << "Vulkan: Failed to acquire next frame";
+        terminate_engine();
+    }
+    return image_index;
+}
+
+void Vulkan::begin_frame() {
+    if(!_sync->wait_for_frame(_current_frame)){
+        PLOGW << "Vulkan: Failed to wait for frame";
+        return;
+    }
+    ensure_recording();
+    _sync->reset_frame_fence(_current_frame);
+}
+
+void Vulkan::end_frame() {
+    auto image_index = acquire_next_image();
+    VkResult result = vkResetCommandBuffer(_cmd_buffers[_current_frame], 0);
+    if(result != VK_SUCCESS) {
+        PLOGF << "Vulkan: Failed to reset command buffer";
+        terminate_engine();
+    }
+
+    ensure_recording();
+
+    std::vector<VkSemaphore> wait_semaphores = {_sync->_frame_sync_objects[_current_frame].image_available_semaphore};
+    std::vector<VkPipelineStageFlags> wait_stages = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+    std::vector<VkSemaphore> signal_semaphores = {_sync->_frame_sync_objects[_current_frame].render_finished_semaphore};
+
+    _sync->submit_command_buffers(_device->_graphicsQ, 
+                                  {_cmd_buffers[_current_frame]},
+                                  wait_semaphores,
+                                  wait_stages,
+                                  signal_semaphores,
+                                  _sync->_frame_sync_objects[_current_frame].in_flight_fence);
+
+    result = _sync->present_image(_device->_presentQ, _device->_swapchain, image_index, signal_semaphores);
+    if(result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+        _device->recreate_swapchain(_device->_surface, _device->_extent.width, _device->_extent.height);
+    } else if (result != VK_SUCCESS) {
+        PLOGF << "Vulkan: Failed to present swapchain image";
+        terminate_engine();
+    }
+
+    _current_frame = (_current_frame + 1) % MAX_FRAMES_IN_FLIGHT;
+}
+
+void Vulkan::clean() {
+    _sync->clean();
+    _render_pass->clean();
+    _command_pool->clean();
+    for(auto p : _pipelines) {
+        p->clean();
+    }
+    _device->clean();
+    _instance->clean();
+}
+
+  ///////////////////////////////////////
+ // RENDER API /////////////////////////
+///////////////////////////////////////
+
+void Vulkan::draw_vertex_array(std::shared_ptr<VertexArray> array, int end_vert, int draw_mode) {
+    if(!array)return;
+
+    auto it = vertex_arrays.find(array);
+
+    if(it == vertex_arrays.end())return;
+
+    vert_data& vert_d = it->second;
+
+    if(vert_d.vert_buffer._buffer == VK_NULL_HANDLE ||
+       vert_d.index_buffer._buffer == VK_NULL_HANDLE) {
+        PLOGW << "Vulkan: Buffers were null";
+        return;
+    }
+
+    VkCommandBuffer current_cmd_buffer = _cmd_buffers[_current_frame];
+
+    if(current_cmd_buffer == VK_NULL_HANDLE) {
+        PLOGE << "Vulkan: Command buffer is null";
+        return;
+    }
+
+    if(_current_pipeline_index > _pipelines.size()) {
+        PLOGF << "Vulkan: current pipeline does not exist";
+        terminate_engine(1); // TODO: Make this a specific error code
+    }
+
+    Pipeline* pipe = _pipelines[_current_pipeline_index];
+
+    if(!pipe || !pipe->is_valid()) {
+        PLOGE << "Vulkan: current pipeline is not initialized";
+        return;
+    };
+
+    VkPrimitiveTopology topology;
+
+    switch(draw_mode) {
+        case Argon::kDrawPoints:
+            topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+            break;
+        case Argon::kDrawLines:
+            topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+            break;
+        case Argon::kDrawLineLoop:
+            // Vulkan has no line loop TODO: Make line strip its' own constant
+            PLOGE << "Vulkan: Line loop does not exist in vulkan";
+            topology = VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
+            break;
+        case Argon::kDrawTriangles:
+            topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+            break;
+        case Argon::kDrawTriangleStrip:
+            topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+            break;
+        case Argon::kDrawTriangleFan:
+            topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN;
+            break;
+        default:
+            topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+            break;
+    }
+
+    _command_pool->bind_pipeline(current_cmd_buffer, pipe->_pipeline);
+    _command_pool->set_primitive_topology(current_cmd_buffer, topology);
+    _command_pool->bind_vertex_buffers(current_cmd_buffer, 0, {vert_d.vert_buffer._buffer}, {0});
+    _command_pool->bind_index_buffer(current_cmd_buffer, vert_d.index_buffer._buffer, 0, VK_INDEX_TYPE_UINT16);
+
+    uint32_t index_count = end_vert < 0 ? static_cast<uint32_t>(array->index_data.size()) : static_cast<uint32_t>(end_vert);
+
+    if(index_count == 0)return;
+
+    _command_pool->draw_indexed(current_cmd_buffer, index_count, 1, 0, 0, 0);
 }
 
 }

@@ -4,6 +4,7 @@
  * @author Garrett Rosende
  **/
 
+#include "ArgonEngine/ArgonInit.h"
 #include "RenderAPI.h"
 #include "RenderSystem.h"
 #include "vulkan/vulkan_core.h"
@@ -70,6 +71,7 @@ class Vulkan:public RenderAPI {
         std::vector<VkImageView> _image_views;
         VkFormat _image_format;
         VkExtent2D _extent;
+        VkSurfaceKHR _surface;
 
         std::vector<const char*> _extensions = {
             VK_KHR_SWAPCHAIN_EXTENSION_NAME
@@ -135,6 +137,7 @@ class Vulkan:public RenderAPI {
         }
 
         void create(VkInstance instance, VkSurfaceKHR surface, uint32_t width, uint32_t height) {
+            _surface = surface;
             pick_physical_device(instance, surface);
             create_logical_device(surface);
             create_swap_chain(surface, width, height);
@@ -184,6 +187,9 @@ class Vulkan:public RenderAPI {
         std::shared_ptr<VertexArray> _vertex_array;
         VkPipelineColorBlendAttachmentState _color_blend_attachment{};
 
+        VkVertexInputBindingDescription _binding_desc{};
+        std::vector<VkVertexInputAttributeDescription> _attribs;
+
         void create_graphics_pipeline(VkDevice device,
                                       VkRenderPass render_pass,
                                       const VirtualResource vertex_shader_path,
@@ -209,6 +215,7 @@ class Vulkan:public RenderAPI {
         VkPipelineMultisampleStateCreateInfo create_multisample_info();
         VkPipelineColorBlendStateCreateInfo create_color_blend_info();
         VkPipelineDepthStencilStateCreateInfo create_depth_stencil_info();
+        VkPipelineDynamicStateCreateInfo create_dynamic_state_info();
 
         void clean();
 
@@ -305,6 +312,7 @@ class Vulkan:public RenderAPI {
                                    const std::vector<VkDescriptorSet>& desc_sets = {},
                                    uint32_t vertex_count = 0, uint32_t index_count = 0,
                                    uint32_t instance_count = 1);
+        void set_primitive_topology(VkCommandBuffer buffer, VkPrimitiveTopology topology);
         void clean();
 
         CommandPool():
@@ -412,6 +420,11 @@ class Vulkan:public RenderAPI {
         ~Buffer() {
             clean();
         }
+        Buffer(const Buffer&) = delete;
+        Buffer& operator=(const Buffer&) = delete;
+
+        Buffer(Buffer&& other) noexcept;
+        Buffer& operator=(Buffer&& other) noexcept;
     };
 
     struct RenderPass {
@@ -523,15 +536,65 @@ class Vulkan:public RenderAPI {
         }
     };
 
-    void init_vulkan();
+    struct vert_data {
+        size_t buff_size = 0;
+        Buffer vert_buffer;
 
-    void clean();
+        size_t index_size = 0;
+        Buffer index_buffer;
+
+        size_t update_id = 0;
+        size_t vertices = 0;
+
+        size_t last_frame = 0;
+    };
+
+    enum class CmdState {
+        Idle,
+        Recording,
+    };
+
+    enum class RenderState {
+        Rendering,
+        NotRendering
+    };
+
+    Instance* _instance;
+    Device* _device;
+    std::vector<Pipeline*> _pipelines;
+    size_t _current_pipeline_index;
+    CommandPool* _command_pool;
+    VkCommandBuffer _cmd_buffers[MAX_FRAMES_IN_FLIGHT];
+    CmdState cmdstate = CmdState::Idle;
+    RenderState renderstate = RenderState::NotRendering;
+    RenderPass* _render_pass;
+    Synchronization* _sync;
+    size_t _current_frame = 0;
+
+    std::map<std::shared_ptr<VertexArray>, vert_data> vertex_arrays;
+
+    void ensure_recording();
+    void ensure_idle();
+
+    uint32_t acquire_next_image();
+
 
 public:
     Vulkan() {} 
     ~Vulkan() {
         clean();
     }
+
+    void init_vulkan(const std::vector<const char*>& required_extensions, VkSurfaceKHR surface,
+                     uint32_t width, uint32_t height, uint32_t queue_family_index, VkFormat color_format,
+                     VkFormat depth_format, VkSampleCountFlagBits msaa_samples = VK_SAMPLE_COUNT_1_BIT,
+                     uint32_t max_frames_in_flight = MAX_FRAMES_IN_FLIGHT,
+                     bool allow_command_pool_reset = true, bool command_pool_transient = false);
+
+    void begin_frame();
+    void end_frame();
+    void clean();
+
     void draw_vertex_array(std::shared_ptr<VertexArray> array, int end_vert, int draw_mode);
     void update_resources();
     void set_blend(unsigned int blend);
