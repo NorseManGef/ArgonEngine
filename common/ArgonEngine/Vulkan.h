@@ -296,7 +296,7 @@ class Vulkan:public RenderAPI {
 
         void copy_buffer(VkCommandBuffer buffer, VkBuffer src_buffer, VkBuffer dst_buffer,
                          VkDeviceSize size, VkDeviceSize src_offset = 0, VkDeviceSize dst_offset = 0);
-        void pipeline_barrier(VkCommandBuffer buffer, VkDependencyFlags dep_flags = 0,
+        static void pipeline_barrier(VkCommandBuffer buffer, VkDependencyFlags dep_flags = 0,
                               const std::vector<VkMemoryBarrier2>& memory_barriers = {},
                               const std::vector<VkBufferMemoryBarrier2>& buffer_barriers = {},
                               const std::vector<VkImageMemoryBarrier2>& image_barriers = {});
@@ -364,8 +364,6 @@ class Vulkan:public RenderAPI {
         void flush(VkDeviceSize offset = 0, VkDeviceSize size = VK_WHOLE_SIZE);
         void invalidate(VkDeviceSize offset = 0, VkDeviceSize size = VK_WHOLE_SIZE);
 
-        uint32_t find_mem_type(VkPhysicalDevice physical_device, uint32_t type_filter,
-                               VkMemoryPropertyFlags properties) const;
 
         VkCommandBuffer begin_single_time_commands(VkDevice device, VkCommandPool command_pool) const;
         void end_single_time_commands(VkDevice device, VkCommandPool command_pool,
@@ -536,6 +534,70 @@ class Vulkan:public RenderAPI {
         }
     };
 
+    struct RealTexFormat {
+        int argon_format_flag;
+        VkFormat actual_format;
+
+        void set_format(int flag);
+    };
+
+    struct TexturePrim {
+        VkDevice _device;
+        VkPhysicalDevice _physical_device;
+
+        VkImage _image;
+        VkDeviceMemory _memory;
+        VkImageView _view;
+
+        VkSampler _sampler;
+
+        VkFormat _format;
+        uint32_t _width, _height;
+
+        VkImageLayout _layout;
+
+        uint64_t _update_id;
+        uint64_t _last_frame;
+
+        void create_image(VkDevice device, VkPhysicalDevice physical_device,
+                          uint32_t width, uint32_t height, RealTexFormat format);
+
+        void create_image_view();
+
+        void upload_data(VkCommandBuffer buffer,
+                         const void* data,
+                         VkDeviceSize size,
+                         VkDeviceSize offset);
+
+        void create_sampler(VkPhysicalDevice physical_device);
+
+        void clean();
+
+        TexturePrim():
+            _device(VK_NULL_HANDLE),
+            _physical_device(VK_NULL_HANDLE),
+            _image(VK_NULL_HANDLE),
+            _memory(VK_NULL_HANDLE),
+            _view(VK_NULL_HANDLE),
+            _width(0),
+            _height(0),
+            _format(VK_FORMAT_UNDEFINED),
+            _layout(VK_IMAGE_LAYOUT_UNDEFINED),
+            _update_id(0),
+            _last_frame(0)
+        {}
+
+        ~TexturePrim() {
+            clean();
+        }
+
+        TexturePrim(const TexturePrim&) = delete;
+        TexturePrim& operator=(const TexturePrim&) = delete;
+
+        TexturePrim(TexturePrim&& other) noexcept;
+        TexturePrim& operator=(TexturePrim&& other) noexcept;
+    };
+
     struct vert_data {
         size_t buff_size = 0;
         Buffer vert_buffer;
@@ -572,11 +634,15 @@ class Vulkan:public RenderAPI {
     size_t _current_frame = 0;
 
     std::map<std::shared_ptr<VertexArray>, vert_data> vertex_arrays;
+    std::map<VirtualResource, TexturePrim> textures;
 
     void ensure_recording();
     void ensure_idle();
 
     uint32_t acquire_next_image();
+
+    static uint32_t find_mem_type(VkPhysicalDevice physical_device, uint32_t type_filter,
+                           VkMemoryPropertyFlags properties);
 
 
 public:

@@ -1493,7 +1493,7 @@ void Vulkan::Buffer::invalidate(VkDeviceSize offset, VkDeviceSize size) {
     }
 }
 
-uint32_t find_mem_type(VkPhysicalDevice physical_device, uint32_t type_filter,
+uint32_t Vulkan::find_mem_type(VkPhysicalDevice physical_device, uint32_t type_filter,
                        VkMemoryPropertyFlags properties) {
     VkPhysicalDeviceMemoryProperties2 mem_props;
     vkGetPhysicalDeviceMemoryProperties2(physical_device, &mem_props);
@@ -2259,8 +2259,169 @@ void Vulkan::Synchronization::clean() {
     }
 }
 
+  ////////////////////////////////////////
+ // TEXTUREPRIM /////////////////////////
+////////////////////////////////////////
+
+void Vulkan::TexturePrim::create_image(VkDevice device, VkPhysicalDevice physical_device,
+                                       uint32_t width, uint32_t height, RealTexFormat format) {
+    _device = device;
+    _physical_device = physical_device;
+    _width = width;
+    _height = height;
+    _layout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+    VkImageCreateInfo imageInfo{
+        .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+        .imageType = VK_IMAGE_TYPE_2D,
+        .format = format.actual_format,
+        .extent.width = width,
+        .extent.height = height,
+        .extent.depth = 1,
+        .mipLevels = 1,
+        .arrayLayers = 1,
+        .samples = VK_SAMPLE_COUNT_1_BIT,
+        .tiling = VK_IMAGE_TILING_OPTIMAL,
+        .usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+        .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+        .initialLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+    };
+
+    VkResult result = vkCreateImage(_device, &imageInfo, nullptr, &_image);
+
+    if(result != VK_SUCCESS) {
+        PLOGE << "Vulkan: Failed to create texture image";
+        return;
+    }
+
+    VkMemoryRequirements mem_reqs{};
+
+    vkGetImageMemoryRequirements(_device, _image, &mem_reqs);
+
+    uint32_t mem_type = find_mem_type(_physical_device, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+    VkMemoryAllocateInfo allocInfo{
+        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+        .allocationSize = mem_reqs.size,
+        .memoryTypeIndex = mem_type,
+    };
+
+    result = vkAllocateMemory(_device, &allocInfo, nullptr, &_memory);
+    
+    if(result != VK_SUCCESS) {
+        PLOGE << "Vulkan: Failed to allocate texture memory";
+        vkDestroyImage(_device, _image, nullptr);
+        _image = VK_NULL_HANDLE;
+        return;
+    }
+
+    vkBindImageMemory(
+        _device,
+        _image,
+        _memory,
+        0
+    );
+
+    create_image_view();
+}
+
+void Vulkan::TexturePrim::create_image_view() {
+    VkImageViewCreateInfo viewInfo = {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+        .image = _image,
+        .viewType = VK_IMAGE_VIEW_TYPE_2D,
+        .format = _format,
+        .subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+        .subresourceRange.baseMipLevel = 0,
+        .subresourceRange.levelCount = 1,
+        .subresourceRange.baseArrayLayer = 0,
+        .subresourceRange.layerCount = 1,
+    };
+
+    VkResult result = vkCreateImageView(_device, &viewInfo, nullptr, &_view);
+
+    if(result != VK_SUCCESS) {
+        PLOGE << "Vulkan: Failed to create texture image view";
+        _view = VK_NULL_HANDLE;
+    }
+}
+
+void Vulkan::TexturePrim::upload_data(VkCommandBuffer buffer,
+                                      const void* data,
+                                      VkDeviceSize size,
+                                      VkDeviceSize offset) {
+    if(!data || size == 0)return;
+
+    Buffer staging;
+
+    staging.create_staging_buffer(_device, _physical_device, size);
+
+    staging.upload_data(data, size);
+
+    VkBufferImageCopy region{
+        .bufferOffset = 0,
+        .bufferRowLength = 0,
+        .bufferImageHeight = 0,
+        .imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+        .imageSubresource.mipLevel = 0,
+        .imageSubresource.baseArrayLayer = 0,
+        .imageSubresource.layerCount = 1,
+        .imageOffset = {0,0,0},
+        .imageExtent = {_width, _height, 1},
+    };
+
+    vkCmdCopyBufferToImage(buffer, staging._buffer, _image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+
+    VkImageMemoryBarrier2 barrier {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+        .pNext = nullptr,
+        .srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+        .srcAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT | VK_ACCESS_2_TRANSFER_WRITE_BIT,
+        .dstStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+        .dstAccessMask = VK_ACCESS_2_SHADER_READ_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT,
+        .oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        .newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        .srcQueueFamilyIndex = 0,
+        .dstQueueFamilyIndex = 0,
+        .image = _image,
+        .subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+        .subresourceRange.baseMipLevel = 0,
+        .subresourceRange.levelCount = 1,
+        .subresourceRange.baseArrayLayer = 0,
+        .subresourceRange.layerCount = 1,
+    };
+
+    CommandPool::pipeline_barrier(buffer, 0, {}, {}, {barrier});
+}
+
+void Vulkan::TexturePrim::create_sampler(VkPhysicalDevice physical_device) {
+    VkPhysicalDeviceProperties props;
+    vkGetPhysicalDeviceProperties(physical_device, &props);
+
+    VkSamplerCreateInfo samplerInfo{
+        .magFilter = VK_FILTER_LINEAR,
+        .minFilter = VK_FILTER_LINEAR,
+        .mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR,
+        .addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+        .addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+        .addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+        .mipLodBias = 0.0f,
+        .anisotropyEnable = VK_TRUE,
+        .maxAnisotropy = props.limits.maxSamplerAnisotropy,
+        .minLod = 0.0f,
+        .maxLod = 0.0f
+    };
+
+    VkResult result = vkCreateSampler(_device, &samplerInfo, nullptr, &_sampler);
+
+    if(result != VK_SUCCESS) {
+        PLOGF << "Vulkan: Failed to create texture sampler";
+        terminate_engine();
+    }
+}
+
   ///////////////////////////////////////
- // VULKAN /////////////////////////////
+ // UTIL ///////////////////////////////
 ///////////////////////////////////////
 
 void Vulkan::init_vulkan(const std::vector<const char*>& required_extensions, VkSurfaceKHR surface,
@@ -2377,8 +2538,6 @@ void Vulkan::init_vulkan(const std::vector<const char*>& required_extensions, Vk
 void Vulkan::ensure_recording() {
     if(cmdstate == CmdState::Recording)return;
 
-    assert(cmdstate == CmdState::Idle);
-
     _command_pool->begin_buffer(_cmd_buffers[_current_frame]);
 
     cmdstate = CmdState::Recording;
@@ -2386,8 +2545,6 @@ void Vulkan::ensure_recording() {
 
 void Vulkan::ensure_idle() {
     if(cmdstate == CmdState::Idle)return;
-
-    assert(cmdstate == CmdState::Recording);
 
     _command_pool->end_buffer(_cmd_buffers[_current_frame]);
 
@@ -2450,6 +2607,48 @@ void Vulkan::end_frame() {
     }
 
     _current_frame = (_current_frame + 1) % MAX_FRAMES_IN_FLIGHT;
+}
+
+void Vulkan::RealTexFormat::set_format(int flag) {
+    argon_format_flag = flag;
+    switch(flag) {
+        case kTextureRGB565:
+            actual_format = VK_FORMAT_R5G6B5_UNORM_PACK16;
+            break;
+        case kTextureRGB8:
+            actual_format = VK_FORMAT_R8G8B8_UNORM;
+            break;
+        case(kTextureRGBF16):
+            actual_format = VK_FORMAT_R16G16B16_SFLOAT;
+            break;
+        case kTextureRGBF32:
+            actual_format = VK_FORMAT_R32G32B32_SFLOAT;
+            break;
+        case kTextureRGBF64:
+            actual_format = VK_FORMAT_R64G64B64_SFLOAT;
+            break;
+        case kTextureRGBA5551:
+            actual_format = VK_FORMAT_R5G5B5A1_UNORM_PACK16;
+            break;
+        case kTextureRGBA4:
+            actual_format = VK_FORMAT_R4G4B4A4_UNORM_PACK16;
+            break;
+        case kTextureRGBA8:
+            actual_format = VK_FORMAT_R8G8B8A8_UNORM;
+            break;
+        case kTextureRGBAF16:
+            actual_format = VK_FORMAT_R16G16B16A16_SFLOAT;
+            break;
+        case kTextureRGBAF32:
+            actual_format = VK_FORMAT_R32G32B32A32_SFLOAT;
+            break;
+        case kTextureRGBAF64:
+            actual_format = VK_FORMAT_R64G64B64A64_SFLOAT;
+            break;
+        default:
+            PLOGE << "Vulkan: No valid texture format provided";
+            actual_format = VK_FORMAT_UNDEFINED;
+    }
 }
 
 void Vulkan::clean() {
@@ -2539,6 +2738,35 @@ void Vulkan::draw_vertex_array(std::shared_ptr<VertexArray> array, int end_vert,
     if(index_count == 0)return;
 
     _command_pool->draw_indexed(current_cmd_buffer, index_count, 1, 0, 0, 0);
+}
+
+void Vulkan::update_resources() {
+
+}
+
+void Vulkan::cache_texture(VirtualResource tex) {
+    VirtualResourceImage* image = tex.get_data<VirtualResourceImage*>();
+    RealTexFormat format;
+    format.set_format(image->get_format());
+    if(image){
+        TexturePrim& p = textures[tex];
+        p._last_frame = 0;
+        bool realloc = p._width!=image->get_width()||p._height!=image->get_height();
+        if(realloc) {
+            p.create_image(_device->_device, _device->_physical_device,
+                       image->get_width(), image->get_height(), format);
+            p.upload_data(_cmd_buffers[_current_frame], image->get_image_data(),
+                          tex.size(), 0);
+        }
+
+        if(p._update_id!=image->update_id()||realloc) {
+            p.upload_data(_cmd_buffers[_current_frame], image->get_image_data(),
+                          tex.size(), 0);
+            p._update_id = image->update_id();
+        }
+    } else {
+        PLOGE << tex.get_path_string() << " is not a valid texture.";
+    }
 }
 
 }
