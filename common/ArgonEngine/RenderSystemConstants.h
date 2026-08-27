@@ -118,6 +118,8 @@ enum TextureFormat{
     kTextureRGBAF32=0x9,
     kTextureRGBAF64=0xA,
 
+    // extra bit flags
+
     kTextureDepth16 = 0xB,
     kTextureDepth24 = 0xC,
     kTextureDepth32 = 0xD,
@@ -130,6 +132,7 @@ enum TextureFormat{
     kTextureAnsiotropic2x= 0x100,
     kTextureAnsiotropic4x= 0x200,
     kTextureAnsiotropic8x= 0x300,
+    kTextureAnsiotropic16x = 0x400,
 
     kTextureFlagMask = 0xFFFFF000,
 
