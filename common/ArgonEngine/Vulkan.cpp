@@ -580,8 +580,8 @@ void Vulkan::Device::clean_swapchain() {
  // PIPELINE ///////////////////////////
 ///////////////////////////////////////
 void Vulkan::Pipeline::create_graphics_pipeline(VkDevice device, VkRenderPass render_pass,
-                                                VirtualResource vertex_shader_path, 
-                                                VirtualResource fragment_shader_path,
+                                                VkShaderModule vertex_shader, 
+                                                VkShaderModule fragment_shader,
                                                 VkExtent2D extent) {
     if(device == VK_NULL_HANDLE) {
         PLOGF << "Vulkan: Invalid device handle provided to graphics pipeline";
@@ -597,8 +597,8 @@ void Vulkan::Pipeline::create_graphics_pipeline(VkDevice device, VkRenderPass re
 
     _device = device;
 
-    VkShaderModule vertex_shader = load_shader(vertex_shader_path);
-    VkShaderModule fragment_shader = load_shader(fragment_shader_path);
+    _current_vertex_shader = vertex_shader;
+    _current_fragment_shader = fragment_shader;
 
     VkPipelineShaderStageCreateInfo vertex_shader_stageInfo{
         .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
@@ -626,6 +626,7 @@ void Vulkan::Pipeline::create_graphics_pipeline(VkDevice device, VkRenderPass re
     auto multisample_info = create_multisample_info();
     auto depth_stencil_info = create_depth_stencil_info();
     auto color_blend_info = create_color_blend_info();
+    auto dynamic_state_info = create_dynamic_state_info();
 
     VkGraphicsPipelineCreateInfo pipeline_createInfo{
         .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
@@ -638,7 +639,7 @@ void Vulkan::Pipeline::create_graphics_pipeline(VkDevice device, VkRenderPass re
         .pMultisampleState = &multisample_info,
         .pDepthStencilState = &depth_stencil_info,
         .pColorBlendState = &color_blend_info,
-        .pDynamicState = nullptr, //TODO: Determine if dynamic state is needed
+        .pDynamicState = &dynamic_state_info,
         .layout = _pipeline_layout,
         .renderPass = render_pass,
         .subpass = 0, //TODO: Determine if this should be user-settable
@@ -663,6 +664,7 @@ void Vulkan::Pipeline::create_graphics_pipeline(VkDevice device, VkRenderPass re
 }
 
 VkShaderModule Vulkan::Pipeline::create_shader_module(const std::string shader_code) {
+    // FIXME: REWRITE THIS TO USE GLSLC TO SUPPORT GLSL SHADERS
     VkShaderModuleCreateInfo createInfo{
         .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
         .codeSize = shader_code.size(),
@@ -691,7 +693,7 @@ void Vulkan::Pipeline::create_desc_layout() {
         .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
         .descriptorCount = 1,
         .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-        .pImmutableSamplers = nullptr, //TODO: Determine if we have texture sampling and need to use this value
+        .pImmutableSamplers = nullptr,
     };
 
     VkDescriptorSetLayoutCreateInfo layout_info{
@@ -809,7 +811,7 @@ VkPipelineVertexInputStateCreateInfo Vulkan::Pipeline::create_vertex_input_info(
 VkPipelineInputAssemblyStateCreateInfo Vulkan::Pipeline::create_input_assembly_info() {
     VkPipelineInputAssemblyStateCreateInfo input_assembly_info{
         .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
-        .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+        .topology = _current_topology,
         .primitiveRestartEnable = VK_FALSE,
     };
 
@@ -822,8 +824,8 @@ VkPipelineViewportStateCreateInfo Vulkan::Pipeline::create_viewport_info(VkExten
         .y = 0.0f,
         .width = static_cast<float>(extent.width),
         .height = static_cast<float>(extent.height),
-        .minDepth = 0.0f,
-        .maxDepth = 1.0f,
+        .minDepth = _current_min_depth,
+        .maxDepth = _current_max_depth,
     };
     
     _scissor.offset = {0,0};
@@ -846,8 +848,8 @@ VkPipelineRasterizationStateCreateInfo Vulkan::Pipeline::create_rasterization_in
         .depthClampEnable = VK_FALSE,
         .rasterizerDiscardEnable = VK_FALSE,
         .polygonMode = VK_POLYGON_MODE_FILL,
-        .cullMode = VK_CULL_MODE_BACK_BIT,
-        .frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE,
+        .cullMode = _current_cull_mode,
+        .frontFace = _current_front_face,
         .depthBiasEnable = VK_FALSE, //TODO: detemine if we need depth bias
         .depthBiasConstantFactor = 0.0f,
         .depthBiasClamp = 0.0f,
@@ -874,18 +876,17 @@ VkPipelineMultisampleStateCreateInfo Vulkan::Pipeline::create_multisample_info()
 
 VkPipelineColorBlendStateCreateInfo Vulkan::Pipeline::create_color_blend_info() {
     _color_blend_attachment = {
-        //TODO: make this user-settable
-        .blendEnable = VK_FALSE,
-        .srcColorBlendFactor = VK_BLEND_FACTOR_ONE,
-        .dstColorBlendFactor = VK_BLEND_FACTOR_ZERO,
+        .blendEnable = _current_blend_enabled,
+        .srcColorBlendFactor = blend_converter(_current_blend>>kSrcColorOffset),
+        .dstColorBlendFactor = blend_converter(_current_blend>>kDstColorOffset),
         .colorBlendOp = VK_BLEND_OP_ADD,
-        .srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE,
-        .dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
+        .srcAlphaBlendFactor = blend_converter(_current_blend>>kSrcAlphaOffset),
+        .dstAlphaBlendFactor = blend_converter(_current_blend>>kDstAlphaOffset),
         .alphaBlendOp = VK_BLEND_OP_ADD,
-        .colorWriteMask = VK_COLOR_COMPONENT_R_BIT |
-                          VK_COLOR_COMPONENT_G_BIT |
-                          VK_COLOR_COMPONENT_B_BIT |
-                          VK_COLOR_COMPONENT_A_BIT,
+        .colorWriteMask = (_current_render_flags&kRenderRedMask ? VK_COLOR_COMPONENT_R_BIT : 0u) |
+                          (_current_render_flags&kRenderGreenMask ? VK_COLOR_COMPONENT_G_BIT : 0u) |
+                          (_current_render_flags&kRenderBlueMask ? VK_COLOR_COMPONENT_B_BIT : 0u) |
+                          (_current_render_flags&kRenderAlphaMask ? VK_COLOR_COMPONENT_A_BIT : 0u),
     };
 
     VkPipelineColorBlendStateCreateInfo color_blend_info{
@@ -1312,6 +1313,10 @@ void Vulkan::CommandPool::clean() {
 ///////////////////////////////////////
 void Vulkan::Buffer::create_buffer(VkDevice device, VkPhysicalDevice physical_device, VkDeviceSize size,
                                    VkBufferUsageFlags usage, VkMemoryPropertyFlags memory_properties) {
+    if(_buffer!=VK_NULL_HANDLE) {
+        vkDestroyBuffer(_device, _buffer, nullptr);
+        vkFreeMemory(_device, _memory, nullptr);
+    }
     _device = device;
     _size = size;
     _usage = usage;
@@ -1321,7 +1326,7 @@ void Vulkan::Buffer::create_buffer(VkDevice device, VkPhysicalDevice physical_de
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
         .size = size,
         .usage = usage,
-        .sharingMode = VK_SHARING_MODE_EXCLUSIVE, //TODO: Make this user settable
+        .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
     };
 
     {
@@ -1626,9 +1631,9 @@ Vulkan::Buffer Vulkan::Buffer::create_index_buffer(VkDevice device, VkPhysicalDe
     return index_buffer;
 }
 
-Vulkan::Buffer Vulkan::Buffer::create_uniform_buffer(VkDevice device, VkPhysicalDevice physical_device) {
+Vulkan::Buffer Vulkan::Buffer::create_uniform_buffer(VkDevice device, VkPhysicalDevice physical_device, VkDeviceSize size) {
     Buffer uniform_buffer;
-    uniform_buffer.create_buffer(device, physical_device, sizeof(Uniforms), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+    uniform_buffer.create_buffer(device, physical_device, size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                                  VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
     return uniform_buffer;
@@ -1724,12 +1729,12 @@ std::vector<Vulkan::Buffer> Vulkan::Buffer::create_uniform_buffers_in_flight(VkD
 }
 
 Vulkan::Buffer Vulkan::Buffer::create_dynamic_uniform_buffer(VkDevice device, VkPhysicalDevice physical_device,
-                                                             uint32_t object_count) {
+                                                             uint32_t object_count, VkDeviceSize block_size) {
     VkPhysicalDeviceProperties2 properties;
     vkGetPhysicalDeviceProperties2(physical_device, &properties);
 
     size_t min_uniform_alignment = properties.properties.limits.minUniformBufferOffsetAlignment;
-    size_t dynamic_alignment = sizeof(Uniforms);
+    size_t dynamic_alignment = block_size;
 
     if(min_uniform_alignment > 0) {
         dynamic_alignment = (dynamic_alignment + min_uniform_alignment - 1) & ~(min_uniform_alignment - 1);
@@ -1747,20 +1752,20 @@ Vulkan::Buffer Vulkan::Buffer::create_dynamic_uniform_buffer(VkDevice device, Vk
 }
 
 void Vulkan::Buffer::update_dynamic_uniform_buffer(Buffer& dynamic_buffer, VkPhysicalDevice physical_device,
-                                                   uint32_t object_index, Uniforms uniform) {
-    VkPhysicalDeviceProperties2 props;
+                                                   uint32_t object_index, VkDeviceSize uniform_offset, const void* data, VkDeviceSize block_size) {
+    VkPhysicalDeviceProperties2 props = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2 };
     vkGetPhysicalDeviceProperties2(physical_device, &props);
 
     size_t min_uniform_alignment = props.properties.limits.minUniformBufferOffsetAlignment;
-    size_t dynamic_alignment = sizeof(uniform);
+    size_t dynamic_alignment = block_size;
 
     if(min_uniform_alignment) {
          dynamic_alignment = (dynamic_alignment + min_uniform_alignment -1) & ~(min_uniform_alignment - 1);
     }
 
-    VkDeviceSize offset = object_index + dynamic_alignment;
+    VkDeviceSize offset = object_index * dynamic_alignment + uniform_offset;
 
-    dynamic_buffer.upload_data(&uniform, sizeof(uniform), offset);
+    dynamic_buffer.upload_data(&data, block_size, offset);
 }
 
 VkMemoryRequirements2 Vulkan::Buffer::get_mem_requirements(VkDevice device, VkDeviceSize size, 
@@ -2700,33 +2705,7 @@ void Vulkan::draw_vertex_array(std::shared_ptr<VertexArray> array, int end_vert,
         return;
     };
 
-    VkPrimitiveTopology topology;
-
-    switch(draw_mode) {
-        case Argon::kDrawPoints:
-            topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
-            break;
-        case Argon::kDrawLines:
-            topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
-            break;
-        case Argon::kDrawLineLoop:
-            // Vulkan has no line loop TODO: Make line strip its' own constant
-            PLOGE << "Vulkan: Line loop does not exist in vulkan";
-            topology = VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
-            break;
-        case Argon::kDrawTriangles:
-            topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-            break;
-        case Argon::kDrawTriangleStrip:
-            topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
-            break;
-        case Argon::kDrawTriangleFan:
-            topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN;
-            break;
-        default:
-            topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-            break;
-    }
+    VkPrimitiveTopology& topology = pipe->_current_topology;
 
     _command_pool->bind_pipeline(current_cmd_buffer, pipe->_pipeline);
     _command_pool->set_primitive_topology(current_cmd_buffer, topology);
@@ -2741,7 +2720,200 @@ void Vulkan::draw_vertex_array(std::shared_ptr<VertexArray> array, int end_vert,
 }
 
 void Vulkan::update_resources() {
+    std::map<VirtualResource, TexturePrim>::iterator it = textures.begin();
+    while(it!=textures.end()){
+        it->second._last_frame++;
+        if(it->second._last_frame>300){
+            it = textures.erase(it);
+        }else ++it;
+    }
 
+    std::map<std::shared_ptr<VertexArray>, vert_data>::iterator it2 = vertex_arrays.begin();
+    while(it2!=vertex_arrays.end()){
+        it2->second._last_frame++;
+        if(it->second._last_frame>30){
+            it2->second.index_buffer.clean();
+            it2->second.vert_buffer.clean();
+            it2 = vertex_arrays.erase(it2);
+        }else ++it2;
+    }
+
+    std::map<VirtualResource, shader_data>::iterator it3 = shaders.begin();
+    while(it3!=shaders.end()){
+        it3->second._last_frame++;
+        if(it3->second._last_frame>300){
+            vkDestroyShaderModule(_device->_device, it3->second.module, nullptr);
+            it3 = shaders.erase(it3);
+        }else ++it3;
+    }
+}
+
+void Vulkan::set_blend(unsigned int blend) {
+    if(current_blend != blend) {
+        if(blend==kBlendReplace) {
+            current_blend_enabled = false;
+        }else{
+            if(current_blend==kBlendReplace)
+                current_blend_enabled = true;
+        }
+        current_blend = blend;
+    }
+}
+
+void Vulkan::set_cull_face(int face) {
+    if(current_cull_mode!=face) {
+        switch(face) {
+            case kCullNone: current_cull_mode = VK_CULL_MODE_NONE;break;
+            case kCullBackFaceCounterClockWise: 
+                current_cull_mode = VK_CULL_MODE_BACK_BIT;
+                current_front_face = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+                break;
+            case kCullBackFaceClockWise:
+                current_cull_mode = VK_CULL_MODE_BACK_BIT;
+                current_front_face = VK_FRONT_FACE_CLOCKWISE;
+                break;
+            case kCullFrontFaceCounterClockWise:
+                current_cull_mode = VK_CULL_MODE_FRONT_BIT;
+                current_front_face = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+                break;
+            case kCullFrontFaceClockWise:
+                current_cull_mode = VK_CULL_MODE_FRONT_BIT;
+                current_front_face = VK_FRONT_FACE_CLOCKWISE;
+                break;
+        }
+    }
+}
+
+void Vulkan::set_depth_range(float near, float far) {
+    current_min_depth = near;
+    current_max_depth = far;
+}
+
+void Vulkan::set_render_flags(unsigned int render_flags) {
+    current_render_flags=render_flags;
+}
+
+void Vulkan::set_clear_color(Vector4f v) {
+    current_clear_color = {{v[0], v[1], v[2], v[3]}};
+}
+
+void Vulkan::set_viewport(int x, int y, int w, int h) {
+    current_viewport = {
+        static_cast<float>(x),
+        static_cast<float>(y),
+        static_cast<float>(w),
+        static_cast<float>(h),
+    };
+}
+
+void Vulkan::set_uniforms(Uniforms** all_uniforms, int size) {
+    auto it = current_shader->uniforms.begin();
+    
+    while (it != current_shader->uniforms.end()) {
+        const UniformType type = it->second.type;
+
+        if(it->second.isTexture) {
+            bool has_value = false;
+            for(int x = 0; x < size; ++x) {
+                auto it2 = all_uniforms[x]->textures.find(it->first);
+                if(it2 != all_uniforms[x]->textures.end()) {
+                    has_value = true;
+                    for(int s = 0; s < std::min(it->second.size, it2->second.size()); ++s) {
+                        cache_texture(it2->second[s]);
+                    }
+                }
+            }
+            if(!has_value)
+                PLOGW<<"No value was set for uniform: "<< it->first <<" of type: texture and size "<< it->second.size;
+            continue;
+        }
+
+        for(int x = 0; x < size; ++x) {
+            switch(type) {
+                case kUniformFloat:
+                    upload_uniform_data_piece(all_uniforms[x]->f,
+                                              it->second.offset, it->first, x);
+                    break;
+                case kUniformFVec2:
+                    upload_uniform_data_piece(all_uniforms[x]->f2,
+                                              it->second.offset, it->first, x);
+                    break;
+                case kUniformFVec3:
+                    upload_uniform_data_piece(all_uniforms[x]->f3,
+                                              it->second.offset, it->first, x);
+                    break;
+                case kUniformFVec4:
+                    upload_uniform_data_piece(all_uniforms[x]->f4,
+                                              it->second.offset, it->first, x);
+                    break;
+                case kUniformFMat2x2:
+                    upload_uniform_data_piece(all_uniforms[x]->mat2,
+                                              it->second.offset, it->first, x);
+                    break;
+                case kUniformFMat2x3:
+                    upload_uniform_data_piece(all_uniforms[x]->mat2,
+                                              it->second.offset, it->first, x);
+                    break; 
+                case kUniformFMat2x4:
+                    upload_uniform_data_piece(all_uniforms[x]->mat2,
+                                              it->second.offset, it->first, x);
+                    break;
+                case kUniformFMat3x2:
+                    upload_uniform_data_piece(all_uniforms[x]->mat3,
+                                              it->second.offset, it->first, x);
+                    break;
+                case kUniformFMat3x3:
+                    upload_uniform_data_piece(all_uniforms[x]->mat3,
+                                              it->second.offset, it->first, x);
+                    break;
+                case kUniformFMat3x4:
+                    upload_uniform_data_piece(all_uniforms[x]->mat3,
+                                              it->second.offset, it->first, x);
+                    break;
+                case kUniformFMat4x2:
+                    upload_uniform_data_piece(all_uniforms[x]->mat4,
+                                              it->second.offset, it->first, x);
+                    break;
+                case kUniformFMat4x3:
+                    upload_uniform_data_piece(all_uniforms[x]->mat4,
+                                              it->second.offset, it->first, x);
+                    break;
+                case kUniformFMat4x4:
+                    upload_uniform_data_piece(all_uniforms[x]->mat4,
+                                              it->second.offset, it->first, x);
+                    break;
+                case kUniformInt:
+                    upload_uniform_data_piece_int(all_uniforms[x]->f,
+                                                  it->second.offset, it->first, x);
+                    break;
+                case kUniformIVec2:
+                    upload_uniform_data_piece_int(all_uniforms[x]->f2,
+                                                  it->second.offset, it->first, x);
+                case kUniformIVec3:
+                    upload_uniform_data_piece_int(all_uniforms[x]->f3,
+                                                  it->second.offset, it->first, x);
+                    break;
+                case kUniformIVec4:
+                    upload_uniform_data_piece_int(all_uniforms[x]->f4,
+                                                  it->second.offset, it->first, x);
+                    break;
+                case kUniformIMat2x2:
+                    upload_uniform_data_piece_int(all_uniforms[x]->mat2,
+                                                  it->second.offset, it->first, x);
+                    break;
+                case kUniformIMat3x3:
+                    upload_uniform_data_piece_int(all_uniforms[x]->mat3,
+                                                  it->second.offset, it->first, x);
+                    break;
+                case kUniformIMat4x4:
+                    upload_uniform_data_piece_int(all_uniforms[x]->mat4,
+                                                  it->second.offset, it->first, x);
+                    break;
+                default: PLOGE<<std::hex<<"Shder uses unknown uniform type: "<<it->second.type<<std::dec;break;
+            }
+        }
+        ++it;
+    }
 }
 
 void Vulkan::cache_texture(VirtualResource tex) {
@@ -2767,6 +2939,42 @@ void Vulkan::cache_texture(VirtualResource tex) {
     } else {
         PLOGE << tex.get_path_string() << " is not a valid texture.";
     }
+}
+
+void Vulkan::cache_array(std::shared_ptr<VertexArray> array) {
+    vert_data &d = vertex_arrays[array];
+    d._last_frame = 0;
+    if(d.vert_buffer._buffer == VK_NULL_HANDLE){
+        d.buff_size = 0;
+        d.update_id = array->update_id-1;
+    }
+    if(d.update_id!=array->update_id){
+        d.buff_size = array->vertex_count()*array->stride;
+        d.vertices = array->vertex_count()-1;
+        d.index_size = array->index_data.size()*2;
+        d.update_id = array->update_id;
+
+        VkMemoryPropertyFlags mem_props;
+        if(array->updates_frequently) {
+            mem_props = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+        } else {
+            mem_props = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+        }
+
+        d.vert_buffer.create_buffer_with_data(_device->_device, _device->_physical_device,
+                                              array->data_start(), d.buff_size, 
+                                              VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                                              mem_props);
+
+        d.index_buffer.create_buffer_with_data(_device->_device, _device->_physical_device,
+                                               array->index_data.data(), d.index_size,
+                                               VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+                                               mem_props);
+    }
+}
+
+void Vulkan::cache_material(Material& material,const VirtualResource& shader) {
+    // does nothing. . .
 }
 
 }

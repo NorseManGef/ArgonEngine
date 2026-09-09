@@ -5,6 +5,7 @@
  **/
 
 #include "ArgonEngine/ArgonInit.h"
+#include "ArgonEngine/Utility.h"
 #include "RenderAPI.h"
 #include "RenderSystem.h"
 #include "vulkan/vulkan_core.h"
@@ -190,10 +191,23 @@ class Vulkan:public RenderAPI {
         VkVertexInputBindingDescription _binding_desc{};
         std::vector<VkVertexInputAttributeDescription> _attribs;
 
+        unsigned int _current_blend = kBlendReplace;
+        bool _current_blend_enabled = true;
+        VkPrimitiveTopology _current_topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+        VkCullModeFlags _current_cull_mode = VK_CULL_MODE_BACK_BIT;
+        VkFrontFace _current_front_face = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+        float _current_min_depth = 0.0f;
+        float _current_max_depth = 1.0f;
+        unsigned int _current_render_flags;
+        VkClearColorValue _current_clear_color;
+        
+        VkShaderModule _current_vertex_shader;
+        VkShaderModule _current_fragment_shader;
+
         void create_graphics_pipeline(VkDevice device,
                                       VkRenderPass render_pass,
-                                      const VirtualResource vertex_shader_path,
-                                      const VirtualResource fragment_shader_path,
+                                      VkShaderModule vertex_shader,
+                                      VkShaderModule fragment_shader,
                                       VkExtent2D extent);
 
         bool is_valid() const {
@@ -217,6 +231,8 @@ class Vulkan:public RenderAPI {
         VkPipelineDepthStencilStateCreateInfo create_depth_stencil_info();
         VkPipelineDynamicStateCreateInfo create_dynamic_state_info();
 
+        VkBlendFactor blend_converter(unsigned int b);
+
         void clean();
 
         Pipeline(): 
@@ -228,8 +244,8 @@ class Vulkan:public RenderAPI {
         {}
 
         Pipeline(VkDevice device, VkRenderPass render_pass,
-                 const VirtualResource vertex_shader_path,
-                 const VirtualResource fragment_shader_path,
+                 VkShaderModule vertex_shader,
+                 VkShaderModule fragment_shader,
                  VkExtent2D extent):
             _device(device),
             _pipeline(VK_NULL_HANDLE),
@@ -237,7 +253,7 @@ class Vulkan:public RenderAPI {
             _desc_layout(VK_NULL_HANDLE),
             _vertex_array(nullptr)
         {
-            create_graphics_pipeline(device, render_pass, vertex_shader_path, fragment_shader_path, extent);
+            create_graphics_pipeline(device, render_pass, vertex_shader, fragment_shader, extent);
         }
 
         ~Pipeline() {
@@ -336,6 +352,8 @@ class Vulkan:public RenderAPI {
         }
     };
 
+    struct Uniform;
+
     struct Buffer {
         VkDevice _device;
         VkBuffer _buffer;
@@ -373,7 +391,7 @@ class Vulkan:public RenderAPI {
                                     VkQueue graphics_queue, std::shared_ptr<VertexArray> vertex_array);
         Buffer create_index_buffer(VkDevice device, VkPhysicalDevice physical_device, VkCommandPool command_pool,
                                    VkQueue graphics_queue, std::shared_ptr<VertexArray> vertex_array);
-        Buffer create_uniform_buffer(VkDevice device, VkPhysicalDevice physical_device);
+        Buffer create_uniform_buffer(VkDevice device, VkPhysicalDevice physical_device, VkDeviceSize size);
         Buffer create_staging_buffer(VkDevice device, VkPhysicalDevice physical_device, VkDeviceSize size);
 
         std::vector<Buffer> create_attrib_buffers(VkDevice device, VkPhysicalDevice physical_device,
@@ -386,9 +404,9 @@ class Vulkan:public RenderAPI {
 
         std::vector<Buffer> create_uniform_buffers_in_flight(VkDevice device, VkPhysicalDevice physical_device,
                                                              uint32_t frames_in_flight);
-        Buffer create_dynamic_uniform_buffer(VkDevice device, VkPhysicalDevice physical_device, uint32_t object_count);
-        void update_dynamic_uniform_buffer(Buffer& dynamic_ubuffer, VkPhysicalDevice physical_device,
-                                           uint32_t object_index, Uniforms uniform);
+        Buffer create_dynamic_uniform_buffer(VkDevice device, VkPhysicalDevice physical_device, uint32_t object_count, VkDeviceSize block_size);
+        static void update_dynamic_uniform_buffer(Buffer& dynamic_ubuffer, VkPhysicalDevice physical_device,
+                                           uint32_t object_index, VkDeviceSize uniform_offset, const void* data, VkDeviceSize block_size);
 
         static VkMemoryRequirements2 get_mem_requirements(VkDevice device, VkDeviceSize size,
                                                           VkBufferUsageFlags usage);
@@ -418,11 +436,6 @@ class Vulkan:public RenderAPI {
         ~Buffer() {
             clean();
         }
-        Buffer(const Buffer&) = delete;
-        Buffer& operator=(const Buffer&) = delete;
-
-        Buffer(Buffer&& other) noexcept;
-        Buffer& operator=(Buffer&& other) noexcept;
     };
 
     struct RenderPass {
@@ -608,7 +621,31 @@ class Vulkan:public RenderAPI {
         size_t update_id = 0;
         size_t vertices = 0;
 
-        size_t last_frame = 0;
+        size_t _last_frame = 0;
+    };
+
+    struct Uniform {
+        uint32_t set = 0;
+        uint32_t binding = 0;
+
+        UniformType type = kUniformFloat;        
+
+        bool isTexture = false;
+
+        size_t offset = 0;
+        size_t size = 0;
+
+        size_t frame = 0;
+    };
+
+    struct shader_data {
+        VkShaderModule module = VK_NULL_HANDLE;
+        VkShaderStageFlagBits stage = VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM;
+
+        std::map<StringIntern, Uniform> uniforms;
+        std::map<StringIntern, uint32_t> attribs;
+
+        size_t _last_frame = 0;
     };
 
     enum class CmdState {
@@ -633,8 +670,23 @@ class Vulkan:public RenderAPI {
     Synchronization* _sync;
     size_t _current_frame = 0;
 
+    Buffer uniform_buffer;
+
+    unsigned int current_blend;
+    bool current_blend_enabled;
+    VkCullModeFlags current_cull_mode;
+    VkFrontFace current_front_face;
+    float current_min_depth;
+    float current_max_depth;
+    unsigned int current_render_flags;
+    VkClearColorValue current_clear_color;
+    VkViewport current_viewport;
+
+    shader_data * current_shader;
+
     std::map<std::shared_ptr<VertexArray>, vert_data> vertex_arrays;
     std::map<VirtualResource, TexturePrim> textures;
+    std::map<VirtualResource, shader_data> shaders;
 
     void ensure_recording();
     void ensure_idle();
@@ -644,6 +696,47 @@ class Vulkan:public RenderAPI {
     static uint32_t find_mem_type(VkPhysicalDevice physical_device, uint32_t type_filter,
                            VkMemoryPropertyFlags properties);
 
+    template<typename map_strintern_T>
+    inline void upload_uniform_data_piece(const map_strintern_T& uniform_piece,
+                                          uint32_t offset, StringIntern str, int x) {
+        auto it = uniform_piece.find(str);
+        if(it != uniform_piece.end() && !it->second.empty()) {
+            auto& fval = it->second[0];
+
+            Buffer::update_dynamic_uniform_buffer(
+                uniform_buffer,
+                _device->_physical_device,
+                x,
+                offset,
+                &fval,
+                it->second.size()
+            );
+        }
+    }
+
+    template<typename map_strintern_T>
+    inline void upload_uniform_data_piece_int(const map_strintern_T& uniform_piece, 
+                                              uint32_t offset, StringIntern str, int x) {
+        auto it = uniform_piece.find(str);
+        if(it != uniform_piece.end() && !it->second.empty()) {
+            std::vector<int32_t> vec;
+            vec.reserve(it->second.size());
+            for(auto i : it->second) {
+                vec.push_back(static_cast<int32_t>(i));
+            }
+
+            auto& val = vec[0];
+
+            Buffer::update_dynamic_uniform_buffer(
+                uniform_buffer,
+                _device->_physical_device,
+                x,
+                offset,
+                &val,
+                it->second.size()
+            );
+        }
+    }
 
 public:
     Vulkan() {} 
