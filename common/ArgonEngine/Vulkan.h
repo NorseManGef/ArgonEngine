@@ -11,6 +11,8 @@
 #include "vulkan/vulkan_core.h"
 #include <vulkan/vulkan.h>
 #include <plog/Log.h>
+#include <SPIRV-Reflect/spirv_reflect.h>
+#include <spirv-tools/libspirv.h>
 #include <optional>
 #include <set>
 

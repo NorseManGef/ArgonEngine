@@ -108,6 +108,10 @@ set(INC_PLOG
     common/plog/include
 )
 
+set(INC_SPRIV-REFLECT
+    common/SPIRV-Reflect
+)
+
 set(INC_LIBUSB
     common/libusb
     ${INC_OS}/libusb)
@@ -123,6 +127,7 @@ include_directories(
     ${INC_PLOG}
     ${INC_LIBUSB}
     ${INC_STB}
+    ${INC_SPIRV-REFLECT}
     ${GENERATED_DIR}
 )
 
@@ -610,6 +615,10 @@ set(SRC_VORBIS
     common/vorbis/window.c
 )
 
+set(SRC_SPIRV-REFLECT
+    common/SPIRV-Reflect/spirv_reflect.c
+)
+
 set(SRC_COMMON
     ${SRC_ARGONAPP}
     ${SRC_ARGONENGINE}
@@ -622,6 +631,7 @@ set(SRC_COMMON
     ${SRC_SDL3}
     ${SRC_LIBUSB}
     ${SRC_VORBIS}
+    ${SRC_SPIRV-REFLECT}
 )
 
 set(SRC_WINDOWS
