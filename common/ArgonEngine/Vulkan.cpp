@@ -1,9 +1,15 @@
 #include "Vulkan.h"
+#include <cctype>
 #include <cstdint>
 #include <ranges>
 #include <algorithm>
+#include <shaderc/env.h>
+#include <shaderc/shaderc.h>
+#include <spirv-tools/libspirv.h>
 #include "ArgonEngine/ArgonInit.h"
 #include "ArgonEngine/RenderSystemConstants.h"
+#include "ArgonEngine/TypeInfo.h"
+#include "SPIRV-Reflect/spirv_reflect.h"
 #include "plog/Severity.h"
 #include "vulkan/vulkan_core.h"
 #ifdef USE_VULKAN
@@ -23,7 +29,7 @@ void Vulkan::Instance::create_instance(const std::vector<const char*>& required_
                               .applicationVersion = VK_MAKE_VERSION(1,0,0),
                               .pEngineName = "Argon Engine",
                               .engineVersion = VK_MAKE_VERSION(1, 0, 0),
-                              .apiVersion = VK_API_VERSION_1_0};
+                              .apiVersion = VK_API_VERSION_1_3}; // TODO: Dynamic API version
 
     VkInstanceCreateInfo createInfo{
         .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
@@ -663,29 +669,6 @@ void Vulkan::Pipeline::create_graphics_pipeline(VkDevice device, VkRenderPass re
     vkDestroyShaderModule(device, fragment_shader, nullptr);
 }
 
-VkShaderModule Vulkan::Pipeline::create_shader_module(const std::string shader_code) {
-    // FIXME: REWRITE THIS TO USE GLSLC TO SUPPORT GLSL SHADERS
-    VkShaderModuleCreateInfo createInfo{
-        .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-        .codeSize = shader_code.size(),
-        .pCode = reinterpret_cast<const uint32_t*>(shader_code.c_str()),
-    };
-
-    VkShaderModule module;
-    VkResult result = vkCreateShaderModule(_device, &createInfo, nullptr, &module);
-    if(result != VK_SUCCESS) {
-        PLOGF << "Vulkan: Failed to create shader module";
-        terminate_engine();
-    }
-
-    return module;
-}
-
-VkShaderModule Vulkan::Pipeline::load_shader(VirtualResource shader_path) {
-    std::string code = shader_path.get_data_as_string();
-
-    return create_shader_module(code);
-}
 
 void Vulkan::Pipeline::create_desc_layout() {
     VkDescriptorSetLayoutBinding ubo_layout_binding{
@@ -2742,7 +2725,11 @@ void Vulkan::update_resources() {
     while(it3!=shaders.end()){
         it3->second._last_frame++;
         if(it3->second._last_frame>300){
-            vkDestroyShaderModule(_device->_device, it3->second.module, nullptr);
+            for(auto i : it3->second.stages) {
+                vkDestroyShaderModule(_device->_device,
+                                      i.module,
+                                      nullptr);
+            }
             it3 = shaders.erase(it3);
         }else ++it3;
     }
@@ -2889,6 +2876,7 @@ void Vulkan::set_uniforms(Uniforms** all_uniforms, int size) {
                 case kUniformIVec2:
                     upload_uniform_data_piece_int(all_uniforms[x]->f2,
                                                   it->second.offset, it->first, x);
+                    break;
                 case kUniformIVec3:
                     upload_uniform_data_piece_int(all_uniforms[x]->f3,
                                                   it->second.offset, it->first, x);
@@ -2913,6 +2901,423 @@ void Vulkan::set_uniforms(Uniforms** all_uniforms, int size) {
             }
         }
         ++it;
+    }
+}
+
+void Vulkan::set_shader(Argon::Renderable* state, VirtualResource& shader, Uniforms** uniforms, int size) {
+    if(!state->material)return;
+    shader_data &s = shaders[shader];
+    s._last_frame=0;
+    if(s.stages.empty())make_shader(shader);
+    current_shader=&s;
+
+    set_uniforms(uniforms, size);
+}
+
+void Vulkan::make_shader(VirtualResource& shader) {
+    shader_data& s = shaders[shader];
+    const std::string shader_code = shader.get_data_as_string();
+
+    std::vector<shader_stage_info> stages = parse_shader_stages(shader_code);
+    if(stages.empty()) {
+        PLOGE << "Vulkan: Shader: " << shader.get_path_string() <<" has no valid stages";
+        return;
+    }
+
+    for(const auto& stage : stages) {
+        ShaderBinary spv = compile_shader(shader_code,
+                                          stage.shaderc_kind,
+                                          std::string(stage.define),
+                                          shader.get_path_string());
+
+        if(spv.data == nullptr) {
+            PLOGE << "Vulkan: Shader stage " << stage.define << " in " << shader.get_path_string() <<
+            " failed to compile";
+            continue;
+        }
+
+        if(!validate_shader(spv)) {
+            PLOGE << "Vulkan: Shader stage " << stage.define << " in " << shader.get_path_string() <<
+            " is invalid";
+            continue;
+        }
+
+        reflect_shader(spv, stage.vk_stage, s);
+
+        VkShaderModule module = create_shader_module(spv);
+
+        free(spv.data);
+
+        s.stages.push_back({
+            module,
+            stage.vk_stage
+        });
+    }
+}
+
+const std::map<std::string_view, Vulkan::shader_stage_info> Vulkan::shader_stage_map = {
+    {
+        "VERTEX",
+        {
+            "VERTEX_SHADER",
+            shaderc_vertex_shader,
+            VK_SHADER_STAGE_VERTEX_BIT
+        }
+    },
+    {
+        "TESSELLATION_CONTROL",
+        {
+            "TESSELLATION_CONTROL_SHADER",
+            shaderc_tess_control_shader,
+            VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT
+        }
+    },
+    {
+        "TESSELLATION_EVALUATION",
+        {
+            "TESSELLATION_EVALUATION_SHADER",
+            shaderc_tess_evaluation_shader,
+            VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT
+        }
+    },
+    {
+        "GEOMETRY",
+        {
+            "GEOMETRY_SHADER",
+            shaderc_geometry_shader,
+            VK_SHADER_STAGE_GEOMETRY_BIT
+        }
+    },
+    {
+        "FRAGMENT",
+        {
+            "FRAGMENT_SHADER",
+            shaderc_fragment_shader,
+            VK_SHADER_STAGE_FRAGMENT_BIT
+        }
+    },
+};
+
+
+std::vector<Vulkan::shader_stage_info> Vulkan::parse_shader_stages(const std::string& source) {
+    //
+    // #stages VERTEX TESSELLATION_CONTROL TESSELLATION_EVALUATION GEOMETRY FRAGMENT
+    //
+    // TODO: Raytracing
+    // #stages RAYGEN MISS CLOSEST_HIT ANY_HIT INTERSECTION CALLABLE
+    
+    std::vector<shader_stage_info> stages;
+
+    const size_t line_end = source.find_first_of("\r\n");
+
+    std::string_view line(
+        source.data(),
+        line_end == std::string::npos ? source.size() : line_end
+    );
+
+    const std::string_view prefix = "#stages";
+
+    if(!line.starts_with(prefix)) {
+        PLOGE << "Vulkan: Shader source must start with stage declaration";
+        return stages;
+    }
+
+    line.remove_prefix(prefix.size());
+
+    size_t pos = 0;
+
+    while(pos<line.size()) {
+        // skipping white space
+        while(pos<line.size() &&
+              std::isspace(static_cast<unsigned char>(line[pos]))) {
+            ++pos;
+        }
+
+        if(pos>=line.size()) {
+            break;
+        }
+
+        const size_t begin = pos;
+
+        while(pos<line.size() &&
+              std::isspace(static_cast<unsigned char>(line[pos]))) {
+            ++pos;
+        }
+
+        const std::string_view name = line.substr(begin, pos - begin);
+
+        const auto it = shader_stage_map.find(name);
+
+        if(it==shader_stage_map.end()) {
+            PLOGE << "Vulkan: Unknown shader stage: " + std::string(name);
+            continue;
+        };
+
+        stages.push_back(it->second);
+    }
+
+    return stages;
+}
+
+Vulkan::ShaderBinary Vulkan::compile_shader(const std::string& source,
+                                            shaderc_shader_kind kind,
+                                            const std::string& define,
+                                            const std::string& filename) {
+    shaderc_compiler_t compiler = shaderc_compiler_initialize();
+
+    if(!compiler) {
+        PLOGF << "Vulkan: Failed to initialize shaderc";
+        terminate_engine();
+    }
+
+    shaderc_compile_options_t options = shaderc_compile_options_initialize();
+
+    if(!options) {
+        shaderc_compiler_release(compiler);
+        PLOGF << "Vulkan: Failed to initialize shaderc options";
+        terminate_engine();
+    }
+
+    if(!define.empty()) {
+        shaderc_compile_options_add_macro_definition(options, 
+                                                     define.c_str(),
+                                                     define.size(),
+                                                     nullptr,
+                                                     0);
+    }
+
+    shaderc_compilation_result_t result = shaderc_compile_into_spv(compiler, 
+                                                                   source.c_str(),
+                                                                   source.size(), 
+                                                                   kind,
+                                                                   filename.c_str(),
+                                                                   "main",
+                                                                   options);
+
+    if(!result) {
+        shaderc_compile_options_release(options);
+        shaderc_compiler_release(compiler);
+
+        PLOGE << "Vulkan: Failed to compile shader stage: " << define << " in " << filename;
+        return {};
+    }
+
+    const auto status = shaderc_result_get_compilation_status(result);
+
+    if(status != shaderc_compilation_status_success) {
+        const char* error = shaderc_result_get_error_message(result);
+
+        std::string message = error ? error : "Unknown shader compilation error";
+
+        shaderc_result_release(result);
+        shaderc_compile_options_release(options);
+        shaderc_compiler_release(compiler);
+
+        PLOGE << "Vulkan: Failed to compile shader stage: " << define << " in " << filename <<
+        "\n" << message;
+        return {};
+    }
+
+    const size_t byte_size = shaderc_result_get_length(result);
+    const char* bytes = shaderc_result_get_bytes(result);
+
+    const size_t word_count = byte_size/sizeof(uint32_t);
+
+    ShaderBinary binary = {
+        .data = static_cast<uint32_t*>(malloc(byte_size)),
+        .word_count = word_count,
+    };
+
+    memcpy(binary.data, bytes, byte_size);
+
+    shaderc_result_release(result);
+    shaderc_compile_options_release(options);
+    shaderc_compiler_release(compiler);
+
+    return binary;
+}
+
+VkShaderModule Vulkan::create_shader_module(const ShaderBinary& shader_code) {
+    VkShaderModuleCreateInfo createInfo{
+        .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+        .codeSize = shader_code.word_count * sizeof(uint32_t),
+        .pCode = shader_code.data,
+    };
+
+    VkShaderModule module;
+    VkResult result = vkCreateShaderModule(_device->_device, 
+                                           &createInfo,
+                                           nullptr,
+                                           &module);
+    if(result != VK_SUCCESS) {
+        PLOGF << "Vulkan: Failed to create shader module";
+        terminate_engine();
+    }
+
+    return module;
+}
+
+bool Vulkan::validate_shader(const ShaderBinary& shader_code) {
+    const spv_context context = spvContextCreate(SPV_ENV_VULKAN_1_3);
+    if(!context) {
+        PLOGF << "Vulkan: failed to create SPIR-V context";
+        terminate_engine();
+    }
+
+    spv_diagnostic diagnostic = nullptr;
+
+    spv_result_t result = spvValidateBinary(context,
+                                            shader_code.data,
+                                            shader_code.word_count,
+                                            &diagnostic);
+
+    if(result != SPV_SUCCESS) {
+        std::string message = diagnostic ? diagnostic->error : "Unkown error";
+        PLOGE << "Vulkan: SPIR-V Validation failed with error: " << message;
+    }
+
+    if(diagnostic != nullptr)
+        spvDiagnosticDestroy(diagnostic);
+
+    spvContextDestroy(context);
+
+    return result == SPV_SUCCESS;
+}
+
+void Vulkan::reflect_shader(ShaderBinary& shader_code, VkShaderStageFlagBits stage, shader_data& data) {
+    SpvReflectShaderModule module;
+
+    SpvReflectResult result = spvReflectCreateShaderModule(shader_code.word_count*sizeof(uint32_t),
+                                                           shader_code.data,
+                                                           &module);
+    if(result != SPV_REFLECT_RESULT_SUCCESS) {
+        PLOGE << "Vulkan: Failed to reflect over shader";
+        return;
+    }
+    
+    /*
+    * attribs
+    * */ {
+        uint32_t count = 0;
+
+        spvReflectEnumerateInputVariables(&module, &count, nullptr);
+
+        std::vector<SpvReflectInterfaceVariable*> vars(count);
+
+        spvReflectEnumerateInputVariables(&module, &count, vars.data());
+
+        for(auto* var : vars) {
+            if(var->decoration_flags & SPV_REFLECT_DECORATION_BUILT_IN)continue;
+            if(!var->name)continue;
+            data.attribs[StringIntern(var->name)] = var->location;
+        }
+    }
+
+    /*
+    * uniforms
+    * */ {
+        uint32_t count = 0;
+
+        spvReflectEnumerateDescriptorSets(&module, &count, nullptr);
+
+        std::vector<SpvReflectDescriptorSet*> sets(count);
+
+        spvReflectEnumerateDescriptorSets(&module, &count, sets.data());
+
+        for(auto* set : sets) {
+            for(uint32_t i = 0; i < set->binding_count; ++i) {
+                auto* binding = set->bindings[i];
+
+                switch(binding->descriptor_type) {
+                    case SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+                    case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+                    {
+                        for(uint32_t x = 0; x < binding->block.member_count; ++x) {
+                            const SpvReflectBlockVariable& member = binding->block.members[i];
+
+                            if(!member.name)continue;
+
+                            Uniform& u = data.uniforms[StringIntern(member.name)];
+
+                            u.set = binding->set;
+                            u.binding = binding->binding;
+                            u.offset = member.offset;
+                            u.size = member.size;
+                            u.isTexture = false;
+
+                            //FIXME: Array detection and unwrapping is needed here or else arrays will implode
+
+                            //translate type
+                            if(!member.type_description) {u.type=kUniformFloat; continue;}
+                            auto& numeric = member.type_description->traits.numeric;
+                            const bool is_int = numeric.scalar.signedness != 0;
+
+                            if(member.type_description->type_flags & SPV_REFLECT_TYPE_FLAG_MATRIX) {
+                                const auto& matrix = numeric.matrix;
+                                if(is_int) {
+                                    switch(matrix.column_count) {
+                                        case 2: u.type = kUniformIMat2x2; break;
+                                        case 3: u.type = kUniformIMat3x3; break;
+                                        case 4: u.type = kUniformIMat4x4; break;
+                                    }
+                                } else {
+                                    switch(matrix.column_count) {
+                                        case 2:
+                                            switch(matrix.row_count) {
+                                                case 2: u.type = kUniformFMat2x2; break;
+                                                case 3: u.type = kUniformFMat2x3; break;
+                                                case 4: u.type = kUniformFMat2x4; break;
+                                            } break;
+                                        case 3:
+                                            switch(matrix.row_count) {
+                                                case 2: u.type = kUniformFMat3x2; break;
+                                                case 3: u.type = kUniformFMat3x3; break;
+                                                case 4: u.type = kUniformFMat3x4; break;
+                                            } break;
+                                        case 4:
+                                            switch(matrix.row_count) {
+                                                case 2: u.type = kUniformFMat4x2; break;
+                                                case 3: u.type = kUniformFMat4x3; break;
+                                                case 4: u.type = kUniformFMat4x4; break;
+                                            } break;
+                                    }
+                                }
+                            } else if(member.type_description->type_flags & SPV_REFLECT_TYPE_FLAG_VECTOR) {
+                                switch(numeric.vector.component_count) {
+                                    case 2:
+                                        u.type = is_int ? kUniformIVec2 : kUniformFVec2; break;
+                                    case 3:
+                                        u.type = is_int ? kUniformIVec3 : kUniformFVec3; break;
+                                    case 4:
+                                        u.type = is_int ? kUniformIVec4 : kUniformFVec4; break;
+                                }
+                            } else if(member.type_description->type_flags & SPV_REFLECT_TYPE_FLAG_INT) {
+                                u.type = kUniformInt;
+                            } else if(member.type_description->type_flags & SPV_REFLECT_TYPE_FLAG_FLOAT) {
+                                u.type = kUniformFloat;
+                            }
+                        }        
+                        break;
+                    }
+                    case SPV_REFLECT_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+                    case SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+                    case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+                    case SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLER:
+                    {
+                        if(!binding->name)break;
+
+                        Uniform& u = data.uniforms[StringIntern(binding->name)];
+
+                        u.set = binding->set;
+                        u.binding = binding->binding;
+                        u.isTexture = true;
+
+                        break;
+                    }
+                    default: break;
+                }
+            }
+        }
     }
 }
 
