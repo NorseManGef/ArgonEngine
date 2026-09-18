@@ -21,6 +21,24 @@ add_subdirectory(common/bullet3)
 
 add_subdirectory(common/plog)
 
+set(SPIRV_HEADERS_ENABLE_TESTS FALSE)
+set(SPIRV_HEADERS_ENABLE_INSTALL FALSE)
+add_subdirectory(common/SPIRV-Headers)
+
+set(SKIP_SPIRV_TOOLS_INSTALL TRUE)
+add_subdirectory(common/SPIRV-Tools)
+
+
+set(GLSLANG_TESTS FALSE)
+set(GLSLANG_ENABLE_INSTALL FALSE)
+add_subdirectory(common/glslang)
+
+set(SHADERC_SKIP_TESTS TRUE)
+set(SHADERC_SKIP_EXAMPLES TRUE)
+set(SHADERC_SKIP_EXECUTABLES TRUE)
+set(SHADERC_SKIP_COPYRIGHT_CHECK TRUE)
+add_subdirectory(common/shaderc)
+
 set(CMAKE_BUILD_TYPE Debug)
 
 if(WIN32)
@@ -108,8 +126,20 @@ set(INC_PLOG
     common/plog/include
 )
 
+set(INC_LIBSHADERC
+    common/shaderc/libshaderc/include
+)
+
 set(INC_SPRIV-REFLECT
     common/SPIRV-Reflect
+)
+
+set(INC_SPIRV-TOOLS
+    common/SPIRV-Tools/include
+)
+
+set(INC_SPIRV-HEADERS
+    common/SPIRV-Headers/include
 )
 
 set(INC_LIBUSB
@@ -128,6 +158,9 @@ include_directories(
     ${INC_LIBUSB}
     ${INC_STB}
     ${INC_SPIRV-REFLECT}
+    ${INC_SPIRV-TOOLS}
+    ${INC_SPIRV-HEADERS}
+    ${INC_LIBSHADERC}
     ${GENERATED_DIR}
 )
 
@@ -924,6 +957,10 @@ target_link_libraries(argonapp
     BulletSoftBody
     LinearMath
     plog::plog
+    SPIRV-Headers
+    spirv-tools
+    glslang
+    shaderc
 )
 
 if(NOT APPLE)
