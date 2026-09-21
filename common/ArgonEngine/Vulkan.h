@@ -769,6 +769,16 @@ class Vulkan:public RenderAPI {
     VkShaderModule create_shader_module(const ShaderBinary& shader_code);
     std::vector<shader_stage_info> parse_shader_stages(const std::string& source);
     void reflect_shader(ShaderBinary& shader_code, VkShaderStageFlagBits stage, shader_data& data);
+    void reflect_uniform_block(const SpvReflectTypeDescription* type_description, 
+                               const SpvReflectDescriptorBinding* binding,
+                               shader_data& data, size_t size, size_t offset, const char* name);
+    void unwrap_reflected_arrays(const SpvReflectTypeDescription* type_description,
+                                 const SpvReflectDescriptorBinding* binding,
+                                 shader_data& data,
+                                 uint32_t dimension,
+                                 uint32_t size,
+                                 uint32_t offset,
+                                 const std::string& name);
     
 
 public:

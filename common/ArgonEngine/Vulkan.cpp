@@ -3184,6 +3184,98 @@ bool Vulkan::validate_shader(const ShaderBinary& shader_code) {
     return result == SPV_SUCCESS;
 }
 
+void Vulkan::reflect_uniform_block(const SpvReflectTypeDescription* type_description,
+                                   const SpvReflectDescriptorBinding* binding,
+                                   shader_data& data, size_t size, size_t offset, const char* name) {
+    Uniform& u = data.uniforms[StringIntern(name)];
+
+    u.set = binding->set;
+    u.binding = binding->binding;
+    u.offset = offset;
+    u.size = size;
+    u.isTexture = false;
+
+    //translate type
+    if(!type_description) {
+        PLOGE << "Vulkan: Reflect type description of variable member was null; defaulting to int.";
+        u.type=kUniformInt; 
+        return;
+    }
+    auto& numeric = type_description->traits.numeric;
+    const bool is_int = numeric.scalar.signedness != 0;
+
+    if(type_description->type_flags & SPV_REFLECT_TYPE_FLAG_MATRIX) {
+        const auto& matrix = numeric.matrix;
+        if(is_int) {
+            switch(matrix.column_count) {
+                case 2: u.type = kUniformIMat2x2; break;
+                case 3: u.type = kUniformIMat3x3; break;
+                case 4: u.type = kUniformIMat4x4; break;
+            }
+        } else {
+            switch(matrix.column_count) {
+                case 2:
+                    switch(matrix.row_count) {
+                        case 2: u.type = kUniformFMat2x2; break;
+                        case 3: u.type = kUniformFMat2x3; break;
+                        case 4: u.type = kUniformFMat2x4; break;
+                    } break;
+                case 3:
+                    switch(matrix.row_count) {
+                        case 2: u.type = kUniformFMat3x2; break;
+                        case 3: u.type = kUniformFMat3x3; break;
+                        case 4: u.type = kUniformFMat3x4; break;
+                    } break;
+                case 4:
+                    switch(matrix.row_count) {
+                        case 2: u.type = kUniformFMat4x2; break;
+                        case 3: u.type = kUniformFMat4x3; break;
+                        case 4: u.type = kUniformFMat4x4; break;
+                    } break;
+            }
+        }
+    } else if(type_description->type_flags & SPV_REFLECT_TYPE_FLAG_VECTOR) {
+        switch(numeric.vector.component_count) {
+            case 2:
+                u.type = is_int ? kUniformIVec2 : kUniformFVec2; break;
+            case 3:
+                u.type = is_int ? kUniformIVec3 : kUniformFVec3; break;
+            case 4:
+                u.type = is_int ? kUniformIVec4 : kUniformFVec4; break;
+        }
+    } else if(type_description->type_flags & SPV_REFLECT_TYPE_FLAG_INT) {
+        u.type = kUniformInt;
+    } else if(type_description->type_flags & SPV_REFLECT_TYPE_FLAG_FLOAT) {
+        u.type = kUniformFloat;
+    }
+}
+
+void Vulkan::unwrap_reflected_arrays(const SpvReflectTypeDescription* type_description,
+                                     const SpvReflectDescriptorBinding* binding,
+                                     shader_data& data,
+                                     uint32_t dimension,
+                                     uint32_t size,
+                                     uint32_t offset,
+                                     const std::string& name) {
+    const auto& array = type_description->traits.array;
+
+    for(int i = 0; i < array.dims[dimension]; ++i) {
+        std::string element_name = name + "[" + std::to_string(i) + "]";
+        uint32_t element_offset = offset + i*array.stride;
+        if(array.dims_count > dimension + 1) {
+            unwrap_reflected_arrays(type_description, binding, data,
+                                    dimension+1, size, element_offset, element_name);
+        } else {
+            size_t element_count = 0;
+            for(int x = 0; x < array.dims_count; ++x) {
+                element_count += array.dims[i];
+            }
+            reflect_uniform_block(type_description, binding, data, 
+                                  size/element_count, element_offset, element_name.c_str());
+        }
+    }
+}
+
 void Vulkan::reflect_shader(ShaderBinary& shader_code, VkShaderStageFlagBits stage, shader_data& data) {
     SpvReflectShaderModule module;
 
@@ -3237,65 +3329,14 @@ void Vulkan::reflect_shader(ShaderBinary& shader_code, VkShaderStageFlagBits sta
 
                             if(!member.name)continue;
 
-                            Uniform& u = data.uniforms[StringIntern(member.name)];
-
-                            u.set = binding->set;
-                            u.binding = binding->binding;
-                            u.offset = member.offset;
-                            u.size = member.size;
-                            u.isTexture = false;
-
-                            //FIXME: Array detection and unwrapping is needed here or else arrays will implode
-
-                            //translate type
-                            if(!member.type_description) {u.type=kUniformFloat; continue;}
-                            auto& numeric = member.type_description->traits.numeric;
-                            const bool is_int = numeric.scalar.signedness != 0;
-
-                            if(member.type_description->type_flags & SPV_REFLECT_TYPE_FLAG_MATRIX) {
-                                const auto& matrix = numeric.matrix;
-                                if(is_int) {
-                                    switch(matrix.column_count) {
-                                        case 2: u.type = kUniformIMat2x2; break;
-                                        case 3: u.type = kUniformIMat3x3; break;
-                                        case 4: u.type = kUniformIMat4x4; break;
-                                    }
-                                } else {
-                                    switch(matrix.column_count) {
-                                        case 2:
-                                            switch(matrix.row_count) {
-                                                case 2: u.type = kUniformFMat2x2; break;
-                                                case 3: u.type = kUniformFMat2x3; break;
-                                                case 4: u.type = kUniformFMat2x4; break;
-                                            } break;
-                                        case 3:
-                                            switch(matrix.row_count) {
-                                                case 2: u.type = kUniformFMat3x2; break;
-                                                case 3: u.type = kUniformFMat3x3; break;
-                                                case 4: u.type = kUniformFMat3x4; break;
-                                            } break;
-                                        case 4:
-                                            switch(matrix.row_count) {
-                                                case 2: u.type = kUniformFMat4x2; break;
-                                                case 3: u.type = kUniformFMat4x3; break;
-                                                case 4: u.type = kUniformFMat4x4; break;
-                                            } break;
-                                    }
-                                }
-                            } else if(member.type_description->type_flags & SPV_REFLECT_TYPE_FLAG_VECTOR) {
-                                switch(numeric.vector.component_count) {
-                                    case 2:
-                                        u.type = is_int ? kUniformIVec2 : kUniformFVec2; break;
-                                    case 3:
-                                        u.type = is_int ? kUniformIVec3 : kUniformFVec3; break;
-                                    case 4:
-                                        u.type = is_int ? kUniformIVec4 : kUniformFVec4; break;
-                                }
-                            } else if(member.type_description->type_flags & SPV_REFLECT_TYPE_FLAG_INT) {
-                                u.type = kUniformInt;
-                            } else if(member.type_description->type_flags & SPV_REFLECT_TYPE_FLAG_FLOAT) {
-                                u.type = kUniformFloat;
-                            }
+                            if(member.type_description->type_flags & SPV_REFLECT_TYPE_FLAG_ARRAY) {
+                                unwrap_reflected_arrays(member.type_description, binding, data,
+                                                        0, member.size,
+                                                        member.offset, member.name);
+                            } else {
+                                reflect_uniform_block(member.type_description, binding, data,
+                                                      member.size, member.offset, member.name);
+                            }                         
                         }        
                         break;
                     }
