@@ -3008,7 +3008,7 @@ std::vector<Vulkan::shader_stage_info> Vulkan::parse_shader_stages(const std::st
     
     std::vector<shader_stage_info> stages;
 
-    const size_t line_end = source.find_first_of("\r\n");
+    const size_t line_end = source.find_first_of("\n");
 
     std::string_view line(
         source.data(),
@@ -3061,7 +3061,7 @@ std::vector<Vulkan::shader_stage_info> Vulkan::parse_shader_stages(const std::st
 
 Vulkan::ShaderBinary Vulkan::compile_shader(const std::string& source,
                                             shaderc_shader_kind kind,
-                                            const std::string& define,
+                                            const std::string& defines,
                                             const std::string& filename) {
     shaderc_compiler_t compiler = shaderc_compiler_initialize();
 
@@ -3078,10 +3078,10 @@ Vulkan::ShaderBinary Vulkan::compile_shader(const std::string& source,
         terminate_engine();
     }
 
-    if(!define.empty()) {
+    if(!defines.empty()) {
         shaderc_compile_options_add_macro_definition(options, 
-                                                     define.c_str(),
-                                                     define.size(),
+                                                     defines.c_str(),
+                                                     defines.size(),
                                                      nullptr,
                                                      0);
     }
@@ -3098,7 +3098,7 @@ Vulkan::ShaderBinary Vulkan::compile_shader(const std::string& source,
         shaderc_compile_options_release(options);
         shaderc_compiler_release(compiler);
 
-        PLOGE << "Vulkan: Failed to compile shader stage: " << define << " in " << filename;
+        PLOGE << "Vulkan: Failed to compile shader stage: " << defines << " in " << filename;
         return {};
     }
 
@@ -3113,7 +3113,7 @@ Vulkan::ShaderBinary Vulkan::compile_shader(const std::string& source,
         shaderc_compile_options_release(options);
         shaderc_compiler_release(compiler);
 
-        PLOGE << "Vulkan: Failed to compile shader stage: " << define << " in " << filename <<
+        PLOGE << "Vulkan: Failed to compile shader stage: " << defines << " in " << filename <<
         "\n" << message;
         return {};
     }

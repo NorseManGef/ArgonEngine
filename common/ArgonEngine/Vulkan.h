@@ -743,13 +743,8 @@ class Vulkan:public RenderAPI {
     }
 
     typedef struct ShaderBinary {
-        uint32_t* data;
-        size_t word_count;
-
-        ShaderBinary() {
-            data = nullptr;
-            word_count = 0;
-        }
+        uint32_t* data = nullptr;
+        size_t word_count = 0;
 
         ~ShaderBinary() {
             if(data!=nullptr) {
