@@ -746,8 +746,15 @@ class Vulkan:public RenderAPI {
         uint32_t* data;
         size_t word_count;
 
+        ShaderBinary() {
+            data = nullptr;
+            word_count = 0;
+        }
+
         ~ShaderBinary() {
-            free(data);
+            if(data!=nullptr) {
+                free(data);
+            }
 
             data = nullptr;
             word_count = 0;
