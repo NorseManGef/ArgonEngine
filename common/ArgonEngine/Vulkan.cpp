@@ -3144,17 +3144,17 @@ VkShaderModule Vulkan::create_shader_module(const ShaderBinary& shader_code) {
         .pCode = shader_code.data,
     };
 
-    VkShaderModule module;
+    VkShaderModule mod;
     VkResult result = vkCreateShaderModule(_device->_device, 
                                            &createInfo,
                                            nullptr,
-                                           &module);
+                                           &mod);
     if(result != VK_SUCCESS) {
         PLOGF << "Vulkan: Failed to create shader module";
         terminate_engine();
     }
 
-    return module;
+    return mod;
 }
 
 bool Vulkan::validate_shader(const ShaderBinary& shader_code) {
@@ -3211,6 +3211,9 @@ void Vulkan::reflect_uniform_block(const SpvReflectTypeDescription* type_descrip
                 case 2: u.type = kUniformIMat2x2; break;
                 case 3: u.type = kUniformIMat3x3; break;
                 case 4: u.type = kUniformIMat4x4; break;
+                default:
+                    PLOGE << "Vulkan: Unknown IMat type";
+                    u.type = kUniformInt;
             }
         } else {
             switch(matrix.column_count) {
@@ -3219,18 +3222,27 @@ void Vulkan::reflect_uniform_block(const SpvReflectTypeDescription* type_descrip
                         case 2: u.type = kUniformFMat2x2; break;
                         case 3: u.type = kUniformFMat2x3; break;
                         case 4: u.type = kUniformFMat2x4; break;
+                        default:
+                            PLOGE << "Vulkan: Unknown FMat type";
+                            u.type = kUniformFloat;
                     } break;
                 case 3:
                     switch(matrix.row_count) {
                         case 2: u.type = kUniformFMat3x2; break;
                         case 3: u.type = kUniformFMat3x3; break;
                         case 4: u.type = kUniformFMat3x4; break;
+                        default: 
+                            PLOGE << "Vulkan: Unknown FMat type";
+                            u.type = kUniformFloat;
                     } break;
                 case 4:
                     switch(matrix.row_count) {
                         case 2: u.type = kUniformFMat4x2; break;
                         case 3: u.type = kUniformFMat4x3; break;
                         case 4: u.type = kUniformFMat4x4; break;
+                        default:
+                            PLOGE << "Vulkan: Unknown FMat type";
+                            u.type = kUniformFloat;
                     } break;
             }
         }
