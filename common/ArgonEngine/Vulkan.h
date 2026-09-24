@@ -11,6 +11,9 @@
 #include "vulkan/vulkan_core.h"
 #include <vulkan/vulkan.h>
 #include <plog/Log.h>
+#include <SPIRV-Reflect/spirv_reflect.h>
+#include <shaderc/shaderc.h>
+#include <spirv-tools/libspirv.h>
 #include <optional>
 #include <set>
 
@@ -216,9 +219,6 @@ class Vulkan:public RenderAPI {
                    _pipeline_layout != VK_NULL_HANDLE &&
                    _desc_layout != VK_NULL_HANDLE;
         }
-
-        VkShaderModule create_shader_module(const std::string shader_code);
-        VkShaderModule load_shader(const VirtualResource shader_path);
 
         void create_desc_layout();
         void create_pipeline_layout();
@@ -638,9 +638,13 @@ class Vulkan:public RenderAPI {
         size_t frame = 0;
     };
 
-    struct shader_data {
+    struct shader_stage {
         VkShaderModule module = VK_NULL_HANDLE;
         VkShaderStageFlagBits stage = VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM;
+    };
+
+    struct shader_data {
+        std::vector<shader_stage> stages;
 
         std::map<StringIntern, Uniform> uniforms;
         std::map<StringIntern, uint32_t> attribs;
@@ -737,6 +741,47 @@ class Vulkan:public RenderAPI {
             );
         }
     }
+
+    typedef struct ShaderBinary {
+        uint32_t* data = nullptr;
+        size_t word_count = 0;
+
+        ~ShaderBinary() {
+            if(data!=nullptr) {
+                free(data);
+            }
+
+            data = nullptr;
+            word_count = 0;
+        }
+    } ShaderBinary;
+
+    struct shader_stage_info {
+        std::string_view define;
+        shaderc_shader_kind shaderc_kind;
+        VkShaderStageFlagBits vk_stage;
+    };
+
+    static const std::map<std::string_view, shader_stage_info> shader_stage_map;
+
+    void make_shader(VirtualResource& shader_path);
+    ShaderBinary compile_shader(const std::string& source, shaderc_shader_kind kind,
+                                const std::string& define, const std::string& filename);
+    bool validate_shader(const ShaderBinary& shader_code);
+    VkShaderModule create_shader_module(const ShaderBinary& shader_code);
+    std::vector<shader_stage_info> parse_shader_stages(const std::string& source);
+    void reflect_shader(ShaderBinary& shader_code, VkShaderStageFlagBits stage, shader_data& data);
+    void reflect_uniform_block(const SpvReflectTypeDescription* type_description, 
+                               const SpvReflectDescriptorBinding* binding,
+                               shader_data& data, size_t size, size_t offset, const char* name);
+    void unwrap_reflected_arrays(const SpvReflectTypeDescription* type_description,
+                                 const SpvReflectDescriptorBinding* binding,
+                                 shader_data& data,
+                                 uint32_t dimension,
+                                 uint32_t size,
+                                 uint32_t offset,
+                                 const std::string& name);
+    
 
 public:
     Vulkan() {} 
