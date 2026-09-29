@@ -173,6 +173,7 @@ namespace Argon {
             }
             std::vector<Renderable*>::iterator it;
             glDepthFunc(GL_LEQUAL);
+            api.pre_draw();
             api.bind_default_framebuffer();
             api.set_viewport(0,0,viewport[0],viewport[1]);
             api.clear(true,true,false);
@@ -225,6 +226,7 @@ namespace Argon {
                 }
                 ++it;
             }
+            api.post_draw();
             api.set_render_flags(kRenderDefault);
             api.bind_default_framebuffer();
             api.set_viewport(0,0,viewport[0],viewport[1]);

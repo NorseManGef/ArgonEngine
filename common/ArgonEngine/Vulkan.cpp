@@ -585,10 +585,29 @@ void Vulkan::Device::clean_swapchain() {
   ///////////////////////////////////////
  // PIPELINE ///////////////////////////
 ///////////////////////////////////////
+
+void Vulkan::Pipeline::create_graphics_pipeline(Required_Pipeline_State state) {
+    _current_blend = state._current_blend;
+    _current_blend_enabled = state._current_blend_enabled;
+    _current_topology = state._current_topology;
+    _current_cull_mode = state._current_cull_mode;
+    _current_front_face = state._current_front_face;
+    _current_min_depth = state._current_min_depth;
+    _current_max_depth = state._current_max_depth;
+    _current_render_flags = state._current_render_flags;
+    _current_clear_value = state._current_clear_value;
+    _viewport = state._current_viewport;
+    _extent = state._extent;
+    _current_render_pass = state._current_render_pass;
+
+    create_graphics_pipeline(state._device, state._current_render_pass, 
+                             *state._current_vertex_shader, 
+                             *state._current_fragment_shader);
+}
+
 void Vulkan::Pipeline::create_graphics_pipeline(VkDevice device, VkRenderPass render_pass,
                                                 VkShaderModule vertex_shader, 
-                                                VkShaderModule fragment_shader,
-                                                VkExtent2D extent) {
+                                                VkShaderModule fragment_shader) {
     if(device == VK_NULL_HANDLE) {
         PLOGF << "Vulkan: Invalid device handle provided to graphics pipeline";
         terminate_engine();
@@ -597,14 +616,15 @@ void Vulkan::Pipeline::create_graphics_pipeline(VkDevice device, VkRenderPass re
         PLOGF << "Vulkan: Invalid render pass handle provided to graphics pipeline";
         terminate_engine();
     }
-    if(extent.width == 0 || extent.height == 0) {
-        PLOGF << "Vulkan: Invalid extent provided to graphics pipeline";
-    }
-
     _device = device;
-
-    _current_vertex_shader = vertex_shader;
-    _current_fragment_shader = fragment_shader;
+    
+    if(vertex_shader == VK_NULL_HANDLE || fragment_shader == VK_NULL_HANDLE) {
+        PLOGF << "Vulkan: Shaders were null";
+        terminate_engine();
+    } else {
+        *_current_vertex_shader = vertex_shader;
+        *_current_fragment_shader = fragment_shader;
+    }
 
     VkPipelineShaderStageCreateInfo vertex_shader_stageInfo{
         .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
@@ -627,7 +647,7 @@ void Vulkan::Pipeline::create_graphics_pipeline(VkDevice device, VkRenderPass re
 
     auto vertex_input_info = create_vertex_input_info();
     auto input_assembly_info = create_input_assembly_info();
-    auto viewport_info = create_viewport_info(extent);
+    auto viewport_info = create_viewport_info();
     auto rasterization_info = create_rasterization_info();
     auto multisample_info = create_multisample_info();
     auto depth_stencil_info = create_depth_stencil_info();
@@ -801,18 +821,9 @@ VkPipelineInputAssemblyStateCreateInfo Vulkan::Pipeline::create_input_assembly_i
     return input_assembly_info;
 }
 
-VkPipelineViewportStateCreateInfo Vulkan::Pipeline::create_viewport_info(VkExtent2D extent) {
-    _viewport = {
-        .x = 0.0f,
-        .y = 0.0f,
-        .width = static_cast<float>(extent.width),
-        .height = static_cast<float>(extent.height),
-        .minDepth = _current_min_depth,
-        .maxDepth = _current_max_depth,
-    };
-    
+VkPipelineViewportStateCreateInfo Vulkan::Pipeline::create_viewport_info() {
     _scissor.offset = {0,0};
-    _scissor.extent = extent;
+    _scissor.extent = _extent;
 
     VkPipelineViewportStateCreateInfo viewport_info {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
@@ -2429,7 +2440,13 @@ void Vulkan::init_vulkan(const std::vector<const char*>& required_extensions, Vk
 
         if((props.formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) == VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
             chosen_depth_format = format;
+            break;
         }
+    }
+
+    if(chosen_depth_format == VK_FORMAT_UNDEFINED) {
+        PLOGF << "Vulkan: No suitable depth format found";
+        terminate_engine();
     }
 
     VkImageCreateInfo imageInfo{
@@ -2443,7 +2460,7 @@ void Vulkan::init_vulkan(const std::vector<const char*>& required_extensions, Vk
         .arrayLayers = 1,
         .samples = VK_SAMPLE_COUNT_1_BIT,
         .tiling = VK_IMAGE_TILING_OPTIMAL,
-        .usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+        .usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
         .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
         .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
     };
@@ -2468,7 +2485,7 @@ void Vulkan::init_vulkan(const std::vector<const char*>& required_extensions, Vk
         if ((mem_reqs.memoryTypeBits & (1 << i)) &&
             (mem_props.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) ==
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) {
-            memory_type_index = 1;
+            memory_type_index = i;
             break;
         }
     }
@@ -2499,7 +2516,7 @@ void Vulkan::init_vulkan(const std::vector<const char*>& required_extensions, Vk
         .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
         .image = depth_image,
         .viewType = VK_IMAGE_VIEW_TYPE_2D,
-        .format = depth_format,
+        .format = chosen_depth_format,
         .subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
         .subresourceRange.baseMipLevel = 0,
         .subresourceRange.levelCount = 1,
@@ -2540,8 +2557,13 @@ void Vulkan::ensure_idle() {
 }
 
 uint32_t Vulkan::acquire_next_image() {
+    VkResult result = _sync->wait_for_fences(_device->_device, _sync->_fences);
+    if(result != VK_SUCCESS) {
+        PLOGF << "Vulkan: Failed to wait for fences";
+        terminate_engine();
+    }
     uint32_t image_index;
-    VkResult result = _sync->acquire_next_image(_device->_device, 
+    result = _sync->acquire_next_image(_device->_device, 
                                                 _device->_swapchain, UINT64_MAX, 
                                                 _sync->_frame_sync_objects[_current_frame].image_available_semaphore,
                                                 VK_NULL_HANDLE, &image_index);
@@ -2566,7 +2588,7 @@ void Vulkan::begin_frame() {
 }
 
 void Vulkan::end_frame() {
-    auto image_index = acquire_next_image();
+    _image_index = acquire_next_image();
     VkResult result = vkResetCommandBuffer(_cmd_buffers[_current_frame], 0);
     if(result != VK_SUCCESS) {
         PLOGF << "Vulkan: Failed to reset command buffer";
@@ -2586,7 +2608,7 @@ void Vulkan::end_frame() {
                                   signal_semaphores,
                                   _sync->_frame_sync_objects[_current_frame].in_flight_fence);
 
-    result = _sync->present_image(_device->_presentQ, _device->_swapchain, image_index, signal_semaphores);
+    result = _sync->present_image(_device->_presentQ, _device->_swapchain, _image_index, signal_semaphores);
     if(result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
         _device->recreate_swapchain(_device->_surface, _device->_extent.width, _device->_extent.height);
     } else if (result != VK_SUCCESS) {
@@ -2644,7 +2666,7 @@ void Vulkan::clean() {
     _render_pass->clean();
     _command_pool->clean();
     for(auto p : _pipelines) {
-        p->clean();
+        p.second.clean();
     }
     _device->clean();
     _instance->clean();
@@ -2676,21 +2698,15 @@ void Vulkan::draw_vertex_array(std::shared_ptr<VertexArray> array, int end_vert,
         return;
     }
 
-    if(_current_pipeline_index > _pipelines.size()) {
-        PLOGF << "Vulkan: current pipeline does not exist";
-        terminate_engine(1); // TODO: Make this a specific error code
-    }
+    Pipeline pipe = _pipelines[state];
 
-    Pipeline* pipe = _pipelines[_current_pipeline_index];
-
-    if(!pipe || !pipe->is_valid()) {
-        PLOGE << "Vulkan: current pipeline is not initialized";
-        return;
+    if(!pipe.is_valid()) {
+        pipe.create_graphics_pipeline(state);
     };
 
-    VkPrimitiveTopology& topology = pipe->_current_topology;
+    VkPrimitiveTopology& topology = pipe._current_topology;
 
-    _command_pool->bind_pipeline(current_cmd_buffer, pipe->_pipeline);
+    _command_pool->bind_pipeline(current_cmd_buffer, pipe._pipeline);
     _command_pool->set_primitive_topology(current_cmd_buffer, topology);
     _command_pool->bind_vertex_buffers(current_cmd_buffer, 0, {vert_d.vert_buffer._buffer}, {0});
     _command_pool->bind_index_buffer(current_cmd_buffer, vert_d.index_buffer._buffer, 0, VK_INDEX_TYPE_UINT16);
@@ -2736,56 +2752,57 @@ void Vulkan::update_resources() {
 }
 
 void Vulkan::set_blend(unsigned int blend) {
-    if(current_blend != blend) {
+    if(state._current_blend != blend) {
         if(blend==kBlendReplace) {
-            current_blend_enabled = false;
+            state._current_blend_enabled = false;
         }else{
-            if(current_blend==kBlendReplace)
-                current_blend_enabled = true;
+            if(state._current_blend==kBlendReplace)
+                state._current_blend_enabled = true;
         }
-        current_blend = blend;
+        state._current_blend = blend;
     }
 }
 
 void Vulkan::set_cull_face(int face) {
-    if(current_cull_mode!=face) {
+    if(state._current_cull_mode!=face) {
         switch(face) {
-            case kCullNone: current_cull_mode = VK_CULL_MODE_NONE;break;
+            case kCullNone: state._current_cull_mode = VK_CULL_MODE_NONE;break;
             case kCullBackFaceCounterClockWise: 
-                current_cull_mode = VK_CULL_MODE_BACK_BIT;
-                current_front_face = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+                state._current_cull_mode = VK_CULL_MODE_BACK_BIT;
+                state._current_front_face = VK_FRONT_FACE_COUNTER_CLOCKWISE;
                 break;
             case kCullBackFaceClockWise:
-                current_cull_mode = VK_CULL_MODE_BACK_BIT;
-                current_front_face = VK_FRONT_FACE_CLOCKWISE;
+                state._current_cull_mode = VK_CULL_MODE_BACK_BIT;
+                state._current_front_face = VK_FRONT_FACE_CLOCKWISE;
                 break;
             case kCullFrontFaceCounterClockWise:
-                current_cull_mode = VK_CULL_MODE_FRONT_BIT;
-                current_front_face = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+                state._current_cull_mode = VK_CULL_MODE_FRONT_BIT;
+                state._current_front_face = VK_FRONT_FACE_COUNTER_CLOCKWISE;
                 break;
             case kCullFrontFaceClockWise:
-                current_cull_mode = VK_CULL_MODE_FRONT_BIT;
-                current_front_face = VK_FRONT_FACE_CLOCKWISE;
+                state._current_cull_mode = VK_CULL_MODE_FRONT_BIT;
+                state._current_front_face = VK_FRONT_FACE_CLOCKWISE;
                 break;
         }
     }
 }
 
 void Vulkan::set_depth_range(float near, float far) {
-    current_min_depth = near;
-    current_max_depth = far;
+    state._current_min_depth = near;
+    state._current_max_depth = far;
 }
 
 void Vulkan::set_render_flags(unsigned int render_flags) {
-    current_render_flags=render_flags;
+    state._current_render_flags=render_flags;
 }
 
 void Vulkan::set_clear_color(Vector4f v) {
-    current_clear_color = {{v[0], v[1], v[2], v[3]}};
+    state._current_clear_value.color = {{v[0], v[1], v[2], v[3]}};
+    state._current_clear_value.depthStencil = {state._current_max_depth-state._current_min_depth, 0};
 }
 
 void Vulkan::set_viewport(int x, int y, int w, int h) {
-    current_viewport = {
+    state._current_viewport = {
         static_cast<float>(x),
         static_cast<float>(y),
         static_cast<float>(w),
@@ -3372,6 +3389,24 @@ void Vulkan::reflect_shader(ShaderBinary& shader_code, VkShaderStageFlagBits sta
             }
         }
     }
+}
+
+void Vulkan::pre_draw() {
+    VkRect2D rect{
+        .extent = _device->_extent,
+    };
+    _command_pool->begin_render_pass(_cmd_buffers[_current_frame], _render_pass->_render_pass,
+                                     _render_pass->framebuffers[_image_index], rect,
+                                     {state._current_clear_value});
+}
+
+void Vulkan::post_draw() {
+    _command_pool->end_render_pass(_cmd_buffers[_current_frame]);
+}
+
+void Vulkan::clear(bool color, bool depth, bool stencil) {
+    // since there is no way to specify which image needs to be cleared with this function, it is left blank
+    // as clearing is automatically performed at the start of a render pass
 }
 
 void Vulkan::cache_texture(VirtualResource tex) {

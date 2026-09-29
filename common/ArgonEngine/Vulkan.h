@@ -181,6 +181,28 @@ class Vulkan:public RenderAPI {
         
     };
 
+    struct Required_Pipeline_State {
+        unsigned int _current_blend = kBlendReplace;
+        bool _current_blend_enabled = true;
+        VkPrimitiveTopology _current_topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+        VkCullModeFlags _current_cull_mode = VK_CULL_MODE_BACK_BIT;
+        VkFrontFace _current_front_face = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+        float _current_min_depth = 0.0f;
+        float _current_max_depth = 1.0f;
+        unsigned int _current_render_flags = kRenderDefault;
+        VkClearValue _current_clear_value;
+        VkViewport _current_viewport;
+        
+        VkShaderModule *_current_vertex_shader = VK_NULL_HANDLE;
+        VkShaderModule *_current_fragment_shader = VK_NULL_HANDLE;
+
+        VkRenderPass _current_render_pass;
+
+
+        VkExtent2D _extent;
+        VkDevice _device; // SHOULD ALWAYS BE THE DEVICE IN USE
+    };
+
     struct Pipeline {
         VkDevice _device;
         VkPipeline _pipeline;
@@ -188,6 +210,7 @@ class Vulkan:public RenderAPI {
         VkDescriptorSetLayout _desc_layout;
         VkViewport _viewport{};
         VkRect2D _scissor{};
+        VkExtent2D _extent{};
         std::shared_ptr<VertexArray> _vertex_array;
         VkPipelineColorBlendAttachmentState _color_blend_attachment{};
 
@@ -201,17 +224,20 @@ class Vulkan:public RenderAPI {
         VkFrontFace _current_front_face = VK_FRONT_FACE_COUNTER_CLOCKWISE;
         float _current_min_depth = 0.0f;
         float _current_max_depth = 1.0f;
-        unsigned int _current_render_flags;
-        VkClearColorValue _current_clear_color;
+        unsigned int _current_render_flags = kRenderDefault;
+        VkClearValue _current_clear_value;
         
-        VkShaderModule _current_vertex_shader;
-        VkShaderModule _current_fragment_shader;
+        VkShaderModule *_current_vertex_shader = VK_NULL_HANDLE;
+        VkShaderModule *_current_fragment_shader = VK_NULL_HANDLE;
+
+        VkRenderPass _current_render_pass;
 
         void create_graphics_pipeline(VkDevice device,
                                       VkRenderPass render_pass,
                                       VkShaderModule vertex_shader,
-                                      VkShaderModule fragment_shader,
-                                      VkExtent2D extent);
+                                      VkShaderModule fragment_shader);
+
+        void create_graphics_pipeline(Required_Pipeline_State state);
 
         bool is_valid() const {
             return _device != VK_NULL_HANDLE &&
@@ -224,7 +250,7 @@ class Vulkan:public RenderAPI {
         void create_pipeline_layout();
         VkPipelineVertexInputStateCreateInfo create_vertex_input_info();
         VkPipelineInputAssemblyStateCreateInfo create_input_assembly_info();
-        VkPipelineViewportStateCreateInfo create_viewport_info(VkExtent2D extent);
+        VkPipelineViewportStateCreateInfo create_viewport_info();
         VkPipelineRasterizationStateCreateInfo create_rasterization_info();
         VkPipelineMultisampleStateCreateInfo create_multisample_info();
         VkPipelineColorBlendStateCreateInfo create_color_blend_info();
@@ -245,15 +271,14 @@ class Vulkan:public RenderAPI {
 
         Pipeline(VkDevice device, VkRenderPass render_pass,
                  VkShaderModule vertex_shader,
-                 VkShaderModule fragment_shader,
-                 VkExtent2D extent):
+                 VkShaderModule fragment_shader):
             _device(device),
             _pipeline(VK_NULL_HANDLE),
             _pipeline_layout(VK_NULL_HANDLE),
             _desc_layout(VK_NULL_HANDLE),
             _vertex_array(nullptr)
         {
-            create_graphics_pipeline(device, render_pass, vertex_shader, fragment_shader, extent);
+            create_graphics_pipeline(device, render_pass, vertex_shader, fragment_shader);
         }
 
         ~Pipeline() {
@@ -664,27 +689,19 @@ class Vulkan:public RenderAPI {
 
     Instance* _instance;
     Device* _device;
-    std::vector<Pipeline*> _pipelines;
-    size_t _current_pipeline_index;
+    std::map<Required_Pipeline_State, Pipeline> _pipelines;
     CommandPool* _command_pool;
     VkCommandBuffer _cmd_buffers[MAX_FRAMES_IN_FLIGHT];
     CmdState cmdstate = CmdState::Idle;
     RenderState renderstate = RenderState::NotRendering;
     RenderPass* _render_pass;
     Synchronization* _sync;
-    size_t _current_frame = 0;
+    size_t _current_frame = 0; // 0..MAX_FRAMES_IN_FLIGHT-1
+    uint32_t _image_index = 0; // 0.._device->swapchain_image_views.size()
 
     Buffer uniform_buffer;
 
-    unsigned int current_blend;
-    bool current_blend_enabled;
-    VkCullModeFlags current_cull_mode;
-    VkFrontFace current_front_face;
-    float current_min_depth;
-    float current_max_depth;
-    unsigned int current_render_flags;
-    VkClearColorValue current_clear_color;
-    VkViewport current_viewport;
+    Required_Pipeline_State state;
 
     shader_data * current_shader;
 
@@ -714,6 +731,7 @@ class Vulkan:public RenderAPI {
                 offset,
                 &fval,
                 it->second.size()
+
             );
         }
     }
@@ -809,10 +827,8 @@ public:
     void set_viewport(int x, int y, int w, int h);
     void set_uniforms(Uniforms** uniforms, int size);
     void set_shader(Renderable*, VirtualResource& x, Uniforms** uniforms, int size);
-    void bind_render_framebuffer();
-    void bind_default_framebuffer();
-    void bind_depth_texture(VirtualResource t);
-    void bind_color_texture(VirtualResource t, int level, int buffer);
+    void pre_draw();
+    void post_draw();
     void clear(bool color, bool depth, bool stencil);
     void cache_texture(VirtualResource tex);
     void cache_array(std::shared_ptr<VertexArray> array);

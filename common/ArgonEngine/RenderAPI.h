@@ -52,13 +52,17 @@ namespace Argon{
         ///Set the shader to use when rendering
         virtual void set_shader(Renderable*,VirtualResource& x,Uniforms** uniforms, int size)=0;
         ///Bind the FBO for render textures.
-        virtual void bind_render_framebuffer()=0;
+        virtual void bind_render_framebuffer(){}
         ///Bind the default window framebuffer.
-        virtual void bind_default_framebuffer()=0;
+        virtual void bind_default_framebuffer(){}
         ///Bind a depth texture to the render FBO.
-        virtual void bind_depth_texture(VirtualResource t)=0;
+        virtual void bind_depth_texture(VirtualResource t){}
         ///Bind a specific level of a color texture to color buffer 'buffer' of the render fbo.
-        virtual void bind_color_texture(VirtualResource t,int level, int buffer)=0;
+        virtual void bind_color_texture(VirtualResource t,int level, int buffer){}
+        ///Do all the stuff we need to do before our draw calls
+        virtual void pre_draw(){}
+        ///Do all the stuff we need to do after our draw calls
+        virtual void post_draw(){}
         ///Clear the current FBO
         virtual void clear(bool color, bool depth, bool stencil)=0;
         ///Cache a texture for use. This must be called every frame before a texture is used.
