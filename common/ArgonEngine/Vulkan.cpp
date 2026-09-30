@@ -2933,7 +2933,7 @@ void Vulkan::set_shader(Argon::Renderable* state, VirtualResource& shader, Unifo
 
 void Vulkan::make_shader(VirtualResource& shader) {
     shader_data& s = shaders[shader];
-    const std::string shader_code = shader.get_data_as_string();
+    std::string shader_code = shader.get_data_as_string();
 
     std::vector<shader_stage_info> stages = parse_shader_stages(shader_code);
     if(stages.empty()) {
@@ -3016,7 +3016,7 @@ const std::map<std::string_view, Vulkan::shader_stage_info> Vulkan::shader_stage
 };
 
 
-std::vector<Vulkan::shader_stage_info> Vulkan::parse_shader_stages(const std::string& source) {
+std::vector<Vulkan::shader_stage_info> Vulkan::parse_shader_stages(std::string& source) {
     //
     // #stages VERTEX TESSELLATION_CONTROL TESSELLATION_EVALUATION GEOMETRY FRAGMENT
     //
@@ -3072,6 +3072,8 @@ std::vector<Vulkan::shader_stage_info> Vulkan::parse_shader_stages(const std::st
 
         stages.push_back(it->second);
     }
+
+    source.erase(0,line_end);
 
     return stages;
 }

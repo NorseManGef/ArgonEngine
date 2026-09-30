@@ -787,7 +787,7 @@ class Vulkan:public RenderAPI {
                                 const std::string& define, const std::string& filename);
     bool validate_shader(const ShaderBinary& shader_code);
     VkShaderModule create_shader_module(const ShaderBinary& shader_code);
-    std::vector<shader_stage_info> parse_shader_stages(const std::string& source);
+    std::vector<shader_stage_info> parse_shader_stages(std::string& source);
     void reflect_shader(ShaderBinary& shader_code, VkShaderStageFlagBits stage, shader_data& data);
     void reflect_uniform_block(const SpvReflectTypeDescription* type_description, 
                                const SpvReflectDescriptorBinding* binding,
