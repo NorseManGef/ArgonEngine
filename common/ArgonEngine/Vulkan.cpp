@@ -2944,7 +2944,7 @@ void Vulkan::make_shader(VirtualResource& shader) {
     for(const auto& stage : stages) {
         ShaderBinary spv = compile_shader(shader_code,
                                           stage.shaderc_kind,
-                                          std::string(stage.define),
+                                          std::string(stage.define) + " VULKAN",
                                           shader.get_path_string());
 
         if(spv.data == nullptr) {
