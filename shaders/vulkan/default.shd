@@ -64,10 +64,10 @@ vec3 hsv_to_rgb(vec3 hsv){
     float t = hsv[2] * (1 - hsv[1] * (1. - f));
 
     if(i==0.)return vec3(v,t,p);
-    else if(i==1) return vec3(q,v,p);
-    else if(i==2) return vec3(p,v,t);
-    else if(i==3) return vec3(p,q,v);
-    else if(i==4) return vec3(t,p,v);
+    else if(i==1.) return vec3(q,v,p);
+    else if(i==2.) return vec3(p,v,t);
+    else if(i==3.) return vec3(p,q,v);
+    else if(i==4.) return vec3(t,p,v);
 
     return vec3(v,p,q);
 
@@ -188,13 +188,13 @@ vec3 calculate_lighting_blinn_phong(vec3 world_pos, vec3 n, vec3 view,vec3 ambie
     vec4 specular_exponent = vec4(spec_exponent);
     vec3 c=vec3(0.);
     vec3 ambient_acc=vec3(0.);
-    for(mediump int x=0;x<total_lights;x+=4){
+    for(mediump int x=0;x<lighting.total_lights;x+=4){
 
-        mat4x3 light = mat4x3(light_positions[x].xyz,light_positions[x+1].xyz,light_positions[x+2].xyz,light_positions[x+3].xyz)-pos_m;
+        mat4x3 light = mat4x3(lighting.light_positions[x].xyz,lighting.light_positions[x+1].xyz,lighting.light_positions[x+2].xyz,lighting.light_positions[x+3].xyz)-pos_m;
 
-        mat4x3 light_c = mat4x3(light_colors[x].xyz,light_colors[x+1].xyz,light_colors[x+2].xyz,light_colors[x+3].xyz);
-        vec4   light_r = vec4(light_positions[x].w,light_positions[x+1].w,light_positions[x+2].w,light_positions[x+3].w);
-        vec4   light_p = vec4(light_colors[x].w,light_colors[x+1].w,light_colors[x+2].w,light_colors[x+3].w);
+        mat4x3 light_c = mat4x3(lighting.light_colors[x].xyz,lighting.light_colors[x+1].xyz,lighting.light_colors[x+2].xyz,lighting.light_colors[x+3].xyz);
+        vec4   light_r = vec4(lighting.light_positions[x].w,lighting.light_positions[x+1].w,lighting.light_positions[x+2].w,lighting.light_positions[x+3].w);
+        vec4   light_p = vec4(lighting.light_colors[x].w,lighting.light_colors[x+1].w,lighting.light_colors[x+2].w,lighting.light_colors[x+3].w);
 
         vec4 l_dist = packed_length(light);
         light = packed_divide(light,l_dist);
@@ -225,3 +225,4 @@ float ar_fog(in float fog_density){
                  (-fog_density*fog_density*z*z  ),0.,1.);
 }
 #endif
+
