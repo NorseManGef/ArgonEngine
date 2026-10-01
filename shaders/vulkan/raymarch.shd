@@ -1,0 +1,294 @@
+#stages VERTEX FRAGMENT
+
+#version 450
+
+layout(set = 0, binding = 0) uniform Scene {
+    mat4 projection_matrix;
+    mat4 view_matrix;
+    mat4 matrix;
+    float time;
+    float scale;
+} scene;
+
+#ifdef VERTEX_SHADER
+
+layout(location = 0) in vec2 position;
+layout(location = 1) in vec2 texture_coord;
+
+layout(location = 0) out vec2 texVarying;
+
+void main()
+{
+    gl_Position = scene.projection_matrix*scene.view_matrix*scene.matrix*vec4(position, 0.0, 1.0);
+     texVarying = texture_coord;
+}
+#endif
+#ifdef FRAGMENT_SHADER
+
+layout(location = 0) in vec2 texVarying;
+
+layout(location = 0) out vec4 outColor;
+
+vec3 light = vec3(0.0, 1.0, -4.0);
+
+vec3 repeat(vec3 p, vec3 c)
+{
+    return mod(p, c) - 0.5 * c;
+}
+
+vec4 box(vec3 p, vec3 b, vec3 material)
+{
+    vec3 d = abs(p) - b;
+    return vec4(
+        min(max(d.x, max(d.y, d.z)), 0.0) + length(max(d, 0.0)),
+        material
+    );
+}
+
+vec4 torus(vec3 p, vec2 t, vec3 material)
+{
+    vec2 q = vec2(length(p.xz) - t.x, p.y);
+    return vec4(length(q) - t.y, material);
+}
+
+vec4 sphere(vec3 p, float r, vec3 material)
+{
+    return vec4(length(p) - r, material);
+}
+
+vec2 rotate(vec2 p, float theta)
+{
+    float c = cos(theta);
+    float s = sin(theta);
+
+    return vec2(
+        c * p.x + s * p.y,
+        c * p.y - s * p.x
+    );
+}
+
+float distance_sq(vec3 a, vec3 b)
+{
+    vec3 t = a - b;
+    return dot(t, t);
+}
+
+float fractal(vec3 z)
+{
+    float s = 1.0;
+
+    vec3 a1 = vec3(1.0, 1.0, 1.0) * s;
+    vec3 a2 = vec3(-1.0, -1.0, 1.0) * s;
+    vec3 a3 = vec3(1.0, -1.0, -1.0) * s;
+    vec3 a4 = vec3(-1.0, 1.0, -1.0) * s;
+
+    vec3 c;
+    float n = 0.0;
+    float dist = 1.0e9;
+    float d;
+    float Scale = 2.0;
+
+    for (int i = 0; i < 15; ++i)
+    {
+        c = a1;
+        dist = distance_sq(z, a1);
+
+        d = distance_sq(z, a2);
+        if (d < dist)
+        {
+            c = a2;
+            dist = d;
+        }
+
+        d = distance_sq(z, a3);
+        if (d < dist)
+        {
+            c = a3;
+            dist = d;
+        }
+
+        d = distance_sq(z, a4);
+        if (d < dist)
+        {
+            c = a4;
+            dist = d;
+        }
+
+        z = Scale * z - c * (Scale - 1.0);
+        n += 1.0;
+    }
+
+    return length(z) * pow(Scale, -n);
+}
+
+float mandelbulb(vec3 pos)
+{
+    float d = sphere(pos, 1.1, vec3(1.0)).r;
+
+    if (d > 0.3)
+        return d;
+
+    vec3 z = pos;
+    float dr = 1.0;
+    float r = 0.0;
+    float Power = 8.0;
+    float Bailout = 10.0;
+
+    for (int i = 0; i < 10; ++i)
+    {
+        r = length(z);
+
+        if (r > Bailout)
+            break;
+
+        float zr = pow(r, Power - 1.0);
+
+        dr = zr * Power * dr + 1.0;
+
+        float theta = acos(clamp(z.z / r, -1.0, 1.0)) * Power;
+        float phi = atan(z.y, z.x) * Power;
+
+        z = r * zr *
+            vec3(
+                sin(theta) * cos(phi),
+                sin(theta) * sin(phi),
+                cos(theta)
+            ) + pos;
+    }
+
+    return 0.5 * log2(r) * r / dr;
+}
+
+void sphereFold(inout vec3 z, inout float dz)
+{
+    float r2 = dot(z, z);
+    float minRadius2 = 5.0;
+    float fixedRadius2 = 50.0;
+
+    if (r2 < minRadius2)
+    {
+        float temp = fixedRadius2 / minRadius2;
+
+        z *= temp;
+        dz *= temp;
+    }
+    else if (r2 < fixedRadius2)
+    {
+        float temp = fixedRadius2 / r2;
+
+        z *= temp;
+        dz *= temp;
+    }
+}
+
+void boxFold(inout vec3 z, inout float dz)
+{
+    float foldingLimit = 20.0;
+
+    z = clamp(z, -foldingLimit, foldingLimit) * 2.0 - z;
+}
+
+float mandelbox(vec3 z)
+{
+    float Scale = 4.0;
+    const int Iterations = 15;
+
+    vec3 offset = z;
+    float dr = 1.0;
+
+    for (int n = 0; n < Iterations; ++n)
+    {
+        boxFold(z, dr);
+        sphereFold(z, dr);
+
+        z = Scale * z + offset;
+        dr = dr * abs(Scale) + 1.0;
+    }
+
+    float r = length(z);
+
+    return r / abs(dr);
+}
+
+vec4 de(vec3 p)
+{
+    p.xz = rotate(p.xz, scene.time * 0.2 * scene.scale);
+
+    return vec4(mandelbulb(p), vec3(1.0));
+}
+
+vec3 get_normal(vec3 p)
+{
+    vec3 xDir = vec3(0.001, 0.0, 0.0);
+    vec3 yDir = vec3(0.0, 0.001, 0.0);
+    vec3 zDir = vec3(0.0, 0.0, 0.001);
+
+    return normalize(
+        vec3(
+            de(p + xDir).r - de(p - xDir).r,
+            de(p + yDir).r - de(p - yDir).r,
+            de(p + zDir).r - de(p - zDir).r
+        )
+    );
+}
+
+void main()
+{
+    light.x = cos(scene.time * 0.4) * 5.0;
+
+    float dist = 1.0;
+    float total_dist = 1.0;
+    float iterations = 0.0;
+
+    vec3 pos = vec3(
+        texVarying - 0.5,
+        1.0 + scene.scale * 8.0
+    );
+
+    vec3 dir = normalize(vec3(-pos.xy, -1.0));
+
+    const float max_its = 80.0;
+
+    for (int i = 0; i < 80; ++i)
+    {
+        if (!(dist > 0.0005 * iterations &&
+              dist * iterations < 100.0))
+            break;
+
+        dist = de(pos).r;
+
+        iterations += 1.0;
+        total_dist += dist;
+        pos += dir * dist;
+    }
+
+    vec3 n = get_normal(pos);
+
+    float mult = 1.0;
+
+    if (dist > 0.001 * iterations)
+        mult = 0.0;
+
+    float ao = 1.0 - iterations * 0.044;
+
+    vec3 lightDir = normalize(vec3(0.0, 10.0, -4.0) - pos);
+    vec3 halfv = normalize(lightDir + dir);
+
+    float NdotL = clamp(dot(n, lightDir), 0.0, 1.0);
+
+    vec3 c =
+        (NdotL * vec3(0.2, 1.0, 0.3) + 0.3) *
+        vec3(0.2, 0.8, 1.0);
+
+    if (NdotL > 0.0)
+    {
+        float NdotH = clamp(dot(n, halfv), 0.0, 1.0);
+
+        c += pow(NdotH, 100.0) *
+             vec3(0.2, 1.0, 0.3);
+    }
+
+    outColor = vec4(c * ao * mult, 1.0);
+}
+
+#endif
