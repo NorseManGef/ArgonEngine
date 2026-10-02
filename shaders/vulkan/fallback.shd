@@ -1,0 +1,70 @@
+#stages VERTEX FRAGMENT
+
+#version 450
+
+
+layout(set = 0, binding = 0) uniform Material
+{
+    vec4 specular;
+    vec4 color;
+};
+
+#ifdef VERTEX_SHADER
+
+layout(location = 0) in vec3 PositionAttribute;
+layout(location = 1) in vec3 NormalAttribute;
+
+layout(location = 0) out vec3 ambient;
+layout(location = 1) out vec3 normal;
+layout(location = 2) out vec4 ecPos;
+
+uniform mat4 view_normal;
+
+void main()
+{
+    ecPos = matrix * vec4(PositionAttribute, 1.0);
+
+    gl_Position = projection_matrix * (view_matrix * ecPos);
+
+#ifndef DEPTH_ONLY
+    ambient = vec3(0.2, 0.1, 0.05) * color.xyz;
+    normal = NormalAttribute * mat3(normal_matrix);
+#endif
+}
+
+#endif
+
+#ifdef FRAGMENT_SHADER
+
+layout(location = 0) in vec3 ambient;
+layout(location = 1) in vec3 normal;
+layout(location = 2) in vec4 ecPos;
+
+layout(location = 0) out vec4 outColor;
+
+void main()
+{
+#ifndef DEPTH_ONLY
+    vec3 pos = ecPos.xyz / ecPos.w;
+    vec3 n = normalize(normal);
+    vec3 view = normalize(camera_pos - pos);
+
+    vec3 c = calculate_lighting_blinn_phong(
+        pos,
+        n,
+        view,
+        ambient,
+        vec3(1.0),
+        color.rgb,
+        100.0
+    );
+
+    outColor = vec4(c, 1.0);
+#endif
+
+#ifdef DEPTH_ONLY
+    outColor = vec4(color.xyz, origin.z);
+#endif
+}
+
+#endif
