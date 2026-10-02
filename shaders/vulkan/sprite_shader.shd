@@ -1,0 +1,64 @@
+#stages VERTEX FRAGMENT
+
+#version 450
+
+#ifdef VERTEX_SHADER
+
+layout(set = 0, binding = 0, std140) uniform Matrices
+{
+    mat4 projection_matrix;
+    mat4 view_matrix;
+    mat4 matrix;
+} matrices;
+
+layout(set = 0, binding = 1, std140) uniform Color
+{
+    vec4 color;
+} colorData;
+
+layout(location = 0) in mediump vec2 position;
+layout(location = 1) in mediump vec2 texture_coord;
+
+layout(location = 0) out mediump vec2 texVarying;
+
+void main()
+{
+    gl_Position =
+        matrices.projection_matrix *
+        matrices.view_matrix *
+        matrices.matrix *
+        vec4(position, 0.0, 1.0);
+
+    texVarying = texture_coord;
+}
+
+#endif
+
+#ifdef FRAGMENT_SHADER
+
+layout(set = 0, binding = 1, std140) uniform Color
+{
+    vec4 color;
+} colorData;
+
+layout(set = 0, binding = 2) uniform sampler2D textureSampler;
+
+layout(location = 0) in mediump vec2 texVarying;
+
+layout(location = 0) out mediump vec4 fragColor;
+
+void main()
+{
+#ifndef DEPTH_ONLY
+
+    vec4 sampledColor = texture(textureSampler, texVarying);
+    vec4 finalColor = colorData.color * sampledColor;
+
+    finalColor.a = 1.0;
+
+    fragColor = finalColor;
+
+#endif
+}
+
+#endif

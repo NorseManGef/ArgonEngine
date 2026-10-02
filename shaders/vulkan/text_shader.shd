@@ -1,0 +1,148 @@
+#stages VERTEX FRAGMENT
+
+#version 450
+
+#ifdef VERTEX_SHADER
+
+layout(set = 0, binding = 0, std140) uniform Matrices
+{
+    mat4 projection_matrix;
+    mat4 view_matrix;
+    mat4 matrix;
+} matrices;
+
+layout(location = 0) in mediump vec2 position;
+layout(location = 1) in mediump vec2 texture_coord;
+layout(location = 2) in mediump vec4 map_location;
+
+layout(location = 0) out mediump vec2 texVarying;
+layout(location = 1) out mediump vec3 subpixelA;
+layout(location = 2) out mediump vec3 subpixelB;
+layout(location = 3) out mediump vec4 map_c;
+layout(location = 4) out mediump float size;
+
+void main()
+{
+    mat4 m = matrices.projection_matrix *
+             matrices.view_matrix *
+             matrices.matrix;
+
+    vec4 v1 = m * (
+        vec4(1.0, 1.0, 0.0, 1.0) +
+        vec4(position, 0.0, 0.0)
+    );
+
+    vec4 v2 = m * (
+        vec4(-1.0, -1.0, 0.0, 1.0) +
+        vec4(position, 0.0, 0.0)
+    );
+
+    size = distance(
+        v1.xyz / v1.w,
+        v2.xyz / v2.w
+    );
+
+    gl_Position = m * vec4(position, 0.0, 1.0);
+
+    if (v1.x - v2.x > 0.0)
+    {
+        subpixelA = vec3(0.4, 0.7, 1.2);
+        subpixelB = vec3(1.2, 0.7, 0.4);
+    }
+    else
+    {
+        subpixelA = vec3(1.2, 0.7, 0.4);
+        subpixelB = vec3(0.4, 0.7, 1.2);
+    }
+
+    texVarying = texture_coord;
+    map_c = map_location;
+}
+
+#endif
+
+#ifdef FRAGMENT_SHADER
+
+layout(set = 0, binding = 1) uniform sampler2D texture;
+
+layout(set = 0, binding = 2, std140) uniform Material
+{
+    vec4 color;
+    float smoothness;
+    float metalness;
+} material;
+
+layout(location = 0) in mediump vec2 texVarying;
+layout(location = 1) in mediump vec3 subpixelA;
+layout(location = 2) in mediump vec3 subpixelB;
+layout(location = 3) in mediump vec4 map_c;
+layout(location = 4) in mediump float size;
+
+layout(location = 0) out mediump vec4 fragColor;
+
+void main()
+{
+#ifndef DEPTH_ONLY
+
+    float inverse_size = 0.1 / (0.01 + size);
+    vec2 offset = vec2(0.002, 0.0005) * inverse_size;
+    float antialias = inverse_size;
+    float cutoff = 0.8;
+
+    vec4 texMain = texture(
+        texture,
+        texVarying
+    );
+
+    vec4 texRed = texture(
+        texture,
+        texVarying + offset
+    );
+
+    vec4 texBlue = texture(
+        texture,
+        texVarying - offset
+    );
+
+    float v = dot(texMain, map_c);
+    float v2 = dot(texRed, map_c);
+    float v3 = dot(texBlue, map_c);
+
+    float main = smoothstep(
+        cutoff - antialias,
+        cutoff + antialias,
+        v
+    );
+
+    float red = smoothstep(
+        cutoff - antialias,
+        cutoff + antialias,
+        v2
+    );
+
+    float blue = smoothstep(
+        cutoff - antialias,
+        cutoff + antialias,
+        v3
+    );
+
+    float scale = max(inverse_size, 1.0);
+
+    fragColor.a =
+        (red * 0.4 +
+         blue * 0.4 +
+         main * 0.5) *
+        scale *
+        material.color.a;
+
+    fragColor.rgb =
+        (vec3(main) * 0.6 +
+         red * subpixelA * 0.6 +
+         blue * subpixelB * 0.6) *
+        scale *
+        material.color.rgb;
+
+#endif
+}
+
+#endif
