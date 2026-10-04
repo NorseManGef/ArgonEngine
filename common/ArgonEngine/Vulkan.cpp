@@ -942,6 +942,9 @@ void Vulkan::Pipeline::clean() {
             _desc_layout = VK_NULL_HANDLE;
         }
 
+        _current_vertex_shader = nullptr;
+        _current_fragment_shader = nullptr;
+
         _binding_desc = {};
         _attribs.clear();
     }
@@ -2679,14 +2682,33 @@ void Vulkan::RealTexFormat::set_format(int flag) {
 }
 
 void Vulkan::clean() {
-    _sync->clean();
-    _render_pass->clean();
-    _command_pool->clean();
+    for(auto s : shaders) {
+        for(auto i : s.second.stages) {
+            if(i.module != VK_NULL_HANDLE) {
+                vkDestroyShaderModule(_device->_device, i.module, nullptr);
+                i.module = VK_NULL_HANDLE;
+            }
+        }
+    }
+    if(current_shader){
+        for(auto i : current_shader->stages) {
+            if(i.module != VK_NULL_HANDLE) {
+                vkDestroyShaderModule(_device->_device, i.module, nullptr);
+                i.module = VK_NULL_HANDLE;
+            }
+        }
+        delete current_shader;
+    };
+    if(_sync)delete _sync;
+    if(_render_pass)delete _render_pass;
+    if(_command_pool)delete _command_pool;
     for(auto p : _pipelines) {
         p.second.clean();
     }
-    _device->clean();
-    _instance->clean();
+    _pipelines.clear();
+    if(_instance)delete _instance;
+    uniform_buffer.clean();
+    if(_device)delete _device;
 }
 
   ///////////////////////////////////////

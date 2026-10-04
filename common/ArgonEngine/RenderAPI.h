@@ -75,6 +75,8 @@ namespace Argon{
         virtual void cache_array(std::shared_ptr<VertexArray> array)=0;
         ///Cache a material for use. This must be called every frame before a material is used or when the shader is changed.
         virtual void cache_material(Material& state, const VirtualResource&  shader)=0;
+
+        virtual ~RenderAPI()=0;
     };
 }
 

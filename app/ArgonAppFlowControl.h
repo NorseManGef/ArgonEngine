@@ -10,6 +10,7 @@
 
 #ifndef Neon_Rush_NeonRushFlowControl_h
 #define Neon_Rush_NeonRushFlowControl_h
+#include "ArgonEngine/ArgonInit.h"
 #include "ArgonEngine/Thread.h"
 #include "ArgonEngine/Graphics.h"
 #include "ArgonAppBase.h"
@@ -82,6 +83,11 @@ public:
         Argon::AudioNode::root_nodes[1]=peak2;
        // Argon::AudioNode::root_nodes[0]=opus->left;
         //Argon::AudioNode::root_nodes[1]=opus->right;
+
+        if(Argon::renderAPI == nullptr) {
+            PLOGF << "Renderer is null";
+            Argon::terminate_engine();
+        }
     }
     void animate();
     void set_node(std::shared_ptr<Argon::Node> node){

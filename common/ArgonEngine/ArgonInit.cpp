@@ -74,6 +74,7 @@
 
 namespace Argon{
     static void (*manual_redraw)()=NULL;
+    static void (*swap_buffers)()=NULL;
     bool run=true;
     Vector2f last_screen;
     Vector2f last_position;
@@ -153,14 +154,17 @@ namespace Argon{
     }
 
 #ifdef USE_SDL
-    static SDL_GLContext context;
+    static SDL_GLContext GLcontext;
     static SDL_Window *win = nullptr;
     bool handle_event(void* userdata,SDL_Event* event);
 
     void terminate_engine(int status){
-        if (context) {
+        if (GLcontext) {
             /* SDL_GL_MakeCurrent(0, NULL); *//* doesn't do anything */
-            SDL_GL_DestroyContext(context);
+            SDL_GL_DestroyContext(GLcontext);
+        }
+        if (renderAPI) {
+            delete renderAPI;
         }
         SDL_Quit();
 
@@ -384,13 +388,13 @@ namespace Argon{
             // Create an OpenGL context associated with the window.
             //SDL_GLContext glcontext = SDL_GL_CreateContext(win);
 
-            context=SDL_GL_CreateContext(win);
+            GLcontext=SDL_GL_CreateContext(win);
             PLOGI << "OpenGL Version: " << glGetString(GL_VERSION);
-            if(!context) {
+            if(!GLcontext) {
                 PLOGF << "SDL_GL_CreateContext failed: " << SDL_GetError();
                 terminate_engine();
             }
-            SDL_GL_MakeCurrent(win, context);
+            SDL_GL_MakeCurrent(win, GLcontext);
 
             int w, h;
             SDL_GetWindowSizeInPixels(win, &w, &h);
@@ -415,6 +419,7 @@ namespace Argon{
             }
             Argon::OpenGLES* ogl;
             renderAPI = ogl;
+            swap_buffers = &swap_buffers_ogl;
 #endif
         } else if(renderer == Renderer::VULKAN) {
 #ifdef USE_VULKAN
@@ -448,6 +453,7 @@ namespace Argon{
             vulkan->init_vulkan(required_extensions, win, Screen::logical_size[0], Screen::logical_size[1]);
 
             renderAPI = vulkan;
+            swap_buffers = &swap_buffers_vulkan;
 #endif
         }
         
@@ -694,7 +700,7 @@ namespace Argon{
 
             swap_buffers();
 
-            SDL_GL_MakeCurrent(win, context);
+            SDL_GL_MakeCurrent(win, GLcontext);
             SDL_GL_SwapWindow(win);
         }
         if(last_minimum_size!=Screen::minimum_size){
@@ -710,7 +716,7 @@ namespace Argon{
 
             manual_redraw();
 
-            SDL_GL_MakeCurrent(win, context);
+            SDL_GL_MakeCurrent(win, GLcontext);
             SDL_GL_SwapWindow(win);
         }
         if(last_position!=Screen::position){
@@ -723,7 +729,8 @@ namespace Argon{
 
     }
     Timer t;
-    void swap_buffers(){
+    #ifdef USE_OPENGL
+    void swap_buffers_ogl(){
         static double accumulator = 0;
         accumulator -= t.delta_time();
         //Linear IFR based accumulator to approximate frame time.
@@ -733,11 +740,23 @@ namespace Argon{
         }
         accumulator += 0.01666666666666666;
         if (accumulator < -0.5)accumulator = -0.5;
-        #ifdef USE_OPENGL
-        SDL_GL_MakeCurrent(win, context);
+        SDL_GL_MakeCurrent(win, GLcontext);
         SDL_GL_SwapWindow(win);
-        #endif
     }
+    #endif
+    #ifdef USE_VULKAN
+    void swap_buffers_vulkan(){
+        static double accumulator = 0;
+        accumulator -= t.delta_time();
+        //Linear IFR based accumulator to approximate frame time.
+        while(accumulator > 0.0166666666666666666){
+            Argon::Thread::sleep(accumulator);
+            accumulator -= t.delta_time();
+        }
+        accumulator += 0.01666666666666666;
+        if (accumulator < -0.5)accumulator = -0.5;
+    }
+    #endif
 #endif
 
 }

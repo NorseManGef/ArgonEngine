@@ -766,7 +766,7 @@ class Vulkan:public RenderAPI {
         }
     }
 
-    typedef struct ShaderBinary {
+    struct ShaderBinary {
         uint32_t* data = nullptr;
         size_t word_count = 0;
 
@@ -778,7 +778,7 @@ class Vulkan:public RenderAPI {
             data = nullptr;
             word_count = 0;
         }
-    } ShaderBinary;
+    };
 
     struct shader_stage_info {
         std::string_view define;

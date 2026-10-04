@@ -349,6 +349,10 @@ public:
     }
     void draw_vertex_array(std::shared_ptr<VertexArray> array,int end_vert, int d);
     void update_resources();
+
+    void end_frame(){}
+
+    ~OpenGLES() = default;
 };
 };
 
