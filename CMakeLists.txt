@@ -1016,6 +1016,7 @@ add_compile_definitions(argonapp
         HAVE_CLOCK_GETTIME
         ARGON_WINDOW_HIGH_PIXEL_DENSITY
         USE_VULKAN
+        USE_OPENGL
 )
 
 if(WAYLAND_FOUND)

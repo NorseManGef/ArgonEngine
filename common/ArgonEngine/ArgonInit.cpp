@@ -23,6 +23,7 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 #ifdef USE_OPENGL
+#include "ArgonEngine/OpenGLES.h"
 #ifndef USE_OPENGLES
 #include <SDL3/SDL_opengl.h>
 #endif
@@ -34,8 +35,14 @@
 
 #ifdef USE_VULKAN
 #include "ArgonEngine/Vulkan.h"
+#include <SDL3/SDL_vulkan.h>
 #endif
 
+#ifdef USE_VULKAN
+#ifdef USE_OPENGL
+#define DO_RENDERER_OPTS
+#endif
+#endif
 
 #ifdef PLATFORM_UNIX
 #include <unistd.h>
@@ -78,7 +85,7 @@ namespace Argon{
 
     void set_manual_redraw(void (*draw)()){manual_redraw=draw;}
 
-    static void InitVirtual(std::string organization_name, std::string app_name){
+    static void InitVirtual(std::string organization_name, std::string app_name, std::string shader_dir){
         PLOGN<<"Argon Engine";
         PLOGN<<"------------";
 
@@ -122,7 +129,7 @@ namespace Argon{
 
         VirtualResource::all_sources()["document:"]=new VirtualResourceIO(doc_dir,true);
         VirtualResource::all_sources()["resource:"]=new VirtualResourceIO(base+"resources",false);
-        VirtualResource::all_sources()["shader:"]=new VirtualResourceIO(base+"shaders",false);
+        VirtualResource::all_sources()["shader:"]=new VirtualResourceIO(base+"shaders"+shader_dir,false);
         VirtualResource::all_sources()["user:"]=
         VirtualResource::all_sources()["home:"]=new VirtualResourceIO(home,true);
         VirtualResource::all_sources()["save:"]=
@@ -243,12 +250,14 @@ namespace Argon{
         args::ValueFlag<std::string> ldir(logfileoptions, "log directory", "Name of a the log file directory.", args::Matcher{"logdir"},std::string(ARGON_LOG_DIR));
 
         args::ValueFlag<int> fcontroller(argparser, "controller", "Enable/disable controller (will not override developer options).", {"controller"},1);
-
+        
+        #ifdef DO_RENDERER_OPTS
         auto renderers = get_renderers();
         std::string rendererHelp = get_renderer_help();
-
+        
         args::MapFlag<std::string, Renderer> frenderer(argparser, "graphics", rendererHelp, {"graphics"}, renderers);
-
+        #endif
+        
         args::ValueFlag<int> fhpd(argparser, "HPD", "Enable High Pixel Density", {"hpd"}, 1);
 
         try{
@@ -290,9 +299,17 @@ namespace Argon{
             lognamer << fdir << '/' << fname;
             plog::init<plog::ArgonFormatter>(severity, lognamer.str().c_str(), ARGON_LOG_MAX_SIZE, ARGON_LOG_MAX_FILES);
         }
-
+        
+        #ifdef DO_RENDERER_OPTS
         Renderer renderer = frenderer.Matched() ? frenderer.Get() : Renderer::OGL;
-        // TODO: Use this value
+        #else
+        #ifdef USE_VULKAN
+        Renderer renderer = Renderer::VULKAN;
+        #endif
+        #ifdef USE_OPENGL
+        Renderer renderer = Renderer::OGL;
+        #endif
+        #endif
 
         bool hpd = fhpd.Matched() ? fhpd.Get() : 1;
 
@@ -324,7 +341,7 @@ namespace Argon{
             PLOGE << "Warning: VSync not enabled!\n" << SDL_GetError();
         }
 
-        InitVirtual(organization_name, app_name);
+        InitVirtual(organization_name, app_name, renderer_name(renderer));
         init_audio();
 
         SDL_Rect r;
@@ -334,64 +351,104 @@ namespace Argon{
         Screen::actual_size=Vector2f(r.w,r.h);
         last_full_screen=Screen::full_screen;
         last_screen=Screen::logical_size;
-        #ifndef OPENGL_AUTO_VERSIONING
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
-        #endif
 
-        SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+        if(renderer == Renderer::OGL) {
+#ifdef USE_OPENGL
+            #ifndef OPENGL_AUTO_VERSIONING
+            SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+            SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
+            #endif
 
-        SDL_PropertiesID props = SDL_CreateProperties();
-        SDL_SetStringProperty(props, SDL_PROP_WINDOW_CREATE_TITLE_STRING, "test");
-        SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X_NUMBER, Screen::position[0]);
-        SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_Y_NUMBER, Screen::position[1]);
-        SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, Screen::logical_size[0]);
-        SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, Screen::logical_size[1]);
-        
-        if(hpd) {
-            SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
-        }
-        else {
-            SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
-        }
+            SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 
-        win = SDL_CreateWindowWithProperties(props);
-        if(!win) {
-            PLOGF << "SDL_CreateWindowWithProperties failed: " << SDL_GetError();
-            terminate_engine();
-        }
+            SDL_PropertiesID props = SDL_CreateProperties();
+            SDL_SetStringProperty(props, SDL_PROP_WINDOW_CREATE_TITLE_STRING, "test");
+            SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X_NUMBER, Screen::position[0]);
+            SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_Y_NUMBER, Screen::position[1]);
+            SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, Screen::logical_size[0]);
+            SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, Screen::logical_size[1]);
+            
+            if(hpd) {
+                SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
+            }
+            else {
+                SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+            }
 
-        // Create an OpenGL context associated with the window.
-        //SDL_GLContext glcontext = SDL_GL_CreateContext(win);
+            win = SDL_CreateWindowWithProperties(props);
+            if(!win) {
+                PLOGF << "SDL_CreateWindowWithProperties failed: " << SDL_GetError();
+                terminate_engine();
+            }
 
-        context=SDL_GL_CreateContext(win);
-        PLOGI << "OpenGL Version: " << glGetString(GL_VERSION);
-        if(!context) {
-            PLOGF << "SDL_GL_CreateContext failed: " << SDL_GetError();
-            terminate_engine();
-        }
-        SDL_GL_MakeCurrent(win, context);
+            // Create an OpenGL context associated with the window.
+            //SDL_GLContext glcontext = SDL_GL_CreateContext(win);
 
-        int w, h;
-        SDL_GetWindowSizeInPixels(win, &w, &h);
-        Screen::framebuffer_size=Vector2f(w,h);
+            context=SDL_GL_CreateContext(win);
+            PLOGI << "OpenGL Version: " << glGetString(GL_VERSION);
+            if(!context) {
+                PLOGF << "SDL_GL_CreateContext failed: " << SDL_GetError();
+                terminate_engine();
+            }
+            SDL_GL_MakeCurrent(win, context);
+
+            int w, h;
+            SDL_GetWindowSizeInPixels(win, &w, &h);
+            Screen::framebuffer_size=Vector2f(w,h);
 
 #ifdef USE_GLEW
-        glewExperimental = GL_TRUE;
-        //SDL_GL_MakeCurrent(win, glcontext);
+            glewExperimental = GL_TRUE;
+            //SDL_GL_MakeCurrent(win, glcontext);
 
-        int code = 0;
-        if(GLEW_OK!=(code=glewInit())){
-            PLOGE << glewGetErrorString(code) << "\n" <<"GLEW Failed to init: "<< code;
-        };
-        if(!GLEW_VERSION_2_0){
-            PLOGW <<"OpenGL 2.0 is required";
-        };
+            int code = 0;
+            if(GLEW_OK!=(code=glewInit())){
+                PLOGE << glewGetErrorString(code) << "\n" <<"GLEW Failed to init: "<< code;
+            };
+            if(!GLEW_VERSION_2_0){
+                PLOGW <<"OpenGL 2.0 is required";
+            };
 #endif
-        if (SDL_GL_SetSwapInterval(-1)){}
-        else if (SDL_GL_SetSwapInterval(1)){}
-        else {
-            PLOGE << "Could not enable VSync: " << SDL_GetError();
+            if (SDL_GL_SetSwapInterval(-1)){}
+            else if (SDL_GL_SetSwapInterval(1)){}
+            else {
+                PLOGE << "Could not enable VSync: " << SDL_GetError();
+            }
+            Argon::OpenGLES* ogl;
+            renderAPI = ogl;
+#endif
+        } else if(renderer == Renderer::VULKAN) {
+#ifdef USE_VULKAN
+            Vulkan* vulkan;
+            SDL_PropertiesID props = SDL_CreateProperties();
+            SDL_SetStringProperty(props, SDL_PROP_WINDOW_CREATE_TITLE_STRING, "test");
+            SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X_NUMBER, Screen::position[0]);
+            SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_Y_NUMBER, Screen::position[1]);
+            SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, Screen::logical_size[0]);
+            SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, Screen::logical_size[1]);
+            
+            if(hpd) {
+                SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
+            }
+            else {
+                SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
+            }
+
+            win = SDL_CreateWindowWithProperties(props);
+            if(!win) {
+                PLOGF << "SDL_CreateWindowWithProperties failed: " << SDL_GetError();
+                terminate_engine();
+            }
+
+            uint32_t ext_count;
+
+            auto instance_extensions = SDL_Vulkan_GetInstanceExtensions(&ext_count);
+
+            std::vector<const char*> required_extensions(instance_extensions, instance_extensions+ext_count);
+
+            vulkan->init_vulkan(required_extensions, win, Screen::logical_size[0], Screen::logical_size[1]);
+
+            renderAPI = vulkan;
+#endif
         }
         
         SDL_SetEventFilter(handle_event, NULL);
@@ -446,10 +503,6 @@ namespace Argon{
             case SDLK_NUMLOCKCLEAR:return kInputIDNumLock;
             case SDLK_PRINTSCREEN:return kInputIDPrintScreen;
             case SDLK_PAUSE:return kInputIDPause;
-
-
-
-
         }
 
 

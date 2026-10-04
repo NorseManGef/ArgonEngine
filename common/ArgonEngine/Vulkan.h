@@ -4,10 +4,13 @@
  * @author Garrett Rosende
  **/
 
+#pragma once
+
 #include "ArgonEngine/ArgonInit.h"
 #include "ArgonEngine/Utility.h"
 #include "RenderAPI.h"
 #include "RenderSystem.h"
+#include "Hardware.h"
 #include "vulkan/vulkan_core.h"
 #include <vulkan/vulkan.h>
 #include <plog/Log.h>
@@ -16,6 +19,7 @@
 #include <spirv-tools/libspirv.h>
 #include <optional>
 #include <set>
+#include <SDL3/SDL_vulkan.h>
 
 #ifdef USE_VULKAN
 #define MAX_FRAMES_IN_FLIGHT 2
@@ -231,6 +235,8 @@ class Vulkan:public RenderAPI {
         VkShaderModule *_current_fragment_shader = VK_NULL_HANDLE;
 
         VkRenderPass _current_render_pass;
+
+        uint32_t _last_frame = 0;
 
         void create_graphics_pipeline(VkDevice device,
                                       VkRenderPass render_pass,
@@ -807,9 +813,8 @@ public:
         clean();
     }
 
-    void init_vulkan(const std::vector<const char*>& required_extensions, VkSurfaceKHR surface,
-                     uint32_t width, uint32_t height, uint32_t queue_family_index, VkFormat color_format,
-                     VkFormat depth_format, VkSampleCountFlagBits msaa_samples = VK_SAMPLE_COUNT_1_BIT,
+    void init_vulkan(const std::vector<const char*>& required_extensions, SDL_Window* window,
+                     uint32_t width, uint32_t height, VkSampleCountFlagBits msaa_samples = VK_SAMPLE_COUNT_1_BIT,
                      uint32_t max_frames_in_flight = MAX_FRAMES_IN_FLIGHT,
                      bool allow_command_pool_reset = true, bool command_pool_transient = false);
 

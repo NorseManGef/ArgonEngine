@@ -20,9 +20,9 @@
 namespace Argon{
     /**
      * @brief The RenderAPI class describes the interface between the engine and an external rasterizer
-     * such as OpenGL or DirectX.
+     * such as OpenGL or Vulkan.
      * @details
-     * All functions provided by this class must be implemented, but additional functions may be provided
+     * Most functions provided by this class must be implemented, but additional functions may be provided
      * by the API which can be accessed by a dynamic cast to the subclass.
      *
      * By using the RenderAPI class, Renderers can remain cross platform.
@@ -63,6 +63,10 @@ namespace Argon{
         virtual void pre_draw(){}
         ///Do all the stuff we need to do after our draw calls
         virtual void post_draw(){}
+        ///Do all the stuff we need to do before each frame
+        virtual void begin_frame(){}
+        ///Do all the stuff we need to do after each frame
+        virtual void end_frame(){}
         ///Clear the current FBO
         virtual void clear(bool color, bool depth, bool stencil)=0;
         ///Cache a texture for use. This must be called every frame before a texture is used.

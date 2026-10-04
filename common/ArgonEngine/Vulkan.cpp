@@ -525,7 +525,7 @@ VkPresentModeKHR Vulkan::Device::choose_present_mode(const std::vector<VkPresent
         if(a == VK_PRESENT_MODE_IMMEDIATE_KHR) return a;
     }
 
-    // Fow now we use regular vsync as a fallback as it is guaranteed to be supported.
+    // For now we use regular vsync as a fallback as it is guaranteed to be supported.
     return VK_PRESENT_MODE_FIFO_KHR;
 }
 
@@ -2413,6 +2413,7 @@ void Vulkan::TexturePrim::create_sampler(VkPhysicalDevice physical_device) {
 
     VkResult result = vkCreateSampler(_device, &samplerInfo, nullptr, &_sampler);
 
+
     if(result != VK_SUCCESS) {
         PLOGF << "Vulkan: Failed to create texture sampler";
         terminate_engine();
@@ -2423,13 +2424,18 @@ void Vulkan::TexturePrim::create_sampler(VkPhysicalDevice physical_device) {
  // UTIL ///////////////////////////////
 ///////////////////////////////////////
 
-void Vulkan::init_vulkan(const std::vector<const char*>& required_extensions, VkSurfaceKHR surface,
-                         uint32_t width, uint32_t height, uint32_t queue_family_index, VkFormat color_format,
-                         VkFormat depth_format, VkSampleCountFlagBits msaa_samples, uint32_t max_frames_in_flight, 
+void Vulkan::init_vulkan(const std::vector<const char*>& required_extensions, SDL_Window* window,
+                         uint32_t width, uint32_t height, VkSampleCountFlagBits msaa_samples, uint32_t max_frames_in_flight, 
                          bool allow_command_pool_reset, bool command_pool_transient) {
     _instance->create_instance(required_extensions);
+    
+    VkSurfaceKHR surface;
+    if(!SDL_Vulkan_CreateSurface(window, _instance->_instance, nullptr, &surface)) {
+        PLOGF << "SDL_Vulkan_CreateSurface failed: " << SDL_GetError();
+        terminate_engine();
+    }
+
     _device->create(_instance->_instance, surface, width, height);
-    _render_pass->create_render_pass(_device->_device, color_format, depth_format);
 
     VkFormat depth_formats[] = {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT};
     VkFormat chosen_depth_format;
@@ -2448,6 +2454,12 @@ void Vulkan::init_vulkan(const std::vector<const char*>& required_extensions, Vk
         PLOGF << "Vulkan: No suitable depth format found";
         terminate_engine();
     }
+
+    VkFormat color_formats[] = {};
+
+    _render_pass->create_render_pass(_device->_device, 
+                                     _device->choose_surface_format(_device->_swapchain_support.formats).surfaceFormat.format,
+                                     chosen_depth_format);
 
     VkImageCreateInfo imageInfo{
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
@@ -2533,7 +2545,7 @@ void Vulkan::init_vulkan(const std::vector<const char*>& required_extensions, Vk
     }
 
     _render_pass->create_framebuffers(_device->_image_views, depth_image_view, _device->_extent);
-    _command_pool->create_command_pool(_device->_device, queue_family_index);
+    _command_pool->create_command_pool(_device->_device, _device->_queue_families.graphics.value());
     for(int i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
         _cmd_buffers[i] = _command_pool->allocate_buffer();
     }
@@ -2585,6 +2597,11 @@ void Vulkan::begin_frame() {
     }
     ensure_recording();
     _sync->reset_frame_fence(_current_frame);
+    VkExtent2D extent{
+        .width = static_cast<uint32_t>(Argon::Screen::logical_size[0]),
+        .height = static_cast<uint32_t>(Argon::Screen::logical_size[1])
+    };
+    _device->_extent = extent;
 }
 
 void Vulkan::end_frame() {
@@ -2748,6 +2765,15 @@ void Vulkan::update_resources() {
             }
             it3 = shaders.erase(it3);
         }else ++it3;
+    }
+
+    std::map<Required_Pipeline_State, Pipeline>::iterator it4 = _pipelines.begin();
+    while(it4!=_pipelines.end()) {
+        it4->second._last_frame++;
+        if(it4->second._last_frame>30){
+            it4->second.clean();
+            it4 = _pipelines.erase(it4);
+        }else ++it4;
     }
 }
 
