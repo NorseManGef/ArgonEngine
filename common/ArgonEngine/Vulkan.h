@@ -12,6 +12,7 @@
 #include "RenderSystem.h"
 #include "Hardware.h"
 #include "vulkan/vulkan_core.h"
+#include <type_traits>
 #include <vulkan/vulkan.h>
 #include <plog/Log.h>
 #include <SPIRV-Reflect/spirv_reflect.h>
@@ -20,6 +21,7 @@
 #include <optional>
 #include <set>
 #include <SDL3/SDL_vulkan.h>
+#include <unordered_map>
 
 #ifdef USE_VULKAN
 #define MAX_FRAMES_IN_FLIGHT 2
@@ -205,6 +207,99 @@ class Vulkan:public RenderAPI {
 
         VkExtent2D _extent;
         VkDevice _device; // SHOULD ALWAYS BE THE DEVICE IN USE
+
+        bool operator==(const Required_Pipeline_State& b)const{
+            return
+            _current_blend == b._current_blend &&
+            _current_blend_enabled == b._current_blend_enabled &&
+            _current_topology == b._current_topology &&
+            _current_cull_mode == b._current_cull_mode &&
+            _current_front_face == b._current_front_face &&
+            _current_min_depth == b._current_min_depth &&
+            _current_max_depth == b._current_max_depth &&
+            _current_render_flags == b._current_render_flags &&
+
+            // compare the appropriate VkClearValue members
+
+            _current_viewport.x == b._current_viewport.x &&
+            _current_viewport.y == b._current_viewport.y &&
+            _current_viewport.width == b._current_viewport.width &&
+            _current_viewport.height == b._current_viewport.height &&
+            _current_viewport.minDepth == b._current_viewport.minDepth &&
+            _current_viewport.maxDepth == b._current_viewport.maxDepth &&
+
+            _current_vertex_shader == b._current_vertex_shader &&
+            _current_fragment_shader == b._current_fragment_shader &&
+            _current_render_pass == b._current_render_pass &&
+
+            _extent.width == b._extent.width &&
+            _extent.height == b._extent.height &&
+
+            _device == b._device;
+        }
+
+    };
+
+    struct Required_Pipeline_State_Hash {
+        std::size_t operator()(const Required_Pipeline_State& s) const {
+            std::size_t seed = 0;
+
+            auto hash_combine = [&seed](std::size_t value) {
+                seed ^= value + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+            };
+
+            hash_combine(std::hash<unsigned int>{}(s._current_blend));
+            hash_combine(std::hash<bool>{}(s._current_blend_enabled));
+
+            hash_combine(std::hash<std::underlying_type_t<VkPrimitiveTopology>>{}(
+                static_cast<std::underlying_type_t<VkPrimitiveTopology>>(
+                    s._current_topology)));
+
+            hash_combine(std::hash<VkCullModeFlags>{}(s._current_cull_mode));
+            hash_combine(std::hash<std::underlying_type_t<VkFrontFace>>{}(
+                static_cast<std::underlying_type_t<VkFrontFace>>(
+                    s._current_front_face)));
+
+            hash_combine(std::hash<float>{}(s._current_min_depth));
+            hash_combine(std::hash<float>{}(s._current_max_depth));
+
+            hash_combine(std::hash<unsigned int>{}(s._current_render_flags));
+
+            // VkClearValue
+            hash_combine(hash_bytes(s._current_clear_value));
+
+            // VkViewport
+            hash_combine(hash_bytes(s._current_viewport));
+
+            // Handles / pointers
+            hash_combine(std::hash<VkShaderModule*>{}(s._current_vertex_shader));
+            hash_combine(std::hash<VkShaderModule*>{}(s._current_fragment_shader));
+            hash_combine(std::hash<VkRenderPass>{}(s._current_render_pass));
+
+            // VkExtent2D
+            hash_combine(std::hash<uint32_t>{}(s._extent.width));
+            hash_combine(std::hash<uint32_t>{}(s._extent.height));
+
+            hash_combine(std::hash<VkDevice>{}(s._device));
+
+            return seed;
+        }
+
+        private:
+        template<typename T>
+        static std::size_t hash_bytes(const T& value) {
+            const auto* bytes =
+                reinterpret_cast<const unsigned char*>(&value);
+
+            std::size_t hash = 14695981039346656037ull;
+
+            for (std::size_t i = 0; i < sizeof(T); ++i) {
+                hash ^= bytes[i];
+                hash *= 1099511628211ull;
+            }
+
+            return hash;
+        }
     };
 
     struct Pipeline {
@@ -238,10 +333,7 @@ class Vulkan:public RenderAPI {
 
         uint32_t _last_frame = 0;
 
-        void create_graphics_pipeline(VkDevice device,
-                                      VkRenderPass render_pass,
-                                      VkShaderModule vertex_shader,
-                                      VkShaderModule fragment_shader);
+        void create_graphics_pipeline();
 
         void create_graphics_pipeline(Required_Pipeline_State state);
 
@@ -274,18 +366,6 @@ class Vulkan:public RenderAPI {
             _desc_layout(VK_NULL_HANDLE),
             _vertex_array(nullptr)
         {}
-
-        Pipeline(VkDevice device, VkRenderPass render_pass,
-                 VkShaderModule vertex_shader,
-                 VkShaderModule fragment_shader):
-            _device(device),
-            _pipeline(VK_NULL_HANDLE),
-            _pipeline_layout(VK_NULL_HANDLE),
-            _desc_layout(VK_NULL_HANDLE),
-            _vertex_array(nullptr)
-        {
-            create_graphics_pipeline(device, render_pass, vertex_shader, fragment_shader);
-        }
 
         ~Pipeline() {
             clean();
@@ -695,7 +775,7 @@ class Vulkan:public RenderAPI {
 
     Instance* _instance;
     Device* _device;
-    std::map<Required_Pipeline_State, Pipeline> _pipelines;
+    std::unordered_map<Required_Pipeline_State, Pipeline, Required_Pipeline_State_Hash> _pipelines;
     CommandPool* _command_pool;
     VkCommandBuffer _cmd_buffers[MAX_FRAMES_IN_FLIGHT];
     CmdState cmdstate = CmdState::Idle;
@@ -741,6 +821,18 @@ class Vulkan:public RenderAPI {
             );
         }
     }
+    
+    /* DOESN'T WORK WITH MATRIX TYPES
+    template<typename T>
+    void append_ints(const T& value, std::vector<int32_t>& out) {
+        if constexpr (std::is_arithmetic_v<T>) {
+            out.push_back(static_cast<int32_t>(value));
+        } else {
+            for (const auto& x : value) {
+                append_ints(x, out);
+            }
+        }
+    }
 
     template<typename map_strintern_T>
     inline void upload_uniform_data_piece_int(const map_strintern_T& uniform_piece, 
@@ -750,7 +842,7 @@ class Vulkan:public RenderAPI {
             std::vector<int32_t> vec;
             vec.reserve(it->second.size());
             for(auto i : it->second) {
-                vec.push_back(static_cast<int32_t>(i));
+                append_ints(it->second, vec);
             }
 
             auto& val = vec[0];
@@ -765,6 +857,7 @@ class Vulkan:public RenderAPI {
             );
         }
     }
+    */
 
     struct ShaderBinary {
         uint32_t* data = nullptr;

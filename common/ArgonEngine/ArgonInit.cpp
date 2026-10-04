@@ -74,7 +74,6 @@
 
 namespace Argon{
     static void (*manual_redraw)()=NULL;
-    static void (*swap_buffers)()=NULL;
     bool run=true;
     Vector2f last_screen;
     Vector2f last_position;

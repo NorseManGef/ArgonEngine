@@ -336,15 +336,19 @@ void Vulkan::Device::create_image_views() {
             .image = _images[i],
             .viewType = VK_IMAGE_VIEW_TYPE_2D, //TODO: determine if the needs to be settable by the user
             .format = _image_format,
-            .components.r = VK_COMPONENT_SWIZZLE_IDENTITY,
-            .components.g = VK_COMPONENT_SWIZZLE_IDENTITY,
-            .components.b = VK_COMPONENT_SWIZZLE_IDENTITY,
-            .components.a = VK_COMPONENT_SWIZZLE_IDENTITY,
-            .subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, // color data
-            .subresourceRange.baseMipLevel = 0,
-            .subresourceRange.levelCount = 1,
-            .subresourceRange.baseArrayLayer = 0,
-            .subresourceRange.layerCount = 1,
+            .components = {
+                .r = VK_COMPONENT_SWIZZLE_IDENTITY,
+                .g = VK_COMPONENT_SWIZZLE_IDENTITY,
+                .b = VK_COMPONENT_SWIZZLE_IDENTITY,
+                .a = VK_COMPONENT_SWIZZLE_IDENTITY,
+            },
+            .subresourceRange = {
+                 .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, // color data
+                 .baseMipLevel = 0,
+                 .levelCount = 1,
+                 .baseArrayLayer = 0,
+                 .layerCount = 1,
+            },
         };
 
         VkResult result = vkCreateImageView(_device, &createInfo, nullptr, &_image_views[i]);
@@ -599,31 +603,31 @@ void Vulkan::Pipeline::create_graphics_pipeline(Required_Pipeline_State state) {
     _viewport = state._current_viewport;
     _extent = state._extent;
     _current_render_pass = state._current_render_pass;
+    _device = state._device;
 
-    create_graphics_pipeline(state._device, state._current_render_pass, 
-                             *state._current_vertex_shader, 
-                             *state._current_fragment_shader);
+    create_graphics_pipeline();
 }
 
-void Vulkan::Pipeline::create_graphics_pipeline(VkDevice device, VkRenderPass render_pass,
-                                                VkShaderModule vertex_shader, 
-                                                VkShaderModule fragment_shader) {
-    if(device == VK_NULL_HANDLE) {
+void Vulkan::Pipeline::create_graphics_pipeline() {
+    if(_device == VK_NULL_HANDLE) {
         PLOGF << "Vulkan: Invalid device handle provided to graphics pipeline";
         terminate_engine();
     }
-    if(render_pass == VK_NULL_HANDLE) {
+    if(_current_render_pass == VK_NULL_HANDLE) {
         PLOGF << "Vulkan: Invalid render pass handle provided to graphics pipeline";
         terminate_engine();
     }
-    _device = device;
+
+    VkShaderModule vertex_shader;
+    VkShaderModule fragment_shader;
     
-    if(vertex_shader == VK_NULL_HANDLE || fragment_shader == VK_NULL_HANDLE) {
+    if((_current_vertex_shader == nullptr || _current_fragment_shader == nullptr) ||
+       (*_current_vertex_shader == VK_NULL_HANDLE || *_current_fragment_shader == VK_NULL_HANDLE)) {
         PLOGF << "Vulkan: Shaders were null";
         terminate_engine();
     } else {
-        *_current_vertex_shader = vertex_shader;
-        *_current_fragment_shader = fragment_shader;
+        vertex_shader = *_current_vertex_shader;
+        fragment_shader = *_current_fragment_shader;
     }
 
     VkPipelineShaderStageCreateInfo vertex_shader_stageInfo{
@@ -667,13 +671,13 @@ void Vulkan::Pipeline::create_graphics_pipeline(VkDevice device, VkRenderPass re
         .pColorBlendState = &color_blend_info,
         .pDynamicState = &dynamic_state_info,
         .layout = _pipeline_layout,
-        .renderPass = render_pass,
+        .renderPass = _current_render_pass,
         .subpass = 0, //TODO: Determine if this should be user-settable
         .basePipelineHandle = VK_NULL_HANDLE, //TODO: Implement base pipelines if feasible for better performance
         .basePipelineIndex = -1,
     };
 
-    VkResult result = vkCreateGraphicsPipelines(device,
+    VkResult result = vkCreateGraphicsPipelines(_device,
                                                 VK_NULL_HANDLE,
                                                 1,
                                                 &pipeline_createInfo,
@@ -685,8 +689,8 @@ void Vulkan::Pipeline::create_graphics_pipeline(VkDevice device, VkRenderPass re
         terminate_engine();
     }
 
-    vkDestroyShaderModule(device, vertex_shader, nullptr);
-    vkDestroyShaderModule(device, fragment_shader, nullptr);
+    vkDestroyShaderModule(_device, vertex_shader, nullptr);
+    vkDestroyShaderModule(_device, fragment_shader, nullptr);
 }
 
 
@@ -1867,9 +1871,9 @@ void Vulkan::RenderPass::create_render_pass(VkDevice device, VkFormat color_form
     VkSubpassDependency2 subpass_dependency{
         .sType = VK_STRUCTURE_TYPE_SUBPASS_DEPENDENCY_2,
         .srcSubpass = VK_SUBPASS_EXTERNAL,
-        .srcSubpass = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | 
-                      VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
         .dstSubpass = 0,
+        .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | 
+                      VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
         .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
                         VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
         .srcAccessMask = 0,
@@ -2277,9 +2281,11 @@ void Vulkan::TexturePrim::create_image(VkDevice device, VkPhysicalDevice physica
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
         .imageType = VK_IMAGE_TYPE_2D,
         .format = format.actual_format,
-        .extent.width = width,
-        .extent.height = height,
-        .extent.depth = 1,
+        .extent = {
+            .width = width,
+            .height = height,
+            .depth = 1,
+        },
         .mipLevels = 1,
         .arrayLayers = 1,
         .samples = VK_SAMPLE_COUNT_1_BIT,
@@ -2333,11 +2339,13 @@ void Vulkan::TexturePrim::create_image_view() {
         .image = _image,
         .viewType = VK_IMAGE_VIEW_TYPE_2D,
         .format = _format,
-        .subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-        .subresourceRange.baseMipLevel = 0,
-        .subresourceRange.levelCount = 1,
-        .subresourceRange.baseArrayLayer = 0,
-        .subresourceRange.layerCount = 1,
+        .subresourceRange = {
+             .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+             .baseMipLevel = 0,
+             .levelCount = 1,
+             .baseArrayLayer = 0,
+             .layerCount = 1,
+        },
     };
 
     VkResult result = vkCreateImageView(_device, &viewInfo, nullptr, &_view);
@@ -2364,13 +2372,15 @@ void Vulkan::TexturePrim::upload_data(VkCommandBuffer buffer,
         .bufferOffset = 0,
         .bufferRowLength = 0,
         .bufferImageHeight = 0,
-        .imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-        .imageSubresource.mipLevel = 0,
-        .imageSubresource.baseArrayLayer = 0,
-        .imageSubresource.layerCount = 1,
+        .imageSubresource = {
+	        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .mipLevel = 0,
+            .baseArrayLayer = 0,
+            .layerCount = 1,
+		},
         .imageOffset = {0,0,0},
         .imageExtent = {_width, _height, 1},
-    };
+    }; 
 
     vkCmdCopyBufferToImage(buffer, staging._buffer, _image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
@@ -2386,11 +2396,13 @@ void Vulkan::TexturePrim::upload_data(VkCommandBuffer buffer,
         .srcQueueFamilyIndex = 0,
         .dstQueueFamilyIndex = 0,
         .image = _image,
-        .subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-        .subresourceRange.baseMipLevel = 0,
-        .subresourceRange.levelCount = 1,
-        .subresourceRange.baseArrayLayer = 0,
-        .subresourceRange.layerCount = 1,
+        .subresourceRange = {
+            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .baseMipLevel = 0,
+            .levelCount = 1,
+            .baseArrayLayer = 0,
+            .layerCount = 1,
+        },
     };
 
     CommandPool::pipeline_barrier(buffer, 0, {}, {}, {barrier});
@@ -2468,9 +2480,11 @@ void Vulkan::init_vulkan(const std::vector<const char*>& required_extensions, SD
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
         .imageType = VK_IMAGE_TYPE_2D,
         .format = chosen_depth_format,
-        .extent.width = _device->_extent.width,
-        .extent.height = _device->_extent.height,
-        .extent.depth = 1,
+        .extent = {
+            .width = _device->_extent.width,
+            .height = _device->_extent.height,
+            .depth = 1,
+        },
         .mipLevels = 1,
         .arrayLayers = 1,
         .samples = VK_SAMPLE_COUNT_1_BIT,
@@ -2532,11 +2546,13 @@ void Vulkan::init_vulkan(const std::vector<const char*>& required_extensions, SD
         .image = depth_image,
         .viewType = VK_IMAGE_VIEW_TYPE_2D,
         .format = chosen_depth_format,
-        .subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
-        .subresourceRange.baseMipLevel = 0,
-        .subresourceRange.levelCount = 1,
-        .subresourceRange.baseArrayLayer = 0,
-        .subresourceRange.layerCount = 1,
+        .subresourceRange = {
+            .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
+            .baseMipLevel = 0,
+            .levelCount = 1,
+            .baseArrayLayer = 0,
+            .layerCount = 1,
+        },
     };
 
     VkImageView depth_image_view;
@@ -2789,7 +2805,7 @@ void Vulkan::update_resources() {
         }else ++it3;
     }
 
-    std::map<Required_Pipeline_State, Pipeline>::iterator it4 = _pipelines.begin();
+    std::unordered_map<Required_Pipeline_State, Pipeline, Required_Pipeline_State_Hash>::iterator it4 = _pipelines.begin();
     while(it4!=_pipelines.end()) {
         it4->second._last_frame++;
         if(it4->second._last_frame>30){
@@ -2934,6 +2950,7 @@ void Vulkan::set_uniforms(Uniforms** all_uniforms, int size) {
                     upload_uniform_data_piece(all_uniforms[x]->mat4,
                                               it->second.offset, it->first, x);
                     break;
+                /* Do ints even need to be supported? we only have float types
                 case kUniformInt:
                     upload_uniform_data_piece_int(all_uniforms[x]->f,
                                                   it->second.offset, it->first, x);
@@ -2962,6 +2979,7 @@ void Vulkan::set_uniforms(Uniforms** all_uniforms, int size) {
                     upload_uniform_data_piece_int(all_uniforms[x]->mat4,
                                                   it->second.offset, it->first, x);
                     break;
+                */
                 default: PLOGE<<std::hex<<"Shder uses unknown uniform type: "<<it->second.type<<std::dec;break;
             }
         }
