@@ -416,13 +416,14 @@ namespace Argon{
             else {
                 PLOGE << "Could not enable VSync: " << SDL_GetError();
             }
-            Argon::OpenGLES* ogl;
+            Argon::OpenGLES* ogl = new Argon::OpenGLES;
             renderAPI = ogl;
+            std::cout << "renderAPI = " << renderAPI << std::endl;
             swap_buffers = &swap_buffers_ogl;
 #endif
         } else if(renderer == Renderer::VULKAN) {
 #ifdef USE_VULKAN
-            Vulkan* vulkan;
+            Vulkan* vulkan = new Vulkan;
             SDL_PropertiesID props = SDL_CreateProperties();
             SDL_SetStringProperty(props, SDL_PROP_WINDOW_CREATE_TITLE_STRING, "test");
             SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X_NUMBER, Screen::position[0]);

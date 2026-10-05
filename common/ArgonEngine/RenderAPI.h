@@ -76,7 +76,7 @@ namespace Argon{
         ///Cache a material for use. This must be called every frame before a material is used or when the shader is changed.
         virtual void cache_material(Material& state, const VirtualResource&  shader)=0;
 
-        virtual ~RenderAPI()=0;
+        virtual ~RenderAPI()=default;
     };
 }
 

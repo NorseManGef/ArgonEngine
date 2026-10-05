@@ -10,14 +10,7 @@
 #include "ArgonEngine/OpenGLES.h"
 
 namespace Argon {
-    
-#if DEFAULT_RENDERER == VULKAN
-    static RenderAPI* renderAPI = new Vulkan();
-#elif DEFAULT_RENDERER == OPENGL
-    static RenderAPI* renderAPI = new OpenGLES();
-#else
-#error "NO DEFAULT RENDERER SET"
-#endif
+    inline RenderAPI* renderAPI;
     /**
      * @brief Selection of renderer to use.
      */

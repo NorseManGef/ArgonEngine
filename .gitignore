@@ -18,6 +18,7 @@ Makefile
 cmake_install.cmake
 CMakeCache.txt
 compile_commands.json
+common/SPIRV-Tools/utils/Table/__pycache__/
 
 # VS Code
 

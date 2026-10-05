@@ -958,7 +958,7 @@ target_link_libraries(argonapp
     LinearMath
     plog::plog
     SPIRV-Headers
-    spirv-tools
+    SPIRV-Tools
     glslang
     shaderc
 )

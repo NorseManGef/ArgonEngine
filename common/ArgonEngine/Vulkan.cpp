@@ -122,10 +122,10 @@ void Vulkan::Instance::create_debug_messenger(VkDebugUtilsMessengerCreateInfoEXT
     }
 }
 
-VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT severity,
-                                             VkDebugUtilsMessageTypeFlagsEXT type,
-                                             const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
-                                             void* pUserData) {
+VKAPI_ATTR VkBool32 VKAPI_CALL Vulkan::Instance::debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT severity,
+                                                               VkDebugUtilsMessageTypeFlagsEXT type,
+                                                               const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
+                                                               void* pUserData) {
     plog::Severity plogsev;
     switch(severity) {
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
@@ -497,7 +497,7 @@ void Vulkan::Device::retrieve_queue_handles() {
     vkGetDeviceQueue(_device, _queue_families.transfer.value(), 0, &_transferQ);
 }
 
-VkSurfaceFormat2KHR choose_surface_format(const std::vector<VkSurfaceFormat2KHR>& available_formats) {
+VkSurfaceFormat2KHR Vulkan::Device::choose_surface_format(const std::vector<VkSurfaceFormat2KHR>& available_formats) {
     //TODO: HDR support with sane user-settable flag
     for(const auto& a : available_formats) {
         if(a.surfaceFormat.format == VK_FORMAT_B8G8R8A8_SRGB &&
@@ -870,6 +870,42 @@ VkPipelineMultisampleStateCreateInfo Vulkan::Pipeline::create_multisample_info()
         .alphaToOneEnable = VK_FALSE,
     };
     return multisample_info;
+}
+
+VkBlendFactor Vulkan::Pipeline::blend_converter(unsigned int b) {
+    switch (b & kSrcColorMask) {
+        case kZero       & kSrcColorMask: return VK_BLEND_FACTOR_ZERO;
+        case kOne        & kSrcColorMask: return VK_BLEND_FACTOR_ONE;
+
+        case kDstColor   & kSrcColorMask: return VK_BLEND_FACTOR_DST_COLOR;
+        case kDstAlpha   & kSrcColorMask: return VK_BLEND_FACTOR_DST_ALPHA;
+        case kOneMinusDstColor & kSrcColorMask:
+            return VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR;
+        case kOneMinusDstAlpha & kSrcColorMask:
+            return VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA;
+
+        case kSrcColor   & kSrcColorMask: return VK_BLEND_FACTOR_SRC_COLOR;
+        case kSrcAlpha   & kSrcColorMask: return VK_BLEND_FACTOR_SRC_ALPHA;
+        case kOneMinusSrcColor & kSrcColorMask:
+            return VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR;
+        case kOneMinusSrcAlpha & kSrcColorMask:
+            return VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+
+        case kConstantColor & kSrcColorMask:
+            return VK_BLEND_FACTOR_CONSTANT_COLOR;
+        case kOneMinusConstantColor & kSrcColorMask:
+            return VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_COLOR;
+        case kConstantAlpha & kSrcColorMask:
+            return VK_BLEND_FACTOR_CONSTANT_ALPHA;
+        case kOneMinusConstantAlpha & kSrcColorMask:
+            return VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_ALPHA;
+
+        case kSrcAlphaSaturate & kSrcColorMask:
+            return VK_BLEND_FACTOR_SRC_ALPHA_SATURATE;
+
+        default:
+            return VK_BLEND_FACTOR_ZERO;
+    }
 }
 
 VkPipelineColorBlendStateCreateInfo Vulkan::Pipeline::create_color_blend_info() {
@@ -2197,7 +2233,7 @@ VkPresentInfoKHR Vulkan::Synchronization::create_present_info(VkSwapchainKHR swa
     return presentInfo;
 }
 
-VkResult wait_for_fences(VkDevice device, const std::vector<VkFence>& fences,
+VkResult Vulkan::Synchronization::wait_for_fences(VkDevice device, const std::vector<VkFence>& fences,
                          bool wait_all, uint64_t timeout) {
     if(fences.empty()) {
         return VK_SUCCESS;
@@ -2432,6 +2468,32 @@ void Vulkan::TexturePrim::create_sampler(VkPhysicalDevice physical_device) {
     if(result != VK_SUCCESS) {
         PLOGF << "Vulkan: Failed to create texture sampler";
         terminate_engine();
+    }
+}
+
+void Vulkan::TexturePrim::clean() {
+    if(_device!=VK_NULL_HANDLE) {
+        if(_image != VK_NULL_HANDLE) {
+            vkDestroyImage(_device, _image, nullptr);
+            _image = VK_NULL_HANDLE;
+        }
+        if(_memory != VK_NULL_HANDLE) {
+            vkFreeMemory(_device, _memory, nullptr);
+            _memory = VK_NULL_HANDLE;
+        }
+        if(_view != VK_NULL_HANDLE) {
+            vkDestroyImageView(_device, _view, nullptr);
+            _view = VK_NULL_HANDLE;
+        }
+        if(_sampler != VK_NULL_HANDLE) {
+            vkDestroySampler(_device, _sampler, nullptr);
+            _sampler = VK_NULL_HANDLE;
+        }
+        _format = VK_FORMAT_UNDEFINED;
+        _layout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+        vkDestroyDevice(_device, nullptr);
+        _device = VK_NULL_HANDLE;
     }
 }
 
