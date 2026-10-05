@@ -21,7 +21,7 @@ namespace Argon {
 
     inline std::string renderer_name(Renderer renderer) {
         switch(renderer) {
-            case Renderer::OGL: return "ogl";
+            case Renderer::OGL: return "opengl";
             case Renderer::VULKAN: return "vulkan";
             default: return "Unknown"; // this should never happen
         }

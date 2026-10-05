@@ -129,7 +129,7 @@ namespace Argon{
 
         VirtualResource::all_sources()["document:"]=new VirtualResourceIO(doc_dir,true);
         VirtualResource::all_sources()["resource:"]=new VirtualResourceIO(base+"resources",false);
-        VirtualResource::all_sources()["shader:"]=new VirtualResourceIO(base+"shaders"+shader_dir,false);
+        VirtualResource::all_sources()["shader:"]=new VirtualResourceIO(base+"shaders/"+shader_dir,false);
         VirtualResource::all_sources()["user:"]=
         VirtualResource::all_sources()["home:"]=new VirtualResourceIO(home,true);
         VirtualResource::all_sources()["save:"]=
@@ -418,7 +418,6 @@ namespace Argon{
             }
             Argon::OpenGLES* ogl = new Argon::OpenGLES;
             renderAPI = ogl;
-            std::cout << "renderAPI = " << renderAPI << std::endl;
             swap_buffers = &swap_buffers_ogl;
 #endif
         } else if(renderer == Renderer::VULKAN) {

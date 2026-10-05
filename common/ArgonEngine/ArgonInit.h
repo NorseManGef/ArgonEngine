@@ -19,7 +19,7 @@ namespace Argon{
     bool poll_events();
     void set_manual_redraw(void (*draw)());
     /// Swaps the rendered buffers to make them visible to the user.
-    static void (*swap_buffers)()=NULL;
+    inline void (*swap_buffers)()=NULL;
     void swap_buffers_ogl();
     void swap_buffers_vulkan();
 }
