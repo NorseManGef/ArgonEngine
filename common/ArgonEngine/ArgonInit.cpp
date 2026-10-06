@@ -449,7 +449,9 @@ namespace Argon{
 
             std::vector<const char*> required_extensions(instance_extensions, instance_extensions+ext_count);
 
+            std::cout << "before init_vulkan" << std::endl;
             vulkan->init_vulkan(required_extensions, win, Screen::logical_size[0], Screen::logical_size[1]);
+            std::cout << "after init_vulkan" << std::endl;
 
             renderAPI = vulkan;
             swap_buffers = &swap_buffers_vulkan;

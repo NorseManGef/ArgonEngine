@@ -36,6 +36,7 @@ class Vulkan:public RenderAPI {
             "VK_LAYER_KHRONOS_validation"
         };
         void create_instance(const std::vector<const char*>& required_extensions);
+        void populate_debug_messenger_info(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
         void create_debug_messenger(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
         void check_validation_support();
 
@@ -45,14 +46,17 @@ class Vulkan:public RenderAPI {
                                                             void* pUserData);
         void clean();
 
-        Instance(bool validation = false):
+        Instance():
+            _validation(false),
+            _instance(VK_NULL_HANDLE),
+            debug_messenger(VK_NULL_HANDLE)
+        {};
+
+        Instance(bool validation):
             _validation(validation),
             _instance(nullptr),
             debug_messenger(nullptr)
-        {
-            std::vector<const char*> reqext;
-            create_instance(reqext);
-        };
+        {};
         Instance(std::vector<const char*> reqext, bool validation = false):
             _validation(validation),
             _instance(nullptr),
@@ -108,8 +112,8 @@ class Vulkan:public RenderAPI {
         };
 
         struct Swapchain_details {
-            VkSurfaceCapabilities2KHR capabilities;
-            std::vector<VkSurfaceFormat2KHR> formats;
+            VkSurfaceCapabilitiesKHR capabilities;
+            std::vector<VkSurfaceFormatKHR> formats;
             std::vector<VkPresentModeKHR> presentModes;
 
             bool queried = false;
@@ -135,10 +139,10 @@ class Vulkan:public RenderAPI {
         Swapchain_details query_swapchain_details(VkPhysicalDevice device, VkSurfaceKHR surface) const;
         void retrieve_queue_handles();
 
-        VkSurfaceFormat2KHR choose_surface_format(const std::vector<VkSurfaceFormat2KHR>& available_formats);
+        VkSurfaceFormatKHR choose_surface_format(const std::vector<VkSurfaceFormatKHR>& available_formats);
         VkPresentModeKHR choose_present_mode(const std::vector<VkPresentModeKHR>& available_present_modes);
-        VkExtent2D choose_swap_extent(const VkSurfaceCapabilities2KHR& capabilities, uint32_t width, uint32_t height);
-        uint32_t choose_image_count(const VkSurfaceCapabilities2KHR& capabilities);
+        VkExtent2D choose_swap_extent(const VkSurfaceCapabilitiesKHR& capabilities, uint32_t width, uint32_t height);
+        uint32_t choose_image_count(const VkSurfaceCapabilitiesKHR& capabilities);
 
         void query_device_info() {
             vkGetPhysicalDeviceProperties2(_physical_device, &_properties);
@@ -519,7 +523,7 @@ class Vulkan:public RenderAPI {
         static void update_dynamic_uniform_buffer(Buffer& dynamic_ubuffer, VkPhysicalDevice physical_device,
                                            uint32_t object_index, VkDeviceSize uniform_offset, const void* data, VkDeviceSize block_size);
 
-        static VkMemoryRequirements2 get_mem_requirements(VkDevice device, VkDeviceSize size,
+        static VkMemoryRequirements get_mem_requirements(VkDevice device, VkDeviceSize size,
                                                           VkBufferUsageFlags usage);
 
         void clean();
@@ -906,7 +910,7 @@ public:
         clean();
     }
 
-    void init_vulkan(const std::vector<const char*>& required_extensions, SDL_Window* window,
+    void init_vulkan(std::vector<const char*>& required_extensions, SDL_Window* window,
                      uint32_t width, uint32_t height, VkSampleCountFlagBits msaa_samples = VK_SAMPLE_COUNT_1_BIT,
                      uint32_t max_frames_in_flight = MAX_FRAMES_IN_FLIGHT,
                      bool allow_command_pool_reset = true, bool command_pool_transient = false);

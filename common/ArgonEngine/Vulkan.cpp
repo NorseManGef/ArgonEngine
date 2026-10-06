@@ -10,6 +10,7 @@
 #include "ArgonEngine/RenderSystemConstants.h"
 #include "ArgonEngine/TypeInfo.h"
 #include "SPIRV-Reflect/spirv_reflect.h"
+#include "plog/Log.h"
 #include "plog/Severity.h"
 #include "vulkan/vulkan_core.h"
 #ifdef USE_VULKAN
@@ -56,7 +57,7 @@ void Vulkan::Instance::create_instance(const std::vector<const char*>& required_
         createInfo.ppEnabledLayerNames = _validation_layers.data();
 
         // Set up debug messenger for instance creation/destruction messages
-        create_debug_messenger(debugCreateInfo);
+        populate_debug_messenger_info(debugCreateInfo);
         createInfo.pNext = &debugCreateInfo;
     } else {
         createInfo.enabledLayerCount = 0;
@@ -68,6 +69,8 @@ void Vulkan::Instance::create_instance(const std::vector<const char*>& required_
         PLOGF << "Failed to create vulkan instance";
         terminate_engine();
     }
+    if(_validation)
+        create_debug_messenger(debugCreateInfo);
 }
 
 void Vulkan::Instance::check_validation_support() {
@@ -93,7 +96,7 @@ void Vulkan::Instance::check_validation_support() {
     }
 }
 
-void Vulkan::Instance::create_debug_messenger(VkDebugUtilsMessengerCreateInfoEXT& createInfo) {
+void Vulkan::Instance::populate_debug_messenger_info(VkDebugUtilsMessengerCreateInfoEXT& createInfo) {
     createInfo = {
         .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT,
         .messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
@@ -106,6 +109,9 @@ void Vulkan::Instance::create_debug_messenger(VkDebugUtilsMessengerCreateInfoEXT
         .pfnUserCallback = debugCallback,
         .pUserData = nullptr,
     };
+}
+
+void Vulkan::Instance::create_debug_messenger(VkDebugUtilsMessengerCreateInfoEXT& createInfo) {
     auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
         _instance, "vkCreateDebugUtilsMessengerEXT"
     );
@@ -194,8 +200,6 @@ void Vulkan::Device::pick_physical_device(VkInstance instance, VkSurfaceKHR surf
         terminate_engine();
     }
 
-    PLOGV << "Vulkan found: " << device_count << " GPU(s)";
-
     std::vector<VkPhysicalDevice> devices(device_count);
     vkEnumeratePhysicalDevices(instance, &device_count, devices.data());
 
@@ -212,7 +216,6 @@ void Vulkan::Device::pick_physical_device(VkInstance instance, VkSurfaceKHR surf
         PLOGF << "Failed to find a suitable GPU; No devices met the minimum requirements";
         terminate_engine();
     }
-
 }
 
 void Vulkan::Device::create_logical_device(VkSurfaceKHR surface) {
@@ -262,19 +265,20 @@ void Vulkan::Device::create_swap_chain(VkSurfaceKHR surface, uint32_t width, uin
         terminate_engine();
     }
 
-    VkSurfaceFormat2KHR surface_format = choose_surface_format(_swapchain_support.formats);
+    VkSurfaceFormatKHR surface_format = choose_surface_format(_swapchain_support.formats);
     VkPresentModeKHR present_mode = choose_present_mode(_swapchain_support.presentModes);
     VkExtent2D extent = choose_swap_extent(_swapchain_support.capabilities, width, height);
     uint32_t image_count = choose_image_count(_swapchain_support.capabilities);
 
-    _image_format = surface_format.surfaceFormat.format;
+    _image_format = surface_format.format;
     _extent = extent;
 
     VkSwapchainCreateInfoKHR createInfo{
         .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
         .surface = surface,
         .minImageCount = image_count,
-        .imageColorSpace = surface_format.surfaceFormat.colorSpace,
+        .imageFormat = _image_format,
+        .imageColorSpace = surface_format.colorSpace,
         .imageExtent = extent,
         .imageArrayLayers = 1, //TODO: come up with a sane method of letting a user control this value
                                // as it is required for stereoscopic 3d applications
@@ -294,7 +298,7 @@ void Vulkan::Device::create_swap_chain(VkSurfaceKHR surface, uint32_t width, uin
         createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
     }
 
-    createInfo.preTransform = _swapchain_support.capabilities.surfaceCapabilities.currentTransform; // No transform
+    createInfo.preTransform = _swapchain_support.capabilities.currentTransform; // No transform
     createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR; // Ignore alpha channel
 
     createInfo.presentMode = present_mode;
@@ -306,7 +310,22 @@ void Vulkan::Device::create_swap_chain(VkSurfaceKHR surface, uint32_t width, uin
         VkResult result = vkCreateSwapchainKHR(_device, &createInfo, nullptr, &_swapchain);
 
         if(result != VK_SUCCESS) {
-            PLOGF << "Vulkan: Failed to create swapchain";
+            PLOGF << "Vulkan: Failed to create swapchain: " << result;
+            PLOGD << "Swapchain extent was: " << extent.width << ", " << extent.height;
+            PLOGD << "Swapchain image count was: Min: " << 
+                      image_count << ", Max: " << _swapchain_support.capabilities.maxImageCount; 
+            const auto& caps =
+                _swapchain_support.capabilities;
+
+            PLOGD << "supportedCompositeAlpha: 0x"
+                  << std::hex << caps.supportedCompositeAlpha;
+
+            PLOGD << "supportedTransforms: 0x"
+                  << std::hex << caps.supportedTransforms;
+
+            PLOGD << "currentTransform: 0x"
+                  << std::hex << caps.currentTransform;
+
             terminate_engine();
         }
     }
@@ -377,34 +396,35 @@ uint32_t Vulkan::Device::score_physical_device(VkPhysicalDevice device, VkSurfac
         return 0;
     }
 
-    VkPhysicalDeviceProperties2 props;
-    VkPhysicalDeviceFeatures2 feats;
-    vkGetPhysicalDeviceProperties2(device, &props);
-    vkGetPhysicalDeviceFeatures2(device, &feats);
+
+    VkPhysicalDeviceProperties props;
+    VkPhysicalDeviceFeatures feats;
+    vkGetPhysicalDeviceProperties(device, &props);
+    vkGetPhysicalDeviceFeatures(device, &feats);
 
     uint32_t score = 0;
 
-    if(props.properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
+    if(props.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
         score += 1000;
-    } else  if(props.properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU) {
+    } else  if(props.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU) {
         score += 500;
     }
 
-    score += props.properties.limits.maxImageDimension2D / 1000;
+    score += props.limits.maxImageDimension2D / 1000;
 
-    if(feats.features.geometryShader) score += 100;
+    if(feats.geometryShader) score += 100;
 
-    if(feats.features.tessellationShader) score += 50;
+    if(feats.tessellationShader) score += 50;
 
-    if(feats.features.samplerAnisotropy) score += 25;
+    if(feats.samplerAnisotropy) score += 25;
 
-    VkPhysicalDeviceMemoryProperties2 memprops;
-    vkGetPhysicalDeviceMemoryProperties2(device, &memprops);
+    VkPhysicalDeviceMemoryProperties memprops;
+    vkGetPhysicalDeviceMemoryProperties(device, &memprops);
 
     uint64_t total_memory = 0;
-    for(int i = 0; i < memprops.memoryProperties.memoryHeapCount; ++i) {
-        if(memprops.memoryProperties.memoryHeaps[i].flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT) {
-            total_memory += memprops.memoryProperties.memoryHeaps[i].size;
+    for(int i = 0; i < memprops.memoryHeapCount; ++i) {
+        if(memprops.memoryHeaps[i].flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT) {
+            total_memory += memprops.memoryHeaps[i].size;
         }
     }
 
@@ -418,17 +438,17 @@ Vulkan::Device::Queue_family_indices Vulkan::Device::find_queue_families(VkPhysi
     Queue_family_indices indices;
 
     uint32_t count;
-    vkGetPhysicalDeviceQueueFamilyProperties2(device, &count, nullptr);
+    vkGetPhysicalDeviceQueueFamilyProperties(device, &count, nullptr);
 
-    std::vector<VkQueueFamilyProperties2> queue_families(count);
-    vkGetPhysicalDeviceQueueFamilyProperties2(device, &count, queue_families.data());
+    std::vector<VkQueueFamilyProperties> queue_families(count);
+    vkGetPhysicalDeviceQueueFamilyProperties(device, &count, queue_families.data());
 
     for(int i = 0; i < queue_families.size(); ++i) {
         const auto family = queue_families[i];
 
-        if(family.queueFamilyProperties.queueFlags & VK_QUEUE_GRAPHICS_BIT) indices.graphics = i;
-        if(family.queueFamilyProperties.queueFlags & VK_QUEUE_COMPUTE_BIT) indices.compute = i;
-        if(family.queueFamilyProperties.queueFlags & VK_QUEUE_TRANSFER_BIT) indices.transfer = i;
+        if(family.queueFlags & VK_QUEUE_GRAPHICS_BIT) indices.graphics = i;
+        if(family.queueFlags & VK_QUEUE_COMPUTE_BIT) indices.compute = i;
+        if(family.queueFlags & VK_QUEUE_TRANSFER_BIT) indices.transfer = i;
 
         VkBool32 present_support = false;
         vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &present_support);
@@ -461,20 +481,13 @@ bool Vulkan::Device::check_device_extensions(VkPhysicalDevice device) {
 Vulkan::Device::Swapchain_details Vulkan::Device::query_swapchain_details(VkPhysicalDevice device, VkSurfaceKHR surface) const {
     Swapchain_details details;
 
-    VkPhysicalDeviceSurfaceInfo2KHR surface2 {
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SURFACE_INFO_2_KHR,
-        .pNext = nullptr,
-        .surface = surface
-    };
-
-    vkGetPhysicalDeviceSurfaceCapabilities2KHR(device, &surface2, &details.capabilities);
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &details.capabilities);
 
     uint32_t format_count;
-    vkGetPhysicalDeviceSurfaceFormats2KHR(device, &surface2, &format_count, details.formats.data());
-
+    vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &format_count, nullptr);
     if(format_count != 0) {
         details.formats.resize(format_count);
-        vkGetPhysicalDeviceSurfaceFormats2KHR(device, &surface2, &format_count, details.formats.data());
+        vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &format_count, details.formats.data());
     }
 
     uint32_t present_mode_count;
@@ -497,22 +510,22 @@ void Vulkan::Device::retrieve_queue_handles() {
     vkGetDeviceQueue(_device, _queue_families.transfer.value(), 0, &_transferQ);
 }
 
-VkSurfaceFormat2KHR Vulkan::Device::choose_surface_format(const std::vector<VkSurfaceFormat2KHR>& available_formats) {
+VkSurfaceFormatKHR Vulkan::Device::choose_surface_format(const std::vector<VkSurfaceFormatKHR>& available_formats) {
     //TODO: HDR support with sane user-settable flag
     for(const auto& a : available_formats) {
-        if(a.surfaceFormat.format == VK_FORMAT_B8G8R8A8_SRGB &&
-           a.surfaceFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+        if(a.format == VK_FORMAT_B8G8R8A8_SRGB &&
+           a.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
                 return a;
     }
 
     for(const auto& a : available_formats) {
-        if(a.surfaceFormat.format == VK_FORMAT_R8G8B8_SRGB &&
-           a.surfaceFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+        if(a.format == VK_FORMAT_R8G8B8_SRGB &&
+           a.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
                 return a;
     }
 
-    PLOGW << "Vulkan: surface format unknown: " << available_formats[0].surfaceFormat.format
-          << " with color space: " << available_formats[0].surfaceFormat.colorSpace;
+    PLOGW << "Vulkan: surface format unknown: " << available_formats[0].format
+          << " with color space: " << available_formats[0].colorSpace;
     return available_formats[0];
 }
 
@@ -533,22 +546,22 @@ VkPresentModeKHR Vulkan::Device::choose_present_mode(const std::vector<VkPresent
     return VK_PRESENT_MODE_FIFO_KHR;
 }
 
-VkExtent2D Vulkan::Device::choose_swap_extent(const VkSurfaceCapabilities2KHR& capabilities, uint32_t width, uint32_t height) {
-    if(capabilities.surfaceCapabilities.currentExtent.width != std::numeric_limits<uint32_t>::max())
-        return capabilities.surfaceCapabilities.currentExtent;
+VkExtent2D Vulkan::Device::choose_swap_extent(const VkSurfaceCapabilitiesKHR& capabilities, uint32_t width, uint32_t height) {
+    if(capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max())
+        return capabilities.currentExtent;
     VkExtent2D actual_extent = {width, height};
     actual_extent.width = std::clamp(actual_extent.width,
-                                     capabilities.surfaceCapabilities.minImageExtent.width,
-                                     capabilities.surfaceCapabilities.maxImageExtent.width);
+                                     capabilities.minImageExtent.width,
+                                     capabilities.maxImageExtent.width);
     actual_extent.height = std::clamp(actual_extent.height,
-                                      capabilities.surfaceCapabilities.minImageExtent.height,
-                                      capabilities.surfaceCapabilities.maxImageExtent.height);
+                                      capabilities.minImageExtent.height,
+                                      capabilities.maxImageExtent.height);
     return actual_extent;
 }
 
-uint32_t Vulkan::Device::choose_image_count(const VkSurfaceCapabilities2KHR& capabilities) {
-    uint32_t image_count = capabilities.surfaceCapabilities.minImageCount + 1;
-    uint32_t max_count = capabilities.surfaceCapabilities.maxImageCount;
+uint32_t Vulkan::Device::choose_image_count(const VkSurfaceCapabilitiesKHR& capabilities) {
+    uint32_t image_count = capabilities.minImageCount + 1;
+    uint32_t max_count = capabilities.maxImageCount;
 
     // Make sure image_count doesn't exceed the maximum (0 means no limit)
     if(max_count > 0 && image_count > max_count)
@@ -1375,23 +1388,18 @@ void Vulkan::Buffer::create_buffer(VkDevice device, VkPhysicalDevice physical_de
         }
     }
 
-    VkMemoryRequirements2 mem_reqs;
-    VkBufferMemoryRequirementsInfo2 mem_reqInfo{
-        .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_REQUIREMENTS_INFO_2,
-        .pNext = nullptr,
-        .buffer = _buffer,
-    };
-    vkGetBufferMemoryRequirements2(device, &mem_reqInfo, &mem_reqs);
+    VkMemoryRequirements mem_reqs;
+    vkGetBufferMemoryRequirements(device, _buffer, &mem_reqs);
 
-    uint32_t mem_index = find_mem_type(physical_device, mem_reqs.memoryRequirements.memoryTypeBits, memory_properties);
+    uint32_t mem_index = find_mem_type(physical_device, mem_reqs.memoryTypeBits, memory_properties);
 
-    VkPhysicalDeviceMemoryProperties2 physical_mem_props;
-    vkGetPhysicalDeviceMemoryProperties2(physical_device, &physical_mem_props);
-    _is_coherent = (physical_mem_props.memoryProperties.memoryTypes[mem_index].propertyFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) != 0;
+    VkPhysicalDeviceMemoryProperties physical_mem_props;
+    vkGetPhysicalDeviceMemoryProperties(physical_device, &physical_mem_props);
+    _is_coherent = (physical_mem_props.memoryTypes[mem_index].propertyFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) != 0;
 
     VkMemoryAllocateInfo allocInfo{
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-        .allocationSize = mem_reqs.memoryRequirements.size,
+        .allocationSize = mem_reqs.size,
         .memoryTypeIndex = mem_index,
     };
     {
@@ -1537,13 +1545,13 @@ void Vulkan::Buffer::invalidate(VkDeviceSize offset, VkDeviceSize size) {
 
 uint32_t Vulkan::find_mem_type(VkPhysicalDevice physical_device, uint32_t type_filter,
                        VkMemoryPropertyFlags properties) {
-    VkPhysicalDeviceMemoryProperties2 mem_props;
-    vkGetPhysicalDeviceMemoryProperties2(physical_device, &mem_props);
+    VkPhysicalDeviceMemoryProperties mem_props;
+    vkGetPhysicalDeviceMemoryProperties(physical_device, &mem_props);
 
-    for(uint32_t i = 0; i < mem_props.memoryProperties.memoryTypeCount; ++i) {
+    for(uint32_t i = 0; i < mem_props.memoryTypeCount; ++i) {
         bool type_supported = (type_filter & (1 << i)) != 0;
 
-        bool has_required_props = (mem_props.memoryProperties.memoryTypes[i].propertyFlags & properties) == 
+        bool has_required_props = (mem_props.memoryTypes[i].propertyFlags & properties) == 
                                    properties;
 
         if(type_supported && has_required_props) {
@@ -1766,12 +1774,12 @@ std::vector<Vulkan::Buffer> Vulkan::Buffer::create_uniform_buffers_in_flight(VkD
 }
 
 Vulkan::Buffer Vulkan::Buffer::create_dynamic_uniform_buffer(VkDevice device, VkPhysicalDevice physical_device,
-                                                             uint32_t object_count, VkDeviceSize block_size) {
-    VkPhysicalDeviceProperties2 properties;
-    vkGetPhysicalDeviceProperties2(physical_device, &properties);
+                                                             uint32_t object_count, VkDeviceSize object_block_size) {
+    VkPhysicalDeviceProperties properties;
+    vkGetPhysicalDeviceProperties(physical_device, &properties);
 
-    size_t min_uniform_alignment = properties.properties.limits.minUniformBufferOffsetAlignment;
-    size_t dynamic_alignment = block_size;
+    size_t min_uniform_alignment = properties.limits.minUniformBufferOffsetAlignment;
+    size_t dynamic_alignment = object_block_size;
 
     if(min_uniform_alignment > 0) {
         dynamic_alignment = (dynamic_alignment + min_uniform_alignment - 1) & ~(min_uniform_alignment - 1);
@@ -1789,12 +1797,12 @@ Vulkan::Buffer Vulkan::Buffer::create_dynamic_uniform_buffer(VkDevice device, Vk
 }
 
 void Vulkan::Buffer::update_dynamic_uniform_buffer(Buffer& dynamic_buffer, VkPhysicalDevice physical_device,
-                                                   uint32_t object_index, VkDeviceSize uniform_offset, const void* data, VkDeviceSize block_size) {
+                                                   uint32_t object_index, VkDeviceSize uniform_offset, const void* data, VkDeviceSize data_size) {
     VkPhysicalDeviceProperties2 props = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2 };
     vkGetPhysicalDeviceProperties2(physical_device, &props);
 
     size_t min_uniform_alignment = props.properties.limits.minUniformBufferOffsetAlignment;
-    size_t dynamic_alignment = block_size;
+    size_t dynamic_alignment = data_size;
 
     if(min_uniform_alignment) {
          dynamic_alignment = (dynamic_alignment + min_uniform_alignment -1) & ~(min_uniform_alignment - 1);
@@ -1802,10 +1810,10 @@ void Vulkan::Buffer::update_dynamic_uniform_buffer(Buffer& dynamic_buffer, VkPhy
 
     VkDeviceSize offset = object_index * dynamic_alignment + uniform_offset;
 
-    dynamic_buffer.upload_data(&data, block_size, offset);
+    dynamic_buffer.upload_data(data, data_size, offset);
 }
 
-VkMemoryRequirements2 Vulkan::Buffer::get_mem_requirements(VkDevice device, VkDeviceSize size, 
+VkMemoryRequirements Vulkan::Buffer::get_mem_requirements(VkDevice device, VkDeviceSize size, 
                                                            VkBufferUsageFlags usage) {
     VkBufferCreateInfo bufferInfo{
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
@@ -1823,13 +1831,8 @@ VkMemoryRequirements2 Vulkan::Buffer::get_mem_requirements(VkDevice device, VkDe
         terminate_engine();
     }
 
-    VkBufferMemoryRequirementsInfo2 mem_reqInfo{
-        .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_REQUIREMENTS_INFO_2,
-        .buffer = temp_buffer,
-    };
-    
-    VkMemoryRequirements2 mem_reqs;
-    vkGetBufferMemoryRequirements2(device, &mem_reqInfo, &mem_reqs);
+    VkMemoryRequirements mem_reqs;
+    vkGetBufferMemoryRequirements(device, temp_buffer, &mem_reqs);
 
     vkDestroyBuffer(device, temp_buffer, nullptr);
 
@@ -2501,10 +2504,14 @@ void Vulkan::TexturePrim::clean() {
  // UTIL ///////////////////////////////
 ///////////////////////////////////////
 
-void Vulkan::init_vulkan(const std::vector<const char*>& required_extensions, SDL_Window* window,
+void Vulkan::init_vulkan(std::vector<const char*>& required_extensions, SDL_Window* window,
                          uint32_t width, uint32_t height, VkSampleCountFlagBits msaa_samples, uint32_t max_frames_in_flight, 
                          bool allow_command_pool_reset, bool command_pool_transient) {
-    _instance->create_instance(required_extensions);
+    bool val = false;
+    IF_PLOG(plog::verbose) {
+        val = true;
+    }
+    _instance = new Instance(required_extensions, val);
     
     VkSurfaceKHR surface;
     if(!SDL_Vulkan_CreateSurface(window, _instance->_instance, nullptr, &surface)) {
@@ -2512,16 +2519,16 @@ void Vulkan::init_vulkan(const std::vector<const char*>& required_extensions, SD
         terminate_engine();
     }
 
-    _device->create(_instance->_instance, surface, width, height);
+    _device = new Device(_instance->_instance, surface, width, height);
 
     VkFormat depth_formats[] = {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT};
     VkFormat chosen_depth_format;
 
     for (VkFormat format : depth_formats) {
-        VkFormatProperties2 props;
-        vkGetPhysicalDeviceFormatProperties2(_device->_physical_device, format, &props);
+        VkFormatProperties props;
+        vkGetPhysicalDeviceFormatProperties(_device->_physical_device, format, &props);
 
-        if((props.formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) == VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
+        if((props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) == VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
             chosen_depth_format = format;
             break;
         }
@@ -2534,9 +2541,10 @@ void Vulkan::init_vulkan(const std::vector<const char*>& required_extensions, SD
 
     VkFormat color_formats[] = {};
 
-    _render_pass->create_render_pass(_device->_device, 
-                                     _device->choose_surface_format(_device->_swapchain_support.formats).surfaceFormat.format,
-                                     chosen_depth_format);
+    _render_pass = new RenderPass(_device->_device,
+                                  _device->choose_surface_format(
+                                        _device->_swapchain_support.formats).format,
+                                  chosen_depth_format);
 
     VkImageCreateInfo imageInfo{
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
@@ -2626,11 +2634,13 @@ void Vulkan::init_vulkan(const std::vector<const char*>& required_extensions, SD
     }
 
     _render_pass->create_framebuffers(_device->_image_views, depth_image_view, _device->_extent);
-    _command_pool->create_command_pool(_device->_device, _device->_queue_families.graphics.value());
+    _command_pool = new CommandPool(_device->_device, 
+                                    _device->_queue_families.graphics.value());
     for(int i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
         _cmd_buffers[i] = _command_pool->allocate_buffer();
     }
-    _sync->create_sync(_device->_device);
+    _sync = new Synchronization(_device->_device);
+    uniform_buffer.create_dynamic_uniform_buffer(_device->_device, _device->_physical_device);
 }
 
 void Vulkan::ensure_recording() {
@@ -2785,7 +2795,6 @@ void Vulkan::clean() {
     }
     _pipelines.clear();
     if(_instance)delete _instance;
-    uniform_buffer.clean();
     if(_device)delete _device;
 }
 
