@@ -618,6 +618,9 @@ void Vulkan::Pipeline::create_graphics_pipeline(Required_Pipeline_State state) {
     _current_render_pass = state._current_render_pass;
     _device = state._device;
 
+    _desc_layout = state._current_desc_layout;
+    _desc_pool = state._desc_pool;
+
     create_graphics_pipeline();
 }
 
@@ -659,7 +662,7 @@ void Vulkan::Pipeline::create_graphics_pipeline() {
 
     VkPipelineShaderStageCreateInfo shader_stages[] = {vertex_shader_stageInfo, fragment_shader_stageInfo};
 
-    create_desc_layout();
+    create_desc_sets();
     create_pipeline_layout();
 
     auto vertex_input_info = create_vertex_input_info();
@@ -707,30 +710,15 @@ void Vulkan::Pipeline::create_graphics_pipeline() {
 }
 
 
-void Vulkan::Pipeline::create_desc_layout() {
-    VkDescriptorSetLayoutBinding ubo_layout_binding{
-        .binding = 0,
-        .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .descriptorCount = 1,
-        .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-        .pImmutableSamplers = nullptr,
+VkDescriptorSetLayout Vulkan::Pipeline::create_desc_sets() {
+    VkDescriptorSetAllocateInfo allocInfo{
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+        .descriptorPool = _desc_pool,
+        .descriptorSetCount = 1, //TODO: Make multiple desc sets possible
+        .pSetLayouts = &_desc_layout,
     };
 
-    VkDescriptorSetLayoutCreateInfo layout_info{
-        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-        .bindingCount = 1,
-        .pBindings = &ubo_layout_binding,
-    };
-
-    VkResult result = vkCreateDescriptorSetLayout(_device,
-                                                  &layout_info,
-                                                  nullptr,
-                                                  &_desc_layout);
-
-    if(result != VK_SUCCESS) {
-        PLOGF << "Vulkan: Failed to create descriptor set layout";
-        terminate_engine();
-    }
+    vkAllocateDescriptorSets(_device, &allocInfo, &_desc_set);
 }
 
 void Vulkan::Pipeline::create_pipeline_layout() {
@@ -990,10 +978,17 @@ void Vulkan::Pipeline::clean() {
             _pipeline_layout = VK_NULL_HANDLE;
         }
 
+        if(_desc_set != VK_NULL_HANDLE) {
+            vkFreeDescriptorSets(_device, _desc_pool, 1, &_desc_set);
+            _desc_set = VK_NULL_HANDLE;
+        }
+
         if(_desc_layout != VK_NULL_HANDLE) {
             vkDestroyDescriptorSetLayout(_device, _desc_layout, nullptr);
             _desc_layout = VK_NULL_HANDLE;
         }
+
+        _desc_pool = VK_NULL_HANDLE;
 
         _current_vertex_shader = nullptr;
         _current_fragment_shader = nullptr;
@@ -1773,44 +1768,29 @@ std::vector<Vulkan::Buffer> Vulkan::Buffer::create_uniform_buffers_in_flight(VkD
     return uniform_buffers;
 }
 
-Vulkan::Buffer Vulkan::Buffer::create_dynamic_uniform_buffer(VkDevice device, VkPhysicalDevice physical_device,
-                                                             uint32_t object_count, VkDeviceSize object_block_size) {
+Vulkan::Buffer Vulkan::Buffer::create_dynamic_uniform_buffer(VkDevice device, VkPhysicalDevice physical_device, VkDeviceSize size) {
     VkPhysicalDeviceProperties properties;
     vkGetPhysicalDeviceProperties(physical_device, &properties);
 
+    Buffer buffer;
+
     size_t min_uniform_alignment = properties.limits.minUniformBufferOffsetAlignment;
-    size_t dynamic_alignment = object_block_size;
+    buffer._dynamic_alignment = min_uniform_alignment;
 
-    if(min_uniform_alignment > 0) {
-        dynamic_alignment = (dynamic_alignment + min_uniform_alignment - 1) & ~(min_uniform_alignment - 1);
-    }
-
-    VkDeviceSize buffer_size = object_count * dynamic_alignment;
-
-    Buffer dynamic_buffer;
-    dynamic_buffer.create_buffer(device, physical_device, buffer_size,
+    buffer.create_buffer(device, physical_device, size,
                                  VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                                  VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | 
                                  VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
-    return dynamic_buffer;
+    return buffer;
 }
 
-void Vulkan::Buffer::update_dynamic_uniform_buffer(Buffer& dynamic_buffer, VkPhysicalDevice physical_device,
-                                                   uint32_t object_index, VkDeviceSize uniform_offset, const void* data, VkDeviceSize data_size) {
-    VkPhysicalDeviceProperties2 props = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2 };
-    vkGetPhysicalDeviceProperties2(physical_device, &props);
+void Vulkan::Buffer::update_dynamic_uniform_buffer(Buffer& dynamic_buffer, VkDeviceSize block_offset, 
+                                                   VkDeviceSize uniform_offset, const void* data, VkDeviceSize data_size) {
 
-    size_t min_uniform_alignment = props.properties.limits.minUniformBufferOffsetAlignment;
-    size_t dynamic_alignment = data_size;
+    VkDeviceSize dst_offset = block_offset + uniform_offset;
 
-    if(min_uniform_alignment) {
-         dynamic_alignment = (dynamic_alignment + min_uniform_alignment -1) & ~(min_uniform_alignment - 1);
-    }
-
-    VkDeviceSize offset = object_index * dynamic_alignment + uniform_offset;
-
-    dynamic_buffer.upload_data(data, data_size, offset);
+    dynamic_buffer.upload_data(data, data_size, dst_offset);
 }
 
 VkMemoryRequirements Vulkan::Buffer::get_mem_requirements(VkDevice device, VkDeviceSize size, 
@@ -2640,7 +2620,20 @@ void Vulkan::init_vulkan(std::vector<const char*>& required_extensions, SDL_Wind
         _cmd_buffers[i] = _command_pool->allocate_buffer();
     }
     _sync = new Synchronization(_device->_device);
-    uniform_buffer.create_dynamic_uniform_buffer(_device->_device, _device->_physical_device);
+
+    VkDescriptorPoolSize pool_size{
+        .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
+        .descriptorCount = MAX_FRAMES_IN_FLIGHT,
+    };
+
+    VkDescriptorPoolCreateInfo poolInfo{
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+        .maxSets = MAX_FRAMES_IN_FLIGHT,
+        .poolSizeCount = 1,
+        .pPoolSizes = &pool_size,
+    };
+
+    result = vkCreateDescriptorPool(_device->_device, &poolInfo, nullptr, &state._desc_pool);
 }
 
 void Vulkan::ensure_recording() {
@@ -2693,6 +2686,7 @@ void Vulkan::begin_frame() {
         .height = static_cast<uint32_t>(Argon::Screen::logical_size[1])
     };
     _device->_extent = extent;
+    uniform_buffers[_current_frame]._current_uniform_buffer = 0;
 }
 
 void Vulkan::end_frame() {
@@ -2794,8 +2788,51 @@ void Vulkan::clean() {
         p.second.clean();
     }
     _pipelines.clear();
+    vkDestroyDescriptorPool(_device->_device, state._desc_pool, nullptr);
     if(_instance)delete _instance;
     if(_device)delete _device;
+}
+
+VkDescriptorSetLayout Vulkan::create_desc_layout(shader_data* data, uint32_t set) {
+    std::map<uint32_t, VkDescriptorSetLayoutBinding> bindings;
+
+    VkShaderStageFlags stageFlags = 0;
+    for(const auto& flags : data->stages) {
+        stageFlags |= flags.stage;
+    }
+
+    for(const auto& [name, uniform] : data->uniforms) {
+        if(uniform.set != set)continue;
+
+        if(uniform.isTexture)continue; // not included in buffers, therefore not needed here
+
+        if(bindings.find(uniform.binding) != bindings.end())continue;
+
+        VkDescriptorSetLayoutBinding binding{
+            .binding = uniform.binding,
+            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
+            .descriptorCount = 1,
+            .stageFlags = stageFlags,
+            .pImmutableSamplers = nullptr,
+        };
+
+        bindings.emplace(uniform.binding, binding);
+    }
+
+    std::vector<VkDescriptorSetLayoutBinding> layout_bindings;
+
+    for(const auto& [binding_number, binding] : bindings) {
+        layout_bindings.push_back(binding);
+    }
+
+    VkDescriptorSetLayoutCreateInfo layoutInfo{
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+        .bindingCount = static_cast<uint32_t>(bindings.size()),
+        .pBindings = layout_bindings.data(),
+    };
+    VkDescriptorSetLayout layout;
+    vkCreateDescriptorSetLayout(_device->_device, &layoutInfo, nullptr, &layout);
+    return layout;
 }
 
   ///////////////////////////////////////
@@ -2824,7 +2861,9 @@ void Vulkan::draw_vertex_array(std::shared_ptr<VertexArray> array, int end_vert,
         return;
     }
 
-    Pipeline pipe = _pipelines[state];
+    state._current_desc_layout = create_desc_layout(current_shader, 0); // TODO: make it possible for multiple descriptor sets to exist
+
+    Pipeline& pipe = _pipelines[state];
 
     if(!pipe.is_valid()) {
         pipe.create_graphics_pipeline(state);
@@ -2834,6 +2873,7 @@ void Vulkan::draw_vertex_array(std::shared_ptr<VertexArray> array, int end_vert,
 
     _command_pool->bind_pipeline(current_cmd_buffer, pipe._pipeline);
     _command_pool->set_primitive_topology(current_cmd_buffer, topology);
+    _command_pool->bind_desc_sets(current_cmd_buffer, pipe._pipeline_layout, 0, {pipe._desc_set});
     _command_pool->bind_vertex_buffers(current_cmd_buffer, 0, {vert_d.vert_buffer._buffer}, {0});
     _command_pool->bind_index_buffer(current_cmd_buffer, vert_d.index_buffer._buffer, 0, VK_INDEX_TYPE_UINT16);
 
@@ -2946,11 +2986,14 @@ void Vulkan::set_viewport(int x, int y, int w, int h) {
 }
 
 void Vulkan::set_uniforms(Uniforms** all_uniforms, int size) {
+    auto& buffer = uniform_buffers[_current_frame];
+
+    buffer._current_uniform_offsets.clear();
+
     auto it = current_shader->uniforms.begin();
     
     while (it != current_shader->uniforms.end()) {
         const UniformType type = it->second.type;
-
         if(it->second.isTexture) {
             bool has_value = false;
             for(int x = 0; x < size; ++x) {
@@ -2960,6 +3003,8 @@ void Vulkan::set_uniforms(Uniforms** all_uniforms, int size) {
                     for(int s = 0; s < std::min(it->second.size, it2->second.size()); ++s) {
                         cache_texture(it2->second[s]);
                     }
+
+                    break;
                 }
             }
             if(!has_value)
@@ -2967,59 +3012,43 @@ void Vulkan::set_uniforms(Uniforms** all_uniforms, int size) {
             continue;
         }
 
+        bool found = false;
+
         for(int x = 0; x < size; ++x) {
             switch(type) {
                 case kUniformFloat:
-                    upload_uniform_data_piece(all_uniforms[x]->f,
-                                              it->second.offset, it->first, x);
+                    found = upload_uniform_data_piece(all_uniforms[x]->f,
+                                                      it->second, it->first);
                     break;
                 case kUniformFVec2:
-                    upload_uniform_data_piece(all_uniforms[x]->f2,
-                                              it->second.offset, it->first, x);
+                    found = upload_uniform_data_piece(all_uniforms[x]->f2,
+                                                      it->second, it->first);
                     break;
                 case kUniformFVec3:
-                    upload_uniform_data_piece(all_uniforms[x]->f3,
-                                              it->second.offset, it->first, x);
+                    found = upload_uniform_data_piece(all_uniforms[x]->f3,
+                                                      it->second, it->first);
                     break;
                 case kUniformFVec4:
-                    upload_uniform_data_piece(all_uniforms[x]->f4,
-                                              it->second.offset, it->first, x);
+                    found = upload_uniform_data_piece(all_uniforms[x]->f4,
+                                                      it->second, it->first);
                     break;
                 case kUniformFMat2x2:
-                    upload_uniform_data_piece(all_uniforms[x]->mat2,
-                                              it->second.offset, it->first, x);
-                    break;
                 case kUniformFMat2x3:
-                    upload_uniform_data_piece(all_uniforms[x]->mat2,
-                                              it->second.offset, it->first, x);
-                    break; 
                 case kUniformFMat2x4:
-                    upload_uniform_data_piece(all_uniforms[x]->mat2,
-                                              it->second.offset, it->first, x);
+                    found = upload_uniform_data_piece(all_uniforms[x]->mat2,
+                                                      it->second, it->first);
                     break;
                 case kUniformFMat3x2:
-                    upload_uniform_data_piece(all_uniforms[x]->mat3,
-                                              it->second.offset, it->first, x);
-                    break;
                 case kUniformFMat3x3:
-                    upload_uniform_data_piece(all_uniforms[x]->mat3,
-                                              it->second.offset, it->first, x);
-                    break;
                 case kUniformFMat3x4:
-                    upload_uniform_data_piece(all_uniforms[x]->mat3,
-                                              it->second.offset, it->first, x);
+                    found = upload_uniform_data_piece(all_uniforms[x]->mat3,
+                                                      it->second, it->first);
                     break;
                 case kUniformFMat4x2:
-                    upload_uniform_data_piece(all_uniforms[x]->mat4,
-                                              it->second.offset, it->first, x);
-                    break;
                 case kUniformFMat4x3:
-                    upload_uniform_data_piece(all_uniforms[x]->mat4,
-                                              it->second.offset, it->first, x);
-                    break;
                 case kUniformFMat4x4:
-                    upload_uniform_data_piece(all_uniforms[x]->mat4,
-                                              it->second.offset, it->first, x);
+                    found = upload_uniform_data_piece(all_uniforms[x]->mat4,
+                                                      it->second, it->first);
                     break;
                 /* Do ints even need to be supported? we only have float types
                 case kUniformInt:
@@ -3051,8 +3080,15 @@ void Vulkan::set_uniforms(Uniforms** all_uniforms, int size) {
                                                   it->second.offset, it->first, x);
                     break;
                 */
-                default: PLOGE<<std::hex<<"Shder uses unknown uniform type: "<<it->second.type<<std::dec;break;
+                default: 
+                    PLOGE<<std::hex<<"Shader uses unknown uniform type: "<<it->second.type<<std::dec;
+                    found = true;
+                    break;
             }
+        }
+        if(!found) {
+            PLOGW << "No value was set for uniform: " << it->first << " of type: " << it->second.type <<
+            "and size " << it->second.size;
         }
         ++it;
     }
@@ -3349,6 +3385,7 @@ void Vulkan::reflect_uniform_block(const SpvReflectTypeDescription* type_descrip
     u.binding = binding->binding;
     u.offset = offset;
     u.size = size;
+    u.block_size = binding->block.size;
     u.isTexture = false;
 
     //translate type
@@ -3436,7 +3473,7 @@ void Vulkan::unwrap_reflected_arrays(const SpvReflectTypeDescription* type_descr
         } else {
             size_t element_count = 0;
             for(int x = 0; x < array.dims_count; ++x) {
-                element_count += array.dims[i];
+                element_count += array.dims[x];
             }
             reflect_uniform_block(type_description, binding, data, 
                                   size/element_count, element_offset, element_name.c_str());
@@ -3493,7 +3530,7 @@ void Vulkan::reflect_shader(ShaderBinary& shader_code, VkShaderStageFlagBits sta
                     case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_BUFFER:
                     {
                         for(uint32_t x = 0; x < binding->block.member_count; ++x) {
-                            const SpvReflectBlockVariable& member = binding->block.members[i];
+                            const SpvReflectBlockVariable& member = binding->block.members[x];
 
                             if(!member.name)continue;
 

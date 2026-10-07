@@ -191,6 +191,8 @@ class Vulkan:public RenderAPI {
         
     };
 
+    struct Buffer;
+
     struct Required_Pipeline_State {
         unsigned int _current_blend = kBlendReplace;
         bool _current_blend_enabled = true;
@@ -202,14 +204,16 @@ class Vulkan:public RenderAPI {
         unsigned int _current_render_flags = kRenderDefault;
         VkClearValue _current_clear_value;
         VkViewport _current_viewport;
+
+        VkDescriptorSetLayout _current_desc_layout = VK_NULL_HANDLE;
         
         VkShaderModule *_current_vertex_shader = VK_NULL_HANDLE;
         VkShaderModule *_current_fragment_shader = VK_NULL_HANDLE;
 
         VkRenderPass _current_render_pass;
 
-
         VkExtent2D _extent;
+        VkDescriptorPool _desc_pool; // SHOULD ALWAYS BE THE DESCRIPTOR POOL CREATED IN INITIALIZAITON
         VkDevice _device; // SHOULD ALWAYS BE THE DEVICE IN USE
 
         bool operator==(const Required_Pipeline_State& b)const{
@@ -223,7 +227,7 @@ class Vulkan:public RenderAPI {
             _current_max_depth == b._current_max_depth &&
             _current_render_flags == b._current_render_flags &&
 
-            // compare the appropriate VkClearValue members
+            // TODO: compare the appropriate VkClearValue members
 
             _current_viewport.x == b._current_viewport.x &&
             _current_viewport.y == b._current_viewport.y &&
@@ -231,6 +235,9 @@ class Vulkan:public RenderAPI {
             _current_viewport.height == b._current_viewport.height &&
             _current_viewport.minDepth == b._current_viewport.minDepth &&
             _current_viewport.maxDepth == b._current_viewport.maxDepth &&
+
+            _current_desc_layout == b._current_desc_layout &&
+            _desc_pool == b._desc_pool &&
 
             _current_vertex_shader == b._current_vertex_shader &&
             _current_fragment_shader == b._current_fragment_shader &&
@@ -269,21 +276,21 @@ class Vulkan:public RenderAPI {
 
             hash_combine(std::hash<unsigned int>{}(s._current_render_flags));
 
-            // VkClearValue
             hash_combine(hash_bytes(s._current_clear_value));
 
-            // VkViewport
             hash_combine(hash_bytes(s._current_viewport));
 
-            // Handles / pointers
+            hash_combine(std::hash<VkDescriptorSetLayout>{}(s._current_desc_layout));
+
             hash_combine(std::hash<VkShaderModule*>{}(s._current_vertex_shader));
             hash_combine(std::hash<VkShaderModule*>{}(s._current_fragment_shader));
+
             hash_combine(std::hash<VkRenderPass>{}(s._current_render_pass));
 
-            // VkExtent2D
             hash_combine(std::hash<uint32_t>{}(s._extent.width));
             hash_combine(std::hash<uint32_t>{}(s._extent.height));
 
+            hash_combine(std::hash<VkDescriptorPool>{}(s._desc_pool));
             hash_combine(std::hash<VkDevice>{}(s._device));
 
             return seed;
@@ -311,6 +318,8 @@ class Vulkan:public RenderAPI {
         VkPipeline _pipeline;
         VkPipelineLayout _pipeline_layout;
         VkDescriptorSetLayout _desc_layout;
+        VkDescriptorSet _desc_set;
+        VkDescriptorPool _desc_pool;
         VkViewport _viewport{};
         VkRect2D _scissor{};
         VkExtent2D _extent{};
@@ -348,7 +357,7 @@ class Vulkan:public RenderAPI {
                    _desc_layout != VK_NULL_HANDLE;
         }
 
-        void create_desc_layout();
+        VkDescriptorSetLayout create_desc_sets();
         void create_pipeline_layout();
         VkPipelineVertexInputStateCreateInfo create_vertex_input_info();
         VkPipelineInputAssemblyStateCreateInfo create_input_assembly_info();
@@ -519,9 +528,18 @@ class Vulkan:public RenderAPI {
 
         std::vector<Buffer> create_uniform_buffers_in_flight(VkDevice device, VkPhysicalDevice physical_device,
                                                              uint32_t frames_in_flight);
-        Buffer create_dynamic_uniform_buffer(VkDevice device, VkPhysicalDevice physical_device, uint32_t object_count, VkDeviceSize block_size);
-        static void update_dynamic_uniform_buffer(Buffer& dynamic_ubuffer, VkPhysicalDevice physical_device,
-                                           uint32_t object_index, VkDeviceSize uniform_offset, const void* data, VkDeviceSize block_size);
+
+        uint32_t _dynamic_alignment = UINT32_MAX; // UINT32_MAX implies that the buffer is either not initialized or not a uniform buffer
+        std::map<uint64_t, VkDeviceSize> _current_uniform_offsets;
+        VkDeviceSize _current_uniform_buffer = 0;
+
+        static uint64_t uniform_binding_key(uint32_t set, uint32_t binding) {
+            return (static_cast<uint64_t>(set) << 32) | binding;
+        }
+
+        static Buffer create_dynamic_uniform_buffer(VkDevice device, VkPhysicalDevice physical_device, VkDeviceSize size);
+        static void update_dynamic_uniform_buffer(Buffer& dynamic_ubuffer, VkDeviceSize block_offset,
+                                                  VkDeviceSize uniform_offset, const void* data, VkDeviceSize data_size);
 
         static VkMemoryRequirements get_mem_requirements(VkDevice device, VkDeviceSize size,
                                                           VkBufferUsageFlags usage);
@@ -742,6 +760,7 @@ class Vulkan:public RenderAPI {
     struct Uniform {
         uint32_t set = 0;
         uint32_t binding = 0;
+        size_t block_size = 0;
 
         UniformType type = kUniformFloat;        
 
@@ -789,7 +808,7 @@ class Vulkan:public RenderAPI {
     size_t _current_frame = 0; // 0..MAX_FRAMES_IN_FLIGHT-1
     uint32_t _image_index = 0; // 0.._device->swapchain_image_views.size()
 
-    Buffer uniform_buffer;
+    Buffer uniform_buffers[MAX_FRAMES_IN_FLIGHT];
 
     Required_Pipeline_State state;
 
@@ -808,22 +827,34 @@ class Vulkan:public RenderAPI {
                            VkMemoryPropertyFlags properties);
 
     template<typename map_strintern_T>
-    inline void upload_uniform_data_piece(const map_strintern_T& uniform_piece,
-                                          uint32_t offset, StringIntern str, int x) {
-        auto it = uniform_piece.find(str);
-        if(it != uniform_piece.end() && !it->second.empty()) {
-            auto& fval = it->second[0];
+    inline bool upload_uniform_data_piece(const map_strintern_T& uniform_piece,
+                                          Uniform& uniform, StringIntern name) {
+        auto it = uniform_piece.find(name);
 
-            Buffer::update_dynamic_uniform_buffer(
-                uniform_buffer,
-                _device->_physical_device,
-                x,
-                offset,
-                &fval,
-                it->second.size()
+        if(it == uniform_piece.end() || it->second.empty())return false;
 
-            );
+        auto& buffer = uniform_buffers[_current_frame];
+
+        uint64_t key = Buffer::uniform_binding_key(uniform.set, uniform.binding);
+
+        auto offset_it = buffer._current_uniform_offsets.find(key);
+
+        if(offset_it == buffer._current_uniform_offsets.end()) {
+            VkDeviceSize block_size = uniform.block_size;
+            VkDeviceSize block_stride = (block_size + buffer._dynamic_alignment - 1) & ~(buffer._dynamic_alignment -1);
+
+            VkDeviceSize block_offset = buffer._current_uniform_buffer;
+            buffer._current_uniform_buffer += block_stride;
+
+            offset_it = buffer._current_uniform_offsets.emplace(key,block_offset).first;
         }
+
+        VkDeviceSize block_offset = offset_it->second;
+
+        Buffer::update_dynamic_uniform_buffer(buffer, block_offset, uniform.offset,
+                                              &it->second[0], it->second.size());
+
+        return true;
     }
     
     /* DOESN'T WORK WITH MATRIX TYPES
@@ -902,6 +933,9 @@ class Vulkan:public RenderAPI {
                                  uint32_t size,
                                  uint32_t offset,
                                  const std::string& name);
+
+    VkDescriptorSetLayout create_desc_layout(shader_data* data, uint32_t set);
+
     
 
 public:
