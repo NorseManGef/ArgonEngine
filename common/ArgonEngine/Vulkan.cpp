@@ -6,6 +6,7 @@
 #include <shaderc/env.h>
 #include <shaderc/shaderc.h>
 #include <spirv-tools/libspirv.h>
+#include <vector>
 #include "ArgonEngine/ArgonInit.h"
 #include "ArgonEngine/RenderSystemConstants.h"
 #include "ArgonEngine/TypeInfo.h"
@@ -615,10 +616,12 @@ void Vulkan::Pipeline::create_graphics_pipeline(Required_Pipeline_State state) {
     _current_clear_value = state._current_clear_value;
     _viewport = state._current_viewport;
     _extent = state._extent;
+
+    _current_shader = state._current_shader;
+
     _current_render_pass = state._current_render_pass;
     _device = state._device;
 
-    _desc_layout = state._current_desc_layout;
     _desc_pool = state._desc_pool;
 
     create_graphics_pipeline();
@@ -634,34 +637,27 @@ void Vulkan::Pipeline::create_graphics_pipeline() {
         terminate_engine();
     }
 
-    VkShaderModule vertex_shader;
-    VkShaderModule fragment_shader;
-    
-    if((_current_vertex_shader == nullptr || _current_fragment_shader == nullptr) ||
-       (*_current_vertex_shader == VK_NULL_HANDLE || *_current_fragment_shader == VK_NULL_HANDLE)) {
-        PLOGF << "Vulkan: Shaders were null";
+    std::vector<VkPipelineShaderStageCreateInfo> shader_stages;
+    if(_current_shader == nullptr) {
+        PLOGF << "Vulkan: Pipeline shaders were null";
         terminate_engine();
-    } else {
-        vertex_shader = *_current_vertex_shader;
-        fragment_shader = *_current_fragment_shader;
     }
 
-    VkPipelineShaderStageCreateInfo vertex_shader_stageInfo{
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-        .stage = VK_SHADER_STAGE_VERTEX_BIT,
-        .module = vertex_shader,
-        .pName = "main", // entry point into the shader
-    };
 
-    VkPipelineShaderStageCreateInfo fragment_shader_stageInfo{
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-        .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
-        .module = fragment_shader,
-        .pName = "main",
-    };
+    shader_stages.reserve(_current_shader->stages.size());
+    for(auto& stage : _current_shader->stages) {
+        shader_stages.push_back(
+            VkPipelineShaderStageCreateInfo{
+                .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+                .stage = stage.stage,
+                .module = stage.module,
+                .pName = "main", // Should this always be main? Is there a way to determine if it isn't main?
+            }
+        );
+    }
 
-    VkPipelineShaderStageCreateInfo shader_stages[] = {vertex_shader_stageInfo, fragment_shader_stageInfo};
-
+    // TODO: Make multiple sets possible
+    _desc_layout = create_desc_layout(*_current_shader, 0, &out_bindings);
     create_desc_sets();
     create_pipeline_layout();
 
@@ -676,8 +672,8 @@ void Vulkan::Pipeline::create_graphics_pipeline() {
 
     VkGraphicsPipelineCreateInfo pipeline_createInfo{
         .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-        .stageCount = 2, //vertex+fragment stages. TODO: Determine if other stages might be needed and allow users to set those stages if so.
-        .pStages = shader_stages,
+        .stageCount = static_cast<uint32_t>(shader_stages.size()),
+        .pStages = shader_stages.data(),
         .pVertexInputState = &vertex_input_info,
         .pInputAssemblyState = &input_assembly_info,
         .pViewportState = &viewport_info,
@@ -705,12 +701,52 @@ void Vulkan::Pipeline::create_graphics_pipeline() {
         terminate_engine();
     }
 
-    vkDestroyShaderModule(_device, vertex_shader, nullptr);
-    vkDestroyShaderModule(_device, fragment_shader, nullptr);
+    for(auto& stage : _current_shader->stages) {
+        vkDestroyShaderModule(_device, stage.module, nullptr);
+    }
 }
 
+VkDescriptorSetLayout Vulkan::Pipeline::create_desc_layout(shader_data& data, uint32_t set, std::vector<VkDescriptorSetLayoutBinding>* out_bindings) {
+    std::vector<VkDescriptorSetLayoutBinding> bindings;
 
-VkDescriptorSetLayout Vulkan::Pipeline::create_desc_sets() {
+    VkShaderStageFlags stageFlags = 0;
+    for(const auto& flags : data.stages) {
+        stageFlags |= flags.stage;
+    }
+
+    for(const auto& [name, uniform] : data.uniforms) {
+        if(uniform.set != set)continue;
+
+        if(uniform.isTexture)continue; // not included in buffers, therefore not needed here
+
+        VkDescriptorSetLayoutBinding binding{
+            .binding = uniform.binding,
+            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
+            .descriptorCount = 1,
+            .stageFlags = stageFlags,
+            .pImmutableSamplers = nullptr,
+        };
+
+        bindings.push_back(binding);
+    }
+
+    if(out_bindings != nullptr) {
+        for(const auto& binding : bindings) {
+            out_bindings->push_back(binding);
+        }
+    }
+
+    VkDescriptorSetLayoutCreateInfo layoutInfo{
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+        .bindingCount = static_cast<uint32_t>(bindings.size()),
+        .pBindings = bindings.data(),
+    };
+    VkDescriptorSetLayout layout;
+    vkCreateDescriptorSetLayout(_device, &layoutInfo, nullptr, &layout);
+
+    return layout;
+}
+void Vulkan::Pipeline::create_desc_sets() {
     VkDescriptorSetAllocateInfo allocInfo{
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
         .descriptorPool = _desc_pool,
@@ -719,6 +755,36 @@ VkDescriptorSetLayout Vulkan::Pipeline::create_desc_sets() {
     };
 
     vkAllocateDescriptorSets(_device, &allocInfo, &_desc_set);
+}
+
+void Vulkan::Pipeline::update_desc_sets(shader_data& shader, VkBuffer uniform_buffer, uint32_t set) {
+    std::vector<VkWriteDescriptorSet> descriptor_writes;
+    std::vector<VkDescriptorBufferInfo> descriptor_infos;
+    descriptor_writes.reserve(shader.uniforms.size());
+    descriptor_infos.reserve(shader.uniforms.size());
+    for(const auto& [name, uniform] : shader.uniforms) {
+        if(uniform.set != set)continue;
+
+        if(uniform.isTexture)continue; // not included in buffers, therefore not needed here
+
+        descriptor_infos.push_back({
+            .buffer = uniform_buffer,
+            .offset = uniform.offset,
+            .range = uniform.block_size
+        });
+
+        descriptor_writes.push_back({
+            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .dstSet = _desc_set,
+            .dstBinding = uniform.binding,
+            .dstArrayElement = 0,
+            .descriptorCount = 1,
+            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
+            .pBufferInfo = &descriptor_infos.back(),
+        });
+    }
+
+    vkUpdateDescriptorSets(_device, descriptor_writes.size(), descriptor_writes.data(), 0, nullptr);
 }
 
 void Vulkan::Pipeline::create_pipeline_layout() {
@@ -989,9 +1055,6 @@ void Vulkan::Pipeline::clean() {
         }
 
         _desc_pool = VK_NULL_HANDLE;
-
-        _current_vertex_shader = nullptr;
-        _current_fragment_shader = nullptr;
 
         _binding_desc = {};
         _attribs.clear();
@@ -2793,47 +2856,6 @@ void Vulkan::clean() {
     if(_device)delete _device;
 }
 
-VkDescriptorSetLayout Vulkan::create_desc_layout(shader_data* data, uint32_t set) {
-    std::map<uint32_t, VkDescriptorSetLayoutBinding> bindings;
-
-    VkShaderStageFlags stageFlags = 0;
-    for(const auto& flags : data->stages) {
-        stageFlags |= flags.stage;
-    }
-
-    for(const auto& [name, uniform] : data->uniforms) {
-        if(uniform.set != set)continue;
-
-        if(uniform.isTexture)continue; // not included in buffers, therefore not needed here
-
-        if(bindings.find(uniform.binding) != bindings.end())continue;
-
-        VkDescriptorSetLayoutBinding binding{
-            .binding = uniform.binding,
-            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
-            .descriptorCount = 1,
-            .stageFlags = stageFlags,
-            .pImmutableSamplers = nullptr,
-        };
-
-        bindings.emplace(uniform.binding, binding);
-    }
-
-    std::vector<VkDescriptorSetLayoutBinding> layout_bindings;
-
-    for(const auto& [binding_number, binding] : bindings) {
-        layout_bindings.push_back(binding);
-    }
-
-    VkDescriptorSetLayoutCreateInfo layoutInfo{
-        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-        .bindingCount = static_cast<uint32_t>(bindings.size()),
-        .pBindings = layout_bindings.data(),
-    };
-    VkDescriptorSetLayout layout;
-    vkCreateDescriptorSetLayout(_device->_device, &layoutInfo, nullptr, &layout);
-    return layout;
-}
 
   ///////////////////////////////////////
  // RENDER API /////////////////////////
@@ -2861,19 +2883,22 @@ void Vulkan::draw_vertex_array(std::shared_ptr<VertexArray> array, int end_vert,
         return;
     }
 
-    state._current_desc_layout = create_desc_layout(current_shader, 0); // TODO: make it possible for multiple descriptor sets to exist
-
     Pipeline& pipe = _pipelines[state];
 
     if(!pipe.is_valid()) {
         pipe.create_graphics_pipeline(state);
     };
 
+    std::vector<uint32_t> dynamic_offsets;
+    for(int i = 0; i<pipe.out_bindings.size(); ++i) {
+        dynamic_offsets[i] = pipe.out_bindings[i].binding;
+    }
+
     VkPrimitiveTopology& topology = pipe._current_topology;
 
     _command_pool->bind_pipeline(current_cmd_buffer, pipe._pipeline);
     _command_pool->set_primitive_topology(current_cmd_buffer, topology);
-    _command_pool->bind_desc_sets(current_cmd_buffer, pipe._pipeline_layout, 0, {pipe._desc_set});
+    _command_pool->bind_desc_sets(current_cmd_buffer, pipe._pipeline_layout, 0, {pipe._desc_set}, dynamic_offsets);
     _command_pool->bind_vertex_buffers(current_cmd_buffer, 0, {vert_d.vert_buffer._buffer}, {0});
     _command_pool->bind_index_buffer(current_cmd_buffer, vert_d.index_buffer._buffer, 0, VK_INDEX_TYPE_UINT16);
 

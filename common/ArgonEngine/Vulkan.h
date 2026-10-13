@@ -191,7 +191,7 @@ class Vulkan:public RenderAPI {
         
     };
 
-    struct Buffer;
+    struct shader_data;
 
     struct Required_Pipeline_State {
         unsigned int _current_blend = kBlendReplace;
@@ -205,10 +205,7 @@ class Vulkan:public RenderAPI {
         VkClearValue _current_clear_value;
         VkViewport _current_viewport;
 
-        VkDescriptorSetLayout _current_desc_layout = VK_NULL_HANDLE;
-        
-        VkShaderModule *_current_vertex_shader = VK_NULL_HANDLE;
-        VkShaderModule *_current_fragment_shader = VK_NULL_HANDLE;
+        shader_data* _current_shader = VK_NULL_HANDLE;   
 
         VkRenderPass _current_render_pass;
 
@@ -236,11 +233,9 @@ class Vulkan:public RenderAPI {
             _current_viewport.minDepth == b._current_viewport.minDepth &&
             _current_viewport.maxDepth == b._current_viewport.maxDepth &&
 
-            _current_desc_layout == b._current_desc_layout &&
             _desc_pool == b._desc_pool &&
 
-            _current_vertex_shader == b._current_vertex_shader &&
-            _current_fragment_shader == b._current_fragment_shader &&
+            _current_shader == b._current_shader &&
             _current_render_pass == b._current_render_pass &&
 
             _extent.width == b._extent.width &&
@@ -280,10 +275,7 @@ class Vulkan:public RenderAPI {
 
             hash_combine(hash_bytes(s._current_viewport));
 
-            hash_combine(std::hash<VkDescriptorSetLayout>{}(s._current_desc_layout));
-
-            hash_combine(std::hash<VkShaderModule*>{}(s._current_vertex_shader));
-            hash_combine(std::hash<VkShaderModule*>{}(s._current_fragment_shader));
+            hash_combine(std::hash<shader_data*>{}(s._current_shader));
 
             hash_combine(std::hash<VkRenderPass>{}(s._current_render_pass));
 
@@ -328,6 +320,7 @@ class Vulkan:public RenderAPI {
 
         VkVertexInputBindingDescription _binding_desc{};
         std::vector<VkVertexInputAttributeDescription> _attribs;
+        std::vector<VkDescriptorSetLayoutBinding> out_bindings;
 
         unsigned int _current_blend = kBlendReplace;
         bool _current_blend_enabled = true;
@@ -339,9 +332,7 @@ class Vulkan:public RenderAPI {
         unsigned int _current_render_flags = kRenderDefault;
         VkClearValue _current_clear_value;
         
-        VkShaderModule *_current_vertex_shader = VK_NULL_HANDLE;
-        VkShaderModule *_current_fragment_shader = VK_NULL_HANDLE;
-
+        shader_data* _current_shader = VK_NULL_HANDLE;
         VkRenderPass _current_render_pass;
 
         uint32_t _last_frame = 0;
@@ -357,7 +348,10 @@ class Vulkan:public RenderAPI {
                    _desc_layout != VK_NULL_HANDLE;
         }
 
-        VkDescriptorSetLayout create_desc_sets();
+        VkDescriptorSetLayout create_desc_layout(shader_data& data, uint32_t set, 
+                                                 std::vector<VkDescriptorSetLayoutBinding>* out_bindings = nullptr);
+        void create_desc_sets();
+        void update_desc_sets(shader_data& shader, VkBuffer uniform_buffer, uint32_t set);
         void create_pipeline_layout();
         VkPipelineVertexInputStateCreateInfo create_vertex_input_info();
         VkPipelineInputAssemblyStateCreateInfo create_input_assembly_info();
@@ -933,11 +927,6 @@ class Vulkan:public RenderAPI {
                                  uint32_t size,
                                  uint32_t offset,
                                  const std::string& name);
-
-    VkDescriptorSetLayout create_desc_layout(shader_data* data, uint32_t set);
-
-    
-
 public:
     Vulkan() {} 
     ~Vulkan() {
