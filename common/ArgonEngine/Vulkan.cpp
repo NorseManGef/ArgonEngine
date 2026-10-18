@@ -622,8 +622,6 @@ void Vulkan::Pipeline::create_graphics_pipeline(Required_Pipeline_State state) {
     _current_render_pass = state._current_render_pass;
     _device = state._device;
 
-    _desc_pool = state._desc_pool;
-
     create_graphics_pipeline();
 }
 
@@ -656,11 +654,6 @@ void Vulkan::Pipeline::create_graphics_pipeline() {
         );
     }
 
-    // TODO: Make multiple sets possible
-    _desc_layout = create_desc_layout(*_current_shader, 0, &out_bindings);
-    create_desc_sets();
-    create_pipeline_layout();
-
     auto vertex_input_info = create_vertex_input_info();
     auto input_assembly_info = create_input_assembly_info();
     auto viewport_info = create_viewport_info();
@@ -682,7 +675,7 @@ void Vulkan::Pipeline::create_graphics_pipeline() {
         .pDepthStencilState = &depth_stencil_info,
         .pColorBlendState = &color_blend_info,
         .pDynamicState = &dynamic_state_info,
-        .layout = _pipeline_layout,
+        .layout = _current_shader->pipeline_layout,
         .renderPass = _current_render_pass,
         .subpass = 0, //TODO: Determine if this should be user-settable
         .basePipelineHandle = VK_NULL_HANDLE, //TODO: Implement base pipelines if feasible for better performance
@@ -706,57 +699,6 @@ void Vulkan::Pipeline::create_graphics_pipeline() {
     }
 }
 
-VkDescriptorSetLayout Vulkan::Pipeline::create_desc_layout(shader_data& data, uint32_t set, std::vector<VkDescriptorSetLayoutBinding>* out_bindings) {
-    std::vector<VkDescriptorSetLayoutBinding> bindings;
-
-    VkShaderStageFlags stageFlags = 0;
-    for(const auto& flags : data.stages) {
-        stageFlags |= flags.stage;
-    }
-
-    for(const auto& [name, uniform] : data.uniforms) {
-        if(uniform.set != set)continue;
-
-        if(uniform.isTexture)continue; // not included in buffers, therefore not needed here
-
-        VkDescriptorSetLayoutBinding binding{
-            .binding = uniform.binding,
-            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
-            .descriptorCount = 1,
-            .stageFlags = stageFlags,
-            .pImmutableSamplers = nullptr,
-        };
-
-        bindings.push_back(binding);
-    }
-
-    if(out_bindings != nullptr) {
-        for(const auto& binding : bindings) {
-            out_bindings->push_back(binding);
-        }
-    }
-
-    VkDescriptorSetLayoutCreateInfo layoutInfo{
-        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-        .bindingCount = static_cast<uint32_t>(bindings.size()),
-        .pBindings = bindings.data(),
-    };
-    VkDescriptorSetLayout layout;
-    vkCreateDescriptorSetLayout(_device, &layoutInfo, nullptr, &layout);
-
-    return layout;
-}
-void Vulkan::Pipeline::create_desc_sets() {
-    VkDescriptorSetAllocateInfo allocInfo{
-        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-        .descriptorPool = _desc_pool,
-        .descriptorSetCount = 1, //TODO: Make multiple desc sets possible
-        .pSetLayouts = &_desc_layout,
-    };
-
-    vkAllocateDescriptorSets(_device, &allocInfo, &_desc_set);
-}
-
 void Vulkan::Pipeline::update_desc_sets(shader_data& shader, VkBuffer uniform_buffer, uint32_t set) {
     std::vector<VkWriteDescriptorSet> descriptor_writes;
     std::vector<VkDescriptorBufferInfo> descriptor_infos;
@@ -775,7 +717,7 @@ void Vulkan::Pipeline::update_desc_sets(shader_data& shader, VkBuffer uniform_bu
 
         descriptor_writes.push_back({
             .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-            .dstSet = _desc_set,
+            .dstSet = shader.desc_sets[set],
             .dstBinding = uniform.binding,
             .dstArrayElement = 0,
             .descriptorCount = 1,
@@ -785,26 +727,6 @@ void Vulkan::Pipeline::update_desc_sets(shader_data& shader, VkBuffer uniform_bu
     }
 
     vkUpdateDescriptorSets(_device, descriptor_writes.size(), descriptor_writes.data(), 0, nullptr);
-}
-
-void Vulkan::Pipeline::create_pipeline_layout() {
-    VkPipelineLayoutCreateInfo pipeline_layout_info{
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-        .setLayoutCount = 1,
-        .pSetLayouts = &_desc_layout,
-        .pushConstantRangeCount = 0, //TODO: determine if this is optimal
-        .pPushConstantRanges = nullptr,
-    };
-
-    VkResult result = vkCreatePipelineLayout(_device,
-                                             &pipeline_layout_info,
-                                             nullptr,
-                                             &_pipeline_layout);
-
-    if(result != VK_SUCCESS) {
-        PLOGF << "Vulkan: Failed to create pipeline layout";
-        terminate_engine();
-    }
 }
 
 VkPipelineVertexInputStateCreateInfo Vulkan::Pipeline::create_vertex_input_info() {
@@ -1038,23 +960,6 @@ void Vulkan::Pipeline::clean() {
             vkDestroyPipeline(_device, _pipeline, nullptr);
             _pipeline = VK_NULL_HANDLE;
         }
-
-        if(_pipeline_layout != VK_NULL_HANDLE) {
-            vkDestroyPipelineLayout(_device, _pipeline_layout, nullptr);
-            _pipeline_layout = VK_NULL_HANDLE;
-        }
-
-        if(_desc_set != VK_NULL_HANDLE) {
-            vkFreeDescriptorSets(_device, _desc_pool, 1, &_desc_set);
-            _desc_set = VK_NULL_HANDLE;
-        }
-
-        if(_desc_layout != VK_NULL_HANDLE) {
-            vkDestroyDescriptorSetLayout(_device, _desc_layout, nullptr);
-            _desc_layout = VK_NULL_HANDLE;
-        }
-
-        _desc_pool = VK_NULL_HANDLE;
 
         _binding_desc = {};
         _attribs.clear();
@@ -2889,6 +2794,7 @@ void Vulkan::draw_vertex_array(std::shared_ptr<VertexArray> array, int end_vert,
         pipe.create_graphics_pipeline(state);
     };
 
+    // TODO: move this into the pipeline
     std::vector<uint32_t> dynamic_offsets;
     for(int i = 0; i<pipe.out_bindings.size(); ++i) {
         dynamic_offsets[i] = pipe.out_bindings[i].binding;
@@ -2898,7 +2804,8 @@ void Vulkan::draw_vertex_array(std::shared_ptr<VertexArray> array, int end_vert,
 
     _command_pool->bind_pipeline(current_cmd_buffer, pipe._pipeline);
     _command_pool->set_primitive_topology(current_cmd_buffer, topology);
-    _command_pool->bind_desc_sets(current_cmd_buffer, pipe._pipeline_layout, 0, {pipe._desc_set}, dynamic_offsets);
+    _command_pool->bind_desc_sets(current_cmd_buffer, pipe._current_shader->pipeline_layout,
+                                  0, pipe._current_shader->desc_sets, dynamic_offsets);
     _command_pool->bind_vertex_buffers(current_cmd_buffer, 0, {vert_d.vert_buffer._buffer}, {0});
     _command_pool->bind_index_buffer(current_cmd_buffer, vert_d.index_buffer._buffer, 0, VK_INDEX_TYPE_UINT16);
 
@@ -3015,107 +2922,45 @@ void Vulkan::set_uniforms(Uniforms** all_uniforms, int size) {
 
     buffer._current_uniform_offsets.clear();
 
-    auto it = current_shader->uniforms.begin();
-    
-    while (it != current_shader->uniforms.end()) {
-        const UniformType type = it->second.type;
-        if(it->second.isTexture) {
-            bool has_value = false;
-            for(int x = 0; x < size; ++x) {
-                auto it2 = all_uniforms[x]->textures.find(it->first);
-                if(it2 != all_uniforms[x]->textures.end()) {
-                    has_value = true;
-                    for(int s = 0; s < std::min(it->second.size, it2->second.size()); ++s) {
-                        cache_texture(it2->second[s]);
-                    }
+    for(auto set : current_shader->reflected_sets) {
+        for(int i = 0; i < set->binding_count; ++i) {
+            for(int member_num = 0; member_num < set->bindings[i]->block.member_count; ++member_num) {
+                const SpvReflectBlockVariable& member = set->bindings[i]->block.members[member_num];
+                if(set->bindings[i]->descriptor_type == SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLER ||
+                                                        SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLED_IMAGE ||
+                                                        SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_IMAGE) {
+                    bool has_value = false;
+                    for(int x = 0; x < size; ++x) {
+                        auto it2 = all_uniforms[x]->textures.find(set->bindings[i]->name);
+                        if(it2 != all_uniforms[x]->textures.end()) {
+                            has_value = true;
+                            for(int s = 0; s < std::min(member.size,
+                                                        static_cast<uint32_t>(it2->second.size())); ++s) {
+                                cache_texture(it2->second[s]);
+                            }
 
-                    break;
+                            break;
+                        }
+                    }
+                    if(!has_value)
+                        PLOGW<<"No value was set for uniform: "<< set->bindings[i]->name 
+                             <<" of type: texture and size "<< member.size;
+                    continue;
+                }
+
+                if(!member.name)continue;
+
+                if(member.type_description->type_flags & SPV_REFLECT_TYPE_FLAG_ARRAY) {
+                    unwrap_reflected_arrays(all_uniforms, member.type_description,
+                                            set->bindings[i], 0,
+                                            member.size, member.offset, member.name);
+                } else {
+                    upload_uniform_data(all_uniforms, member.type_description,
+                                        set->bindings[i], member.size,
+                                        member.offset, member.name);
                 }
             }
-            if(!has_value)
-                PLOGW<<"No value was set for uniform: "<< it->first <<" of type: texture and size "<< it->second.size;
-            continue;
         }
-
-        bool found = false;
-
-        for(int x = 0; x < size; ++x) {
-            switch(type) {
-                case kUniformFloat:
-                    found = upload_uniform_data_piece(all_uniforms[x]->f,
-                                                      it->second, it->first);
-                    break;
-                case kUniformFVec2:
-                    found = upload_uniform_data_piece(all_uniforms[x]->f2,
-                                                      it->second, it->first);
-                    break;
-                case kUniformFVec3:
-                    found = upload_uniform_data_piece(all_uniforms[x]->f3,
-                                                      it->second, it->first);
-                    break;
-                case kUniformFVec4:
-                    found = upload_uniform_data_piece(all_uniforms[x]->f4,
-                                                      it->second, it->first);
-                    break;
-                case kUniformFMat2x2:
-                case kUniformFMat2x3:
-                case kUniformFMat2x4:
-                    found = upload_uniform_data_piece(all_uniforms[x]->mat2,
-                                                      it->second, it->first);
-                    break;
-                case kUniformFMat3x2:
-                case kUniformFMat3x3:
-                case kUniformFMat3x4:
-                    found = upload_uniform_data_piece(all_uniforms[x]->mat3,
-                                                      it->second, it->first);
-                    break;
-                case kUniformFMat4x2:
-                case kUniformFMat4x3:
-                case kUniformFMat4x4:
-                    found = upload_uniform_data_piece(all_uniforms[x]->mat4,
-                                                      it->second, it->first);
-                    break;
-                /* Do ints even need to be supported? we only have float types
-                case kUniformInt:
-                    upload_uniform_data_piece_int(all_uniforms[x]->f,
-                                                  it->second.offset, it->first, x);
-                    break;
-                case kUniformIVec2:
-                    upload_uniform_data_piece_int(all_uniforms[x]->f2,
-                                                  it->second.offset, it->first, x);
-                    break;
-                case kUniformIVec3:
-                    upload_uniform_data_piece_int(all_uniforms[x]->f3,
-                                                  it->second.offset, it->first, x);
-                    break;
-                case kUniformIVec4:
-                    upload_uniform_data_piece_int(all_uniforms[x]->f4,
-                                                  it->second.offset, it->first, x);
-                    break;
-                case kUniformIMat2x2:
-                    upload_uniform_data_piece_int(all_uniforms[x]->mat2,
-                                                  it->second.offset, it->first, x);
-                    break;
-                case kUniformIMat3x3:
-                    upload_uniform_data_piece_int(all_uniforms[x]->mat3,
-                                                  it->second.offset, it->first, x);
-                    break;
-                case kUniformIMat4x4:
-                    upload_uniform_data_piece_int(all_uniforms[x]->mat4,
-                                                  it->second.offset, it->first, x);
-                    break;
-                */
-                default: 
-                    PLOGE<<std::hex<<"Shader uses unknown uniform type: "<<it->second.type<<std::dec;
-                    found = true;
-                    break;
-            }
-        }
-        if(!found) {
-            PLOGW << "No value was set for uniform: " << it->first << " of type: " << it->second.type <<
-            "and size " << it->second.size;
-        }
-        ++it;
     }
 }
 
@@ -3401,22 +3246,15 @@ bool Vulkan::validate_shader(const ShaderBinary& shader_code) {
     return result == SPV_SUCCESS;
 }
 
-void Vulkan::reflect_uniform_block(const SpvReflectTypeDescription* type_description,
-                                   const SpvReflectDescriptorBinding* binding,
-                                   shader_data& data, size_t size, size_t offset, const char* name) {
-    Uniform& u = data.uniforms[StringIntern(name)];
-
-    u.set = binding->set;
-    u.binding = binding->binding;
-    u.offset = offset;
-    u.size = size;
-    u.block_size = binding->block.size;
-    u.isTexture = false;
+void Vulkan::upload_uniform_data(Uniforms** all_uniforms, const SpvReflectTypeDescription* type_description,
+                                 const SpvReflectDescriptorBinding* binding,
+                                 size_t size, size_t offset, const char* name) {
+    UniformType type;
 
     //translate type
     if(!type_description) {
         PLOGE << "Vulkan: Reflect type description of variable member was null; defaulting to int.";
-        u.type=kUniformInt; 
+        type=kUniformInt; 
         return;
     }
     auto& numeric = type_description->traits.numeric;
@@ -3426,63 +3264,124 @@ void Vulkan::reflect_uniform_block(const SpvReflectTypeDescription* type_descrip
         const auto& matrix = numeric.matrix;
         if(is_int) {
             switch(matrix.column_count) {
-                case 2: u.type = kUniformIMat2x2; break;
-                case 3: u.type = kUniformIMat3x3; break;
-                case 4: u.type = kUniformIMat4x4; break;
+                case 2: type = kUniformIMat2x2; break;
+                case 3: type = kUniformIMat3x3; break;
+                case 4: type = kUniformIMat4x4; break;
                 default:
                     PLOGE << "Vulkan: Unknown IMat type";
-                    u.type = kUniformInt;
+                    type = kUniformInt;
             }
         } else {
             switch(matrix.column_count) {
                 case 2:
                     switch(matrix.row_count) {
-                        case 2: u.type = kUniformFMat2x2; break;
-                        case 3: u.type = kUniformFMat2x3; break;
-                        case 4: u.type = kUniformFMat2x4; break;
+                        case 2: type = kUniformFMat2x2; break;
+                        case 3: type = kUniformFMat2x3; break;
+                        case 4: type = kUniformFMat2x4; break;
                         default:
                             PLOGE << "Vulkan: Unknown FMat type";
-                            u.type = kUniformFloat;
+                            type = kUniformFloat;
                     } break;
                 case 3:
                     switch(matrix.row_count) {
-                        case 2: u.type = kUniformFMat3x2; break;
-                        case 3: u.type = kUniformFMat3x3; break;
-                        case 4: u.type = kUniformFMat3x4; break;
+                        case 2: type = kUniformFMat3x2; break;
+                        case 3: type = kUniformFMat3x3; break;
+                        case 4: type = kUniformFMat3x4; break;
                         default: 
                             PLOGE << "Vulkan: Unknown FMat type";
-                            u.type = kUniformFloat;
+                            type = kUniformFloat;
                     } break;
                 case 4:
                     switch(matrix.row_count) {
-                        case 2: u.type = kUniformFMat4x2; break;
-                        case 3: u.type = kUniformFMat4x3; break;
-                        case 4: u.type = kUniformFMat4x4; break;
+                        case 2: type = kUniformFMat4x2; break;
+                        case 3: type = kUniformFMat4x3; break;
+                        case 4: type = kUniformFMat4x4; break;
                         default:
                             PLOGE << "Vulkan: Unknown FMat type";
-                            u.type = kUniformFloat;
+                            type = kUniformFloat;
                     } break;
             }
         }
     } else if(type_description->type_flags & SPV_REFLECT_TYPE_FLAG_VECTOR) {
         switch(numeric.vector.component_count) {
             case 2:
-                u.type = is_int ? kUniformIVec2 : kUniformFVec2; break;
+                type = is_int ? kUniformIVec2 : kUniformFVec2; break;
             case 3:
-                u.type = is_int ? kUniformIVec3 : kUniformFVec3; break;
+                type = is_int ? kUniformIVec3 : kUniformFVec3; break;
             case 4:
-                u.type = is_int ? kUniformIVec4 : kUniformFVec4; break;
+                type = is_int ? kUniformIVec4 : kUniformFVec4; break;
         }
     } else if(type_description->type_flags & SPV_REFLECT_TYPE_FLAG_INT) {
-        u.type = kUniformInt;
+        type = kUniformInt;
     } else if(type_description->type_flags & SPV_REFLECT_TYPE_FLAG_FLOAT) {
-        u.type = kUniformFloat;
+        type = kUniformFloat;
+    }
+    bool found = false;
+    for(int x = 0; x < size; ++x) {
+        switch(type) {
+            case kUniformFloat:
+            case kUniformInt:
+                found = upload_uniform_data_piece(all_uniforms[x]->f, binding->set, 
+                                                  binding->binding, binding->block.size,
+                                                  offset, name);
+                break;
+            case kUniformFVec2:
+            case kUniformVec2:
+                found = upload_uniform_data_piece(all_uniforms[x]->f2, binding->set,
+                                                  binding->binding, binding->block.size,
+                                                  offset, name);
+                break;
+            case kUniformFVec3:
+            case kUniformVec3:
+                found = upload_uniform_data_piece(all_uniforms[x]->f3, binding->set,
+                                                  binding->binding, binding->block.size,
+                                                  offset, name);
+                break;
+            case kUniformFVec4:
+            case kUniformVec4:
+                found = upload_uniform_data_piece(all_uniforms[x]->f4, binding->set,
+                                                  binding->binding, binding->block.size,
+                                                  offset, name);
+                break;
+            case kUniformFMat2x2:
+            case kUniformFMat2x3:
+            case kUniformFMat2x4:
+            case kUniformIMat2x2:
+                found = upload_uniform_data_piece(all_uniforms[x]->mat2, binding->set,
+                                                  binding->binding, binding->block.size,
+                                                  offset, name);
+                break;
+            case kUniformFMat3x2:
+            case kUniformFMat3x3:
+            case kUniformFMat3x4:
+            case kUniformIMat3x3:
+                found = upload_uniform_data_piece(all_uniforms[x]->mat3, binding->set,
+                                                  binding->binding, binding->block.size,
+                                                  offset, name);
+                break;
+            case kUniformFMat4x2:
+            case kUniformFMat4x3:
+            case kUniformFMat4x4:
+            case kUniformIMat4x4:
+                found = upload_uniform_data_piece(all_uniforms[x]->mat4, binding->set,
+                                                  binding->binding, binding->block.size,
+                                                  offset, name);
+                break;
+            default: 
+                PLOGE<<std::hex<<"Shader uses unknown uniform type: "<<type<<std::dec;
+                found = true;
+                break;
+        }
+    }
+    if(!found) {
+        PLOGW << "No value was set for uniform: " << name << " of type: " << type <<
+        "and size " << size;
     }
 }
 
-void Vulkan::unwrap_reflected_arrays(const SpvReflectTypeDescription* type_description,
+void Vulkan::unwrap_reflected_arrays(Uniforms** all_uniforms,
+                                     const SpvReflectTypeDescription* type_description,
                                      const SpvReflectDescriptorBinding* binding,
-                                     shader_data& data,
                                      uint32_t dimension,
                                      uint32_t size,
                                      uint32_t offset,
@@ -3493,15 +3392,15 @@ void Vulkan::unwrap_reflected_arrays(const SpvReflectTypeDescription* type_descr
         std::string element_name = name + "[" + std::to_string(i) + "]";
         uint32_t element_offset = offset + i*array.stride;
         if(array.dims_count > dimension + 1) {
-            unwrap_reflected_arrays(type_description, binding, data,
+            unwrap_reflected_arrays(all_uniforms, type_description, binding,
                                     dimension+1, size, element_offset, element_name);
         } else {
             size_t element_count = 0;
             for(int x = 0; x < array.dims_count; ++x) {
                 element_count += array.dims[x];
             }
-            reflect_uniform_block(type_description, binding, data, 
-                                  size/element_count, element_offset, element_name.c_str());
+            upload_uniform_data(all_uniforms, type_description, binding,
+                                size/element_count, element_offset, element_name.c_str());
         }
     }
 }
@@ -3546,28 +3445,39 @@ void Vulkan::reflect_shader(ShaderBinary& shader_code, VkShaderStageFlagBits sta
 
         spvReflectEnumerateDescriptorSets(&module, &count, sets.data());
 
+        std::vector<VkDescriptorPoolSize> desc_pool_sizes;
+
+        std::vector<std::vector<VkDescriptorSetLayoutBinding>> layout_bindings_set;
+        layout_bindings_set.reserve(sets.size());
+
         for(auto* set : sets) {
+            std::vector<VkDescriptorSetLayoutBinding> layout_bindings;
+            layout_bindings.reserve(set->binding_count);
             for(uint32_t i = 0; i < set->binding_count; ++i) {
+                VkDescriptorSetLayoutBinding layout_binding;
                 auto* binding = set->bindings[i];
 
                 switch(binding->descriptor_type) {
                     case SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+                    {
+                        layout_bindings.push_back({
+                            .binding = binding->binding,
+                            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
+                            .descriptorCount = binding->count,
+                            .stageFlags = stage,
+                            .pImmutableSamplers = nullptr,
+                        });
+                        
+                        desc_pool_sizes.push_back({
+                            .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
+                            .descriptorCount = binding->count,
+                        });
+                        
+                        break;
+                    }
                     case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_BUFFER:
                     {
-                        for(uint32_t x = 0; x < binding->block.member_count; ++x) {
-                            const SpvReflectBlockVariable& member = binding->block.members[x];
 
-                            if(!member.name)continue;
-
-                            if(member.type_description->type_flags & SPV_REFLECT_TYPE_FLAG_ARRAY) {
-                                unwrap_reflected_arrays(member.type_description, binding, data,
-                                                        0, member.size,
-                                                        member.offset, member.name);
-                            } else {
-                                reflect_uniform_block(member.type_description, binding, data,
-                                                      member.size, member.offset, member.name);
-                            }                         
-                        }        
                         break;
                     }
                     case SPV_REFLECT_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
@@ -3575,20 +3485,57 @@ void Vulkan::reflect_shader(ShaderBinary& shader_code, VkShaderStageFlagBits sta
                     case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_IMAGE:
                     case SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLER:
                     {
-                        if(!binding->name)break;
-
-                        Uniform& u = data.uniforms[StringIntern(binding->name)];
-
-                        u.set = binding->set;
-                        u.binding = binding->binding;
-                        u.isTexture = true;
 
                         break;
                     }
                     default: break;
                 }
             }
+            layout_bindings_set.push_back(layout_bindings);
         }
+
+        VkDescriptorPoolCreateInfo poolInfo {
+            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+            .maxSets = static_cast<uint32_t>(sets.size()),
+            .poolSizeCount = static_cast<uint32_t>(desc_pool_sizes.size()),
+            .pPoolSizes = desc_pool_sizes.data(),
+        };
+
+        vkCreateDescriptorPool(_device->_device, &poolInfo, nullptr, &data.desc_pool);
+        
+        for(int i = 0; i < sets.size(); ++i) {
+            VkDescriptorSetLayoutCreateInfo layout_info = {
+                .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+                .pNext = nullptr,
+                .bindingCount = static_cast<uint32_t>(layout_bindings_set[i].size()),
+                .pBindings = layout_bindings_set[i].data(),
+            };
+            VkDescriptorSetLayout layout;
+            VkResult result = vkCreateDescriptorSetLayout(_device->_device, &layout_info, nullptr, &layout);
+            if(result != VK_SUCCESS) {
+                PLOGF << "Vulkan: Failed to create descriptor set layout";
+                terminate_engine();
+            } 
+            data.desc_set_layouts.push_back(layout);
+        } 
+
+        VkDescriptorSetAllocateInfo setAllocInfo {
+            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+            .descriptorPool = data.desc_pool,
+            .descriptorSetCount = static_cast<uint32_t>(data.desc_set_layouts.size()),
+            .pSetLayouts = data.desc_set_layouts.data(),
+        };
+
+        data.desc_sets.reserve(setAllocInfo.descriptorSetCount);
+        vkAllocateDescriptorSets(_device->_device, &setAllocInfo, data.desc_sets.data());
+
+        VkPipelineLayoutCreateInfo pipe_layout_info {
+            .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+            .setLayoutCount = static_cast<uint32_t>(data.desc_set_layouts.size()),
+            .pSetLayouts = data.desc_set_layouts.data(),
+            .pushConstantRangeCount = 0,
+            .pPushConstantRanges = nullptr, // consider implementing this in future
+        };
     }
 }
 

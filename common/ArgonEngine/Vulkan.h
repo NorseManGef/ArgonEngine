@@ -308,10 +308,6 @@ class Vulkan:public RenderAPI {
     struct Pipeline {
         VkDevice _device;
         VkPipeline _pipeline;
-        VkPipelineLayout _pipeline_layout;
-        VkDescriptorSetLayout _desc_layout;
-        VkDescriptorSet _desc_set;
-        VkDescriptorPool _desc_pool;
         VkViewport _viewport{};
         VkRect2D _scissor{};
         VkExtent2D _extent{};
@@ -344,15 +340,10 @@ class Vulkan:public RenderAPI {
         bool is_valid() const {
             return _device != VK_NULL_HANDLE &&
                    _pipeline != VK_NULL_HANDLE &&
-                   _pipeline_layout != VK_NULL_HANDLE &&
-                   _desc_layout != VK_NULL_HANDLE;
+                   _current_shader != VK_NULL_HANDLE;
         }
 
-        VkDescriptorSetLayout create_desc_layout(shader_data& data, uint32_t set, 
-                                                 std::vector<VkDescriptorSetLayoutBinding>* out_bindings = nullptr);
-        void create_desc_sets();
         void update_desc_sets(shader_data& shader, VkBuffer uniform_buffer, uint32_t set);
-        void create_pipeline_layout();
         VkPipelineVertexInputStateCreateInfo create_vertex_input_info();
         VkPipelineInputAssemblyStateCreateInfo create_input_assembly_info();
         VkPipelineViewportStateCreateInfo create_viewport_info();
@@ -369,8 +360,6 @@ class Vulkan:public RenderAPI {
         Pipeline(): 
             _device(VK_NULL_HANDLE),
             _pipeline(VK_NULL_HANDLE),
-            _pipeline_layout(VK_NULL_HANDLE),
-            _desc_layout(VK_NULL_HANDLE),
             _vertex_array(nullptr)
         {}
 
@@ -532,6 +521,7 @@ class Vulkan:public RenderAPI {
         }
 
         static Buffer create_dynamic_uniform_buffer(VkDevice device, VkPhysicalDevice physical_device, VkDeviceSize size);
+        // TODO: Make a way to resize the buffers
         static void update_dynamic_uniform_buffer(Buffer& dynamic_ubuffer, VkDeviceSize block_offset,
                                                   VkDeviceSize uniform_offset, const void* data, VkDeviceSize data_size);
 
@@ -774,6 +764,11 @@ class Vulkan:public RenderAPI {
     struct shader_data {
         std::vector<shader_stage> stages;
 
+        std::vector<VkDescriptorSet> desc_sets;
+        std::vector<VkDescriptorSetLayout> desc_set_layouts;
+        VkPipelineLayout pipeline_layout;
+        VkDescriptorPool desc_pool;
+        std::vector<SpvReflectDescriptorSet*> reflected_sets;
         std::map<StringIntern, Uniform> uniforms;
         std::map<StringIntern, uint32_t> attribs;
 
@@ -822,19 +817,20 @@ class Vulkan:public RenderAPI {
 
     template<typename map_strintern_T>
     inline bool upload_uniform_data_piece(const map_strintern_T& uniform_piece,
-                                          Uniform& uniform, StringIntern name) {
+                                          uint32_t set, uint32_t binding, 
+                                          uint32_t block_size, uint32_t offset, StringIntern name) {
         auto it = uniform_piece.find(name);
 
         if(it == uniform_piece.end() || it->second.empty())return false;
 
         auto& buffer = uniform_buffers[_current_frame];
 
-        uint64_t key = Buffer::uniform_binding_key(uniform.set, uniform.binding);
+        uint64_t key = Buffer::uniform_binding_key(set, binding);
 
         auto offset_it = buffer._current_uniform_offsets.find(key);
 
         if(offset_it == buffer._current_uniform_offsets.end()) {
-            VkDeviceSize block_size = uniform.block_size;
+            VkDeviceSize block_size = block_size;
             VkDeviceSize block_stride = (block_size + buffer._dynamic_alignment - 1) & ~(buffer._dynamic_alignment -1);
 
             VkDeviceSize block_offset = buffer._current_uniform_buffer;
@@ -845,49 +841,12 @@ class Vulkan:public RenderAPI {
 
         VkDeviceSize block_offset = offset_it->second;
 
-        Buffer::update_dynamic_uniform_buffer(buffer, block_offset, uniform.offset,
+        Buffer::update_dynamic_uniform_buffer(buffer, block_offset, offset,
                                               &it->second[0], it->second.size());
 
         return true;
     }
     
-    /* DOESN'T WORK WITH MATRIX TYPES
-    template<typename T>
-    void append_ints(const T& value, std::vector<int32_t>& out) {
-        if constexpr (std::is_arithmetic_v<T>) {
-            out.push_back(static_cast<int32_t>(value));
-        } else {
-            for (const auto& x : value) {
-                append_ints(x, out);
-            }
-        }
-    }
-
-    template<typename map_strintern_T>
-    inline void upload_uniform_data_piece_int(const map_strintern_T& uniform_piece, 
-                                              uint32_t offset, StringIntern str, int x) {
-        auto it = uniform_piece.find(str);
-        if(it != uniform_piece.end() && !it->second.empty()) {
-            std::vector<int32_t> vec;
-            vec.reserve(it->second.size());
-            for(auto i : it->second) {
-                append_ints(it->second, vec);
-            }
-
-            auto& val = vec[0];
-
-            Buffer::update_dynamic_uniform_buffer(
-                uniform_buffer,
-                _device->_physical_device,
-                x,
-                offset,
-                &val,
-                it->second.size()
-            );
-        }
-    }
-    */
-
     struct ShaderBinary {
         uint32_t* data = nullptr;
         size_t word_count = 0;
@@ -917,12 +876,12 @@ class Vulkan:public RenderAPI {
     VkShaderModule create_shader_module(const ShaderBinary& shader_code);
     std::vector<shader_stage_info> parse_shader_stages(std::string& source);
     void reflect_shader(ShaderBinary& shader_code, VkShaderStageFlagBits stage, shader_data& data);
-    void reflect_uniform_block(const SpvReflectTypeDescription* type_description, 
-                               const SpvReflectDescriptorBinding* binding,
-                               shader_data& data, size_t size, size_t offset, const char* name);
-    void unwrap_reflected_arrays(const SpvReflectTypeDescription* type_description,
+    void upload_uniform_data(Uniforms** all_uniforms, const SpvReflectTypeDescription* type_description, 
+                             const SpvReflectDescriptorBinding* binding,
+                             size_t size, size_t offset, const char* name);
+    void unwrap_reflected_arrays(Uniforms** all_uniforms,
+                                 const SpvReflectTypeDescription* type_description,
                                  const SpvReflectDescriptorBinding* binding,
-                                 shader_data& data,
                                  uint32_t dimension,
                                  uint32_t size,
                                  uint32_t offset,
