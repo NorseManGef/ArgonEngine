@@ -463,6 +463,7 @@ class Vulkan:public RenderAPI {
 
     struct Buffer {
         VkDevice _device;
+        VkPhysicalDevice _physical_device;
         VkBuffer _buffer;
         VkDeviceMemory _memory;
         VkDeviceSize _size;
@@ -509,9 +510,6 @@ class Vulkan:public RenderAPI {
                                   std::shared_ptr<VertexArray> vertex_array,
                                   VkDeviceSize offset = 0);
 
-        std::vector<Buffer> create_uniform_buffers_in_flight(VkDevice device, VkPhysicalDevice physical_device,
-                                                             uint32_t frames_in_flight);
-
         uint32_t _dynamic_alignment = UINT32_MAX; // UINT32_MAX implies that the buffer is either not initialized or not a uniform buffer
         std::map<uint64_t, VkDeviceSize> _current_uniform_offsets;
         VkDeviceSize _current_uniform_buffer = 0;
@@ -521,9 +519,11 @@ class Vulkan:public RenderAPI {
         }
 
         static Buffer create_dynamic_uniform_buffer(VkDevice device, VkPhysicalDevice physical_device, VkDeviceSize size);
-        // TODO: Make a way to resize the buffers
         static void update_dynamic_uniform_buffer(Buffer& dynamic_ubuffer, VkDeviceSize block_offset,
-                                                  VkDeviceSize uniform_offset, const void* data, VkDeviceSize data_size);
+                                                  VkDeviceSize uniform_offset, const void* data, VkDeviceSize data_size,
+                                                  VkCommandPool command_pool, VkQueue graphics_queue);
+        static void resize_dynamic_uniform_buffer(Buffer* dynamic_ubuffer, VkDeviceSize new_size, 
+                                                  VkCommandPool command_pool, VkQueue graphics_queue);
 
         static VkMemoryRequirements get_mem_requirements(VkDevice device, VkDeviceSize size,
                                                           VkBufferUsageFlags usage);
@@ -548,6 +548,52 @@ class Vulkan:public RenderAPI {
             _buffer(nullptr)
         {
             create_buffer(device, physical_device, size, usage, memory_properties);
+        }
+
+        Buffer(Buffer&& other):
+            _device(other._device),
+            _physical_device(other._physical_device),
+            _buffer(other._buffer),
+            _memory(other._memory),
+            _size(other._size),
+            _usage(other._usage),
+            _memory_properties(other._memory_properties),
+            _mapped_memory(other._mapped_memory),
+            _is_coherent(other._is_coherent),
+            _dynamic_alignment(other._dynamic_alignment),
+            _current_uniform_offsets(std::move(other._current_uniform_offsets)),
+            _current_uniform_buffer(other._current_uniform_buffer)
+        {
+            other._device = nullptr;
+            other._physical_device = nullptr;
+            other._buffer = nullptr;
+            other._memory = nullptr;
+            other._mapped_memory = nullptr;
+        }
+
+        Buffer& operator=(Buffer&& other) {
+            if(&other != this) {
+                _device = other._device;
+                _physical_device = other._physical_device;
+                _buffer = other._buffer;
+                _memory = other._memory;
+                _size = other._size;
+                _usage = other._usage;
+                _memory_properties = other._memory_properties;
+                _mapped_memory = other._mapped_memory;
+                _is_coherent = other._is_coherent;
+                _dynamic_alignment = other._dynamic_alignment;
+                _current_uniform_offsets = std::move(other._current_uniform_offsets);
+                _current_uniform_buffer = other._current_uniform_buffer;
+
+                other._device = nullptr;
+                other._physical_device = nullptr;
+                other._buffer = nullptr;
+                other._memory = nullptr;
+                other._mapped_memory = nullptr;
+            }
+
+            return *this;
         }
         
         ~Buffer() {
@@ -769,10 +815,11 @@ class Vulkan:public RenderAPI {
         VkPipelineLayout pipeline_layout;
         VkDescriptorPool desc_pool;
         std::vector<SpvReflectDescriptorSet*> reflected_sets;
-        std::map<StringIntern, Uniform> uniforms;
         std::map<StringIntern, uint32_t> attribs;
 
         size_t _last_frame = 0;
+
+        ~shader_data();
     };
 
     enum class CmdState {
@@ -795,7 +842,7 @@ class Vulkan:public RenderAPI {
     RenderPass* _render_pass;
     Synchronization* _sync;
     size_t _current_frame = 0; // 0..MAX_FRAMES_IN_FLIGHT-1
-    uint32_t _image_index = 0; // 0.._device->swapchain_image_views.size()
+    uint32_t _image_index = 0; // 0.._device->swapchain_image_command_pool->_command_pool
 
     Buffer uniform_buffers[MAX_FRAMES_IN_FLIGHT];
 
@@ -842,7 +889,9 @@ class Vulkan:public RenderAPI {
         VkDeviceSize block_offset = offset_it->second;
 
         Buffer::update_dynamic_uniform_buffer(buffer, block_offset, offset,
-                                              &it->second[0], it->second.size());
+                                              &it->second[0], it->second.size(),
+                                              _command_pool->_command_pool,
+                                              _device->_graphicsQ);
 
         return true;
     }

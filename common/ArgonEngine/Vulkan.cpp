@@ -677,7 +677,7 @@ void Vulkan::Pipeline::create_graphics_pipeline() {
         .pDynamicState = &dynamic_state_info,
         .layout = _current_shader->pipeline_layout,
         .renderPass = _current_render_pass,
-        .subpass = 0, //TODO: Determine if this should be user-settable
+        .subpass = 0,
         .basePipelineHandle = VK_NULL_HANDLE, //TODO: Implement base pipelines if feasible for better performance
         .basePipelineIndex = -1,
     };
@@ -701,29 +701,78 @@ void Vulkan::Pipeline::create_graphics_pipeline() {
 
 void Vulkan::Pipeline::update_desc_sets(shader_data& shader, VkBuffer uniform_buffer, uint32_t set) {
     std::vector<VkWriteDescriptorSet> descriptor_writes;
-    std::vector<VkDescriptorBufferInfo> descriptor_infos;
-    descriptor_writes.reserve(shader.uniforms.size());
-    descriptor_infos.reserve(shader.uniforms.size());
-    for(const auto& [name, uniform] : shader.uniforms) {
-        if(uniform.set != set)continue;
+    descriptor_writes.reserve(shader.desc_sets.size());
+    IF_PLOG(plog::debug) {
+        if(shader.reflected_sets.size() != shader.desc_sets.size()) {
+            PLOGF << "Vulkan: Reflected sets does not match the size of desc sets";
+            terminate_engine();
+        }
+    }
 
-        if(uniform.isTexture)continue; // not included in buffers, therefore not needed here
+    auto type_translate = [](SpvReflectDescriptorType flag)-> VkDescriptorType {
+        switch(flag) {
+            case 0: return VK_DESCRIPTOR_TYPE_SAMPLER;
+            case 1: return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            case 2: return VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+            case 3: return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+            case 4: return VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
+            case 5: return VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
+            case 6: return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            case 7: return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            case 8: return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+            case 9: return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
+            case 10: return VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
+            case SPV_REFLECT_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR:
+                     return VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
+        }
+    };
 
-        descriptor_infos.push_back({
-            .buffer = uniform_buffer,
-            .offset = uniform.offset,
-            .range = uniform.block_size
-        });
+    for(int i = 0; i < shader.reflected_sets.size(); ++i) {
+        for(int x = 0; x < shader.reflected_sets[i]->binding_count; ++x) {
+            VkDescriptorType type = type_translate(shader.reflected_sets[i]->bindings[x]->descriptor_type);
 
-        descriptor_writes.push_back({
-            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-            .dstSet = shader.desc_sets[set],
-            .dstBinding = uniform.binding,
-            .dstArrayElement = 0,
-            .descriptorCount = 1,
-            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
-            .pBufferInfo = &descriptor_infos.back(),
-        });
+            VkDescriptorImageInfo* imageInfo = nullptr;
+            VkBufferView* texel_buffer_view = nullptr;
+            VkDescriptorBufferInfo* bufferInfo = nullptr;
+
+            switch(type) {
+                case VK_DESCRIPTOR_TYPE_SAMPLER:
+                case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+                case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+                    imageInfo = {
+                        // TODO: Samplers
+                    };
+                    break;
+                case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
+                case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
+                    // TODO: make texel buffer view
+                    break;
+                case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+                case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+                case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
+                case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
+                    bufferInfo = new VkDescriptorBufferInfo{
+                        .buffer = uniform_buffer,
+                        .offset = shader.reflected_sets[i]->bindings[x]->block.offset,
+                        .range = shader.reflected_sets[i]->bindings[x]->block.size,
+                    }; 
+                    break;
+                default: break; // Do nothing
+            };
+
+            descriptor_writes.push_back({
+                .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                .pNext = nullptr,
+                .dstSet = shader.desc_sets[i],
+                .dstBinding = shader.reflected_sets[i]->bindings[x]->binding,
+                .dstArrayElement = 0,
+                .descriptorCount = shader.reflected_sets[i]->bindings[x]->count,
+                .descriptorType = type,
+                .pImageInfo = imageInfo,
+                .pBufferInfo = bufferInfo,
+                .pTexelBufferView = texel_buffer_view,
+            });
+        }
     }
 
     vkUpdateDescriptorSets(_device, descriptor_writes.size(), descriptor_writes.data(), 0, nullptr);
@@ -1331,6 +1380,7 @@ void Vulkan::Buffer::create_buffer(VkDevice device, VkPhysicalDevice physical_de
         vkFreeMemory(_device, _memory, nullptr);
     }
     _device = device;
+    _physical_device = physical_device;
     _size = size;
     _usage = usage;
     _memory_properties = memory_properties;
@@ -1402,7 +1452,6 @@ void Vulkan::Buffer::create_buffer_with_data(VkDevice device, VkPhysicalDevice p
 
 void* Vulkan::Buffer::map(VkDeviceSize offset, VkDeviceSize size) {
     if(_mapped_memory != nullptr) {
-        PLOGW << "Vulkan: Buffer is already mapped";
         return _mapped_memory;
     }
 
@@ -1448,23 +1497,15 @@ void Vulkan::Buffer::copy_to(VkDevice device, VkCommandPool command_pool, VkQueu
                              VkDeviceSize dst_offset) {
     VkCommandBuffer buffer = begin_single_time_commands(device, command_pool);
 
-    VkBufferCopy2 copy{
-        .sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2,
+    VkBufferCopy copy{
         .srcOffset = src_offset,
         .dstOffset = dst_offset,
         .size = size,
     };
 
-    VkCopyBufferInfo2 copyInfo{
-        .sType = VK_STRUCTURE_TYPE_COPY_BUFFER_INFO_2,
-        .pNext = nullptr,
-        .srcBuffer = _buffer,
-        .dstBuffer = dst_buffer._buffer,
-        .regionCount = 1,
-        .pRegions = &copy,
-    };
-
-    vkCmdCopyBuffer2(buffer, &copyInfo);
+    vkCmdCopyBuffer(buffer, _buffer, dst_buffer._buffer,
+                    1, &copy);
+    end_single_time_commands(device, command_pool, buffer, graphics_queue);
 }
 
 void Vulkan::Buffer::flush(VkDeviceSize offset, VkDeviceSize size) {
@@ -1717,25 +1758,6 @@ void Vulkan::Buffer::update_vertex_buffer(Buffer& buffer, VkDevice device, VkPhy
     }
 }
 
-std::vector<Vulkan::Buffer> Vulkan::Buffer::create_uniform_buffers_in_flight(VkDevice device,
-                                                                     VkPhysicalDevice physical_device,
-                                                                     uint32_t frames_in_flight) {
-    std::vector<Buffer> uniform_buffers;
-    uniform_buffers.reserve(frames_in_flight);
-
-    for(uint32_t i = 0; i < frames_in_flight; ++i) {
-        Buffer uniform_buffer;
-        uniform_buffer.create_buffer(device, physical_device, sizeof(Uniforms),
-                                     VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                                     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | 
-                                     VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-        uniform_buffers.push_back(uniform_buffer);
-    }
-
-    return uniform_buffers;
-}
-
 Vulkan::Buffer Vulkan::Buffer::create_dynamic_uniform_buffer(VkDevice device, VkPhysicalDevice physical_device, VkDeviceSize size) {
     VkPhysicalDeviceProperties properties;
     vkGetPhysicalDeviceProperties(physical_device, &properties);
@@ -1754,11 +1776,27 @@ Vulkan::Buffer Vulkan::Buffer::create_dynamic_uniform_buffer(VkDevice device, Vk
 }
 
 void Vulkan::Buffer::update_dynamic_uniform_buffer(Buffer& dynamic_buffer, VkDeviceSize block_offset, 
-                                                   VkDeviceSize uniform_offset, const void* data, VkDeviceSize data_size) {
+                                                   VkDeviceSize uniform_offset, const void* data, 
+                                                   VkDeviceSize data_size, VkCommandPool command_pool, VkQueue graphics_queue) {
 
     VkDeviceSize dst_offset = block_offset + uniform_offset;
 
+    if(dst_offset+data_size > dynamic_buffer._size) {
+        resize_dynamic_uniform_buffer(&dynamic_buffer, dynamic_buffer._size*2, command_pool, graphics_queue);
+    }
+
     dynamic_buffer.upload_data(data, data_size, dst_offset);
+}
+
+void Vulkan::Buffer::resize_dynamic_uniform_buffer(Buffer* dynamic_buffer, VkDeviceSize new_size, 
+                                                   VkCommandPool command_pool, VkQueue graphics_queue) {
+    Buffer new_buffer = create_dynamic_uniform_buffer(dynamic_buffer->_device, dynamic_buffer->_physical_device, new_size);
+
+    dynamic_buffer->copy_to(dynamic_buffer->_device, command_pool, graphics_queue, new_buffer, dynamic_buffer->_size);
+
+    dynamic_buffer->clean();
+
+    *dynamic_buffer = std::move(new_buffer);
 }
 
 VkMemoryRequirements Vulkan::Buffer::get_mem_requirements(VkDevice device, VkDeviceSize size, 
@@ -1802,6 +1840,7 @@ void Vulkan::Buffer::clean() {
         }
 
         _device = VK_NULL_HANDLE; // the device is managed by the device struct and does not need to be destroyed
+        _physical_device = VK_NULL_HANDLE;
     }
 }
 
@@ -2806,14 +2845,14 @@ void Vulkan::draw_vertex_array(std::shared_ptr<VertexArray> array, int end_vert,
     _command_pool->set_primitive_topology(current_cmd_buffer, topology);
     _command_pool->bind_desc_sets(current_cmd_buffer, pipe._current_shader->pipeline_layout,
                                   0, pipe._current_shader->desc_sets, dynamic_offsets);
-    _command_pool->bind_vertex_buffers(current_cmd_buffer, 0, {vert_d.vert_buffer._buffer}, {0});
+    _command_pool->bind_vertex_buffers(current_cmd_buffer, 0, {vert_d.vert_buffer._buffer}, {0}); // FIXME: Offsets need to represent vertex locations in memory
     _command_pool->bind_index_buffer(current_cmd_buffer, vert_d.index_buffer._buffer, 0, VK_INDEX_TYPE_UINT16);
 
     uint32_t index_count = end_vert < 0 ? static_cast<uint32_t>(array->index_data.size()) : static_cast<uint32_t>(end_vert);
 
     if(index_count == 0)return;
 
-    _command_pool->draw_indexed(current_cmd_buffer, index_count, 1, 0, 0, 0);
+    _command_pool->draw_indexed(current_cmd_buffer, index_count, 1, 0, 0, 0); // Do we only draw indexed, or should we also draw()?
 }
 
 void Vulkan::update_resources() {
@@ -3253,8 +3292,8 @@ void Vulkan::upload_uniform_data(Uniforms** all_uniforms, const SpvReflectTypeDe
 
     //translate type
     if(!type_description) {
-        PLOGE << "Vulkan: Reflect type description of variable member was null; defaulting to int.";
-        type=kUniformInt; 
+        PLOGE << "Vulkan: Reflect type description of variable member was null; defaulting to float.";
+        type=kUniformFloat; 
         return;
     }
     auto& numeric = type_description->traits.numeric;
@@ -3320,25 +3359,21 @@ void Vulkan::upload_uniform_data(Uniforms** all_uniforms, const SpvReflectTypeDe
     for(int x = 0; x < size; ++x) {
         switch(type) {
             case kUniformFloat:
-            case kUniformInt:
                 found = upload_uniform_data_piece(all_uniforms[x]->f, binding->set, 
                                                   binding->binding, binding->block.size,
                                                   offset, name);
                 break;
             case kUniformFVec2:
-            case kUniformVec2:
                 found = upload_uniform_data_piece(all_uniforms[x]->f2, binding->set,
                                                   binding->binding, binding->block.size,
                                                   offset, name);
                 break;
             case kUniformFVec3:
-            case kUniformVec3:
                 found = upload_uniform_data_piece(all_uniforms[x]->f3, binding->set,
                                                   binding->binding, binding->block.size,
                                                   offset, name);
                 break;
             case kUniformFVec4:
-            case kUniformVec4:
                 found = upload_uniform_data_piece(all_uniforms[x]->f4, binding->set,
                                                   binding->binding, binding->block.size,
                                                   offset, name);
@@ -3346,7 +3381,6 @@ void Vulkan::upload_uniform_data(Uniforms** all_uniforms, const SpvReflectTypeDe
             case kUniformFMat2x2:
             case kUniformFMat2x3:
             case kUniformFMat2x4:
-            case kUniformIMat2x2:
                 found = upload_uniform_data_piece(all_uniforms[x]->mat2, binding->set,
                                                   binding->binding, binding->block.size,
                                                   offset, name);
@@ -3354,7 +3388,6 @@ void Vulkan::upload_uniform_data(Uniforms** all_uniforms, const SpvReflectTypeDe
             case kUniformFMat3x2:
             case kUniformFMat3x3:
             case kUniformFMat3x4:
-            case kUniformIMat3x3:
                 found = upload_uniform_data_piece(all_uniforms[x]->mat3, binding->set,
                                                   binding->binding, binding->block.size,
                                                   offset, name);
@@ -3362,13 +3395,12 @@ void Vulkan::upload_uniform_data(Uniforms** all_uniforms, const SpvReflectTypeDe
             case kUniformFMat4x2:
             case kUniformFMat4x3:
             case kUniformFMat4x4:
-            case kUniformIMat4x4:
                 found = upload_uniform_data_piece(all_uniforms[x]->mat4, binding->set,
                                                   binding->binding, binding->block.size,
                                                   offset, name);
                 break;
             default: 
-                PLOGE<<std::hex<<"Shader uses unknown uniform type: "<<type<<std::dec;
+                PLOGE<<std::hex<<"Shader uses unknown uniform type, or it was an int: "<<type<<std::dec;
                 found = true;
                 break;
         }
