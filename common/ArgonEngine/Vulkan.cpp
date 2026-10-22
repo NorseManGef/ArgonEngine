@@ -3474,39 +3474,45 @@ void Vulkan::reflect_shader(ShaderBinary& shader_code, VkShaderStageFlagBits sta
                 VkDescriptorSetLayoutBinding layout_binding;
                 auto* binding = set->bindings[i];
 
+                VkDescriptorType type;
+
                 switch(binding->descriptor_type) {
                     case SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
-                    {
-                        layout_bindings.push_back({
-                            .binding = binding->binding,
-                            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
-                            .descriptorCount = binding->count,
-                            .stageFlags = stage,
-                            .pImmutableSamplers = nullptr,
-                        });
-                        
-                        desc_pool_sizes.push_back({
-                            .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
-                            .descriptorCount = binding->count,
-                        });
-                        
+                        type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
                         break;
-                    }
                     case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_BUFFER:
-                    {
-
+                        type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
                         break;
-                    }
                     case SPV_REFLECT_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
-                    case SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
-                    case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_IMAGE:
-                    case SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLER:
-                    {
-
+                        type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
                         break;
-                    }
-                    default: break;
+                    case SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+                        type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+                        break;
+                    case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+                        type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+                        break;
+                    case SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLER:
+                        type = VK_DESCRIPTOR_TYPE_SAMPLER;
+                        break;
+                    default:
+                        type = VK_DESCRIPTOR_TYPE_MAX_ENUM;
+                        PLOGE << "Vulkan: Descriptor type unknown";
+                        break;
                 }
+
+                layout_bindings.push_back({
+                    .binding = binding->binding,
+                    .descriptorType = type,
+                    .descriptorCount = binding->count,
+                    .stageFlags = stage,
+                    .pImmutableSamplers = nullptr,
+                });
+                
+                desc_pool_sizes.push_back({
+                    .type = type,
+                    .descriptorCount = binding->count,
+                });
             }
             layout_bindings_set.push_back(layout_bindings);
         }

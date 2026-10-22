@@ -455,8 +455,6 @@ class Vulkan:public RenderAPI {
         }
     };
 
-    struct Uniform;
-
     struct Buffer {
         VkDevice _device;
         VkPhysicalDevice _physical_device;
@@ -783,21 +781,6 @@ class Vulkan:public RenderAPI {
         size_t _last_frame = 0;
     };
 
-    struct Uniform {
-        uint32_t set = 0;
-        uint32_t binding = 0;
-        size_t block_size = 0;
-
-        UniformType type = kUniformFloat;        
-
-        bool isTexture = false;
-
-        size_t offset = 0;
-        size_t size = 0;
-
-        size_t frame = 0;
-    };
-
     struct shader_stage {
         VkShaderModule module = VK_NULL_HANDLE;
         VkShaderStageFlagBits stage = VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM;
@@ -838,7 +821,7 @@ class Vulkan:public RenderAPI {
     RenderPass* _render_pass;
     Synchronization* _sync;
     size_t _current_frame = 0; // 0..MAX_FRAMES_IN_FLIGHT-1
-    uint32_t _image_index = 0; // 0.._device->swapchain_image_command_pool->_command_pool
+    uint32_t _image_index = 0;
 
     Buffer uniform_buffers[MAX_FRAMES_IN_FLIGHT];
 
