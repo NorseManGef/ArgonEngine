@@ -210,7 +210,6 @@ class Vulkan:public RenderAPI {
         VkRenderPass _current_render_pass;
 
         VkExtent2D _extent;
-        VkDescriptorPool _desc_pool; // SHOULD ALWAYS BE THE DESCRIPTOR POOL CREATED IN INITIALIZAITON
         VkDevice _device; // SHOULD ALWAYS BE THE DEVICE IN USE
 
         bool operator==(const Required_Pipeline_State& b)const{
@@ -232,8 +231,6 @@ class Vulkan:public RenderAPI {
             _current_viewport.height == b._current_viewport.height &&
             _current_viewport.minDepth == b._current_viewport.minDepth &&
             _current_viewport.maxDepth == b._current_viewport.maxDepth &&
-
-            _desc_pool == b._desc_pool &&
 
             _current_shader == b._current_shader &&
             _current_render_pass == b._current_render_pass &&
@@ -282,7 +279,6 @@ class Vulkan:public RenderAPI {
             hash_combine(std::hash<uint32_t>{}(s._extent.width));
             hash_combine(std::hash<uint32_t>{}(s._extent.height));
 
-            hash_combine(std::hash<VkDescriptorPool>{}(s._desc_pool));
             hash_combine(std::hash<VkDevice>{}(s._device));
 
             return seed;

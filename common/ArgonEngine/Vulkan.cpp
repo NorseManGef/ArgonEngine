@@ -2627,20 +2627,6 @@ void Vulkan::init_vulkan(std::vector<const char*>& required_extensions, SDL_Wind
         _cmd_buffers[i] = _command_pool->allocate_buffer();
     }
     _sync = new Synchronization(_device->_device);
-
-    VkDescriptorPoolSize pool_size{
-        .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
-        .descriptorCount = MAX_FRAMES_IN_FLIGHT,
-    };
-
-    VkDescriptorPoolCreateInfo poolInfo{
-        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-        .maxSets = MAX_FRAMES_IN_FLIGHT,
-        .poolSizeCount = 1,
-        .pPoolSizes = &pool_size,
-    };
-
-    result = vkCreateDescriptorPool(_device->_device, &poolInfo, nullptr, &state._desc_pool);
 }
 
 void Vulkan::ensure_recording() {
@@ -2795,7 +2781,6 @@ void Vulkan::clean() {
         p.second.clean();
     }
     _pipelines.clear();
-    vkDestroyDescriptorPool(_device->_device, state._desc_pool, nullptr);
     if(_instance)delete _instance;
     if(_device)delete _device;
 }
@@ -2845,7 +2830,7 @@ void Vulkan::draw_vertex_array(std::shared_ptr<VertexArray> array, int end_vert,
     _command_pool->set_primitive_topology(current_cmd_buffer, topology);
     _command_pool->bind_desc_sets(current_cmd_buffer, pipe._current_shader->pipeline_layout,
                                   0, pipe._current_shader->desc_sets, dynamic_offsets);
-    _command_pool->bind_vertex_buffers(current_cmd_buffer, 0, {vert_d.vert_buffer._buffer}, {0}); // FIXME: Offsets need to represent vertex locations in memory
+    _command_pool->bind_vertex_buffers(current_cmd_buffer, 0, {vert_d.vert_buffer._buffer}, {0});
     _command_pool->bind_index_buffer(current_cmd_buffer, vert_d.index_buffer._buffer, 0, VK_INDEX_TYPE_UINT16);
 
     uint32_t index_count = end_vert < 0 ? static_cast<uint32_t>(array->index_data.size()) : static_cast<uint32_t>(end_vert);
