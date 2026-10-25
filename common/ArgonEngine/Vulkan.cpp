@@ -1,6 +1,7 @@
 #include "Vulkan.h"
 #include <cctype>
 #include <cstdint>
+#include <memory>
 #include <ranges>
 #include <algorithm>
 #include <shaderc/env.h>
@@ -739,18 +740,25 @@ void Vulkan::Pipeline::update_desc_sets(shader_data& shader, VkBuffer uniform_bu
                 case VK_DESCRIPTOR_TYPE_SAMPLER:
                 case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
                 case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
-                    imageInfo = {
-                        // TODO: Samplers
+                {
+                    auto tex = shader.texture_bindings[uniform_binding_key(i, x)];
+                    imageInfo = new VkDescriptorImageInfo {
+                        .sampler = tex->_sampler,
+                        .imageView = tex->_view,
+                        .imageLayout = tex->_layout,
                     };
                     break;
+                }
                 case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
                 case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
                     // TODO: make texel buffer view
                     break;
-                case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
                 case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
-                case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
                 case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
+
+                    break;
+                case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+                case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
                     bufferInfo = new VkDescriptorBufferInfo{
                         .buffer = uniform_buffer,
                         .offset = shader.reflected_sets[i]->bindings[x]->block.offset,
@@ -2812,7 +2820,7 @@ void Vulkan::draw_vertex_array(std::shared_ptr<VertexArray> array, int end_vert,
         return;
     }
 
-    Pipeline& pipe = _pipelines[state];
+    Pipeline& pipe = _pipelines[state]; // creates a new pipeline if one does not already exist
 
     if(!pipe.is_valid()) {
         pipe.create_graphics_pipeline(state);
@@ -2841,10 +2849,10 @@ void Vulkan::draw_vertex_array(std::shared_ptr<VertexArray> array, int end_vert,
 }
 
 void Vulkan::update_resources() {
-    std::map<VirtualResource, TexturePrim>::iterator it = textures.begin();
+    std::map<VirtualResource, std::shared_ptr<TexturePrim>>::iterator it = textures.begin();
     while(it!=textures.end()){
-        it->second._last_frame++;
-        if(it->second._last_frame>300){
+        it->second->_last_frame++;
+        if(it->second->_last_frame>300){
             it = textures.erase(it);
         }else ++it;
     }
@@ -2852,7 +2860,7 @@ void Vulkan::update_resources() {
     std::map<std::shared_ptr<VertexArray>, vert_data>::iterator it2 = vertex_arrays.begin();
     while(it2!=vertex_arrays.end()){
         it2->second._last_frame++;
-        if(it->second._last_frame>30){
+        if(it2->second._last_frame>30){
             it2->second.index_buffer.clean();
             it2->second.vert_buffer.clean();
             it2 = vertex_arrays.erase(it2);
@@ -2952,7 +2960,8 @@ void Vulkan::set_uniforms(Uniforms** all_uniforms, int size) {
                 const SpvReflectBlockVariable& member = set->bindings[i]->block.members[member_num];
                 if(set->bindings[i]->descriptor_type == SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLER ||
                                                         SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLED_IMAGE ||
-                                                        SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_IMAGE) {
+                                                        SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_IMAGE ||
+                                                        SPV_REFLECT_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) {
                     bool has_value = false;
                     for(int x = 0; x < size; ++x) {
                         auto it2 = all_uniforms[x]->textures.find(set->bindings[i]->name);
@@ -2961,6 +2970,9 @@ void Vulkan::set_uniforms(Uniforms** all_uniforms, int size) {
                             for(int s = 0; s < std::min(member.size,
                                                         static_cast<uint32_t>(it2->second.size())); ++s) {
                                 cache_texture(it2->second[s]);
+                                current_shader->texture_bindings[
+                                    uniform_binding_key(set->set, i)
+                                ] = textures[it2->second[s]];
                             }
 
                             break;
@@ -3585,20 +3597,21 @@ void Vulkan::cache_texture(VirtualResource tex) {
     RealTexFormat format;
     format.set_format(image->get_format());
     if(image){
-        TexturePrim& p = textures[tex];
-        p._last_frame = 0;
-        bool realloc = p._width!=image->get_width()||p._height!=image->get_height();
+        std::shared_ptr<TexturePrim> p = std::make_shared<TexturePrim>();
+        textures[tex] = p;
+        p->_last_frame = 0;
+        bool realloc = p->_width!=image->get_width()||p->_height!=image->get_height();
         if(realloc) {
-            p.create_image(_device->_device, _device->_physical_device,
+            p->create_image(_device->_device, _device->_physical_device,
                        image->get_width(), image->get_height(), format);
-            p.upload_data(_cmd_buffers[_current_frame], image->get_image_data(),
+            p->upload_data(_cmd_buffers[_current_frame], image->get_image_data(),
                           tex.size(), 0);
         }
 
-        if(p._update_id!=image->update_id()||realloc) {
-            p.upload_data(_cmd_buffers[_current_frame], image->get_image_data(),
+        if(p->_update_id!=image->update_id()||realloc) {
+            p->upload_data(_cmd_buffers[_current_frame], image->get_image_data(),
                           tex.size(), 0);
-            p._update_id = image->update_id();
+            p->_update_id = image->update_id();
         }
     } else {
         PLOGE << tex.get_path_string() << " is not a valid texture.";
@@ -3606,7 +3619,7 @@ void Vulkan::cache_texture(VirtualResource tex) {
 }
 
 void Vulkan::cache_array(std::shared_ptr<VertexArray> array) {
-    vert_data &d = vertex_arrays[array];
+    vert_data &d = vertex_arrays[array]; // default constructs the array, if it doesn't already exist
     d._last_frame = 0;
     if(d.vert_buffer._buffer == VK_NULL_HANDLE){
         d.buff_size = 0;

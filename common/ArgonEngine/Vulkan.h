@@ -508,9 +508,6 @@ class Vulkan:public RenderAPI {
         std::map<uint64_t, VkDeviceSize> _current_uniform_offsets;
         VkDeviceSize _current_uniform_buffer = 0;
 
-        static uint64_t uniform_binding_key(uint32_t set, uint32_t binding) {
-            return (static_cast<uint64_t>(set) << 32) | binding;
-        }
 
         static Buffer create_dynamic_uniform_buffer(VkDevice device, VkPhysicalDevice physical_device, VkDeviceSize size);
         static void update_dynamic_uniform_buffer(Buffer& dynamic_ubuffer, VkDeviceSize block_offset,
@@ -794,6 +791,7 @@ class Vulkan:public RenderAPI {
         VkPipelineLayout pipeline_layout;
         VkDescriptorPool desc_pool;
         std::vector<SpvReflectDescriptorSet*> reflected_sets;
+        std::map<uint64_t, std::shared_ptr<TexturePrim>> texture_bindings;
         std::map<StringIntern, uint32_t> attribs;
 
         size_t _last_frame = 0;
@@ -830,7 +828,7 @@ class Vulkan:public RenderAPI {
     shader_data * current_shader;
 
     std::map<std::shared_ptr<VertexArray>, vert_data> vertex_arrays;
-    std::map<VirtualResource, TexturePrim> textures;
+    std::map<VirtualResource, std::shared_ptr<TexturePrim>> textures;
     std::map<VirtualResource, shader_data> shaders;
 
     void ensure_recording();
@@ -851,7 +849,7 @@ class Vulkan:public RenderAPI {
 
         auto& buffer = uniform_buffers[_current_frame];
 
-        uint64_t key = Buffer::uniform_binding_key(set, binding);
+        uint64_t key = uniform_binding_key(set, binding);
 
         auto offset_it = buffer._current_uniform_offsets.find(key);
 
@@ -914,6 +912,11 @@ class Vulkan:public RenderAPI {
                                  uint32_t size,
                                  uint32_t offset,
                                  const std::string& name);
+
+    static inline uint64_t uniform_binding_key(uint32_t set, uint32_t binding) {
+        return (static_cast<uint64_t>(set) << 32) | binding;
+    }
+
 public:
     Vulkan() {} 
     ~Vulkan() {
