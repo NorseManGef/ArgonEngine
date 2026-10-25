@@ -1716,8 +1716,6 @@ std::vector<Vulkan::Buffer> Vulkan::Buffer::create_attrib_buffers(VkDevice devic
     for(auto attrib : vertex_array->attributes) {
         VkDeviceSize attrib_buffer_size = attrib.stride * vertex_array->data.size();
 
-        // TODO: This function creates horribly inefficient buffers that store a bunch of extra data.
-        // performing a calculation to extract only the data relevant to attrib would be more memory efficient.
         auto attrib_data = vertex_array->data_start() + attrib.offset;
         
         Buffer staging_buffer;
@@ -1783,20 +1781,20 @@ Vulkan::Buffer Vulkan::Buffer::create_dynamic_uniform_buffer(VkDevice device, Vk
     return buffer;
 }
 
-void Vulkan::Buffer::update_dynamic_uniform_buffer(Buffer& dynamic_buffer, VkDeviceSize block_offset, 
+void Vulkan::Buffer::update_dynamic_buffer(Buffer& dynamic_buffer, VkDeviceSize block_offset, 
                                                    VkDeviceSize uniform_offset, const void* data, 
                                                    VkDeviceSize data_size, VkCommandPool command_pool, VkQueue graphics_queue) {
 
     VkDeviceSize dst_offset = block_offset + uniform_offset;
 
     if(dst_offset+data_size > dynamic_buffer._size) {
-        resize_dynamic_uniform_buffer(&dynamic_buffer, dynamic_buffer._size*2, command_pool, graphics_queue);
+        resize_dynamic_buffer(&dynamic_buffer, dynamic_buffer._size*2, command_pool, graphics_queue);
     }
 
     dynamic_buffer.upload_data(data, data_size, dst_offset);
 }
 
-void Vulkan::Buffer::resize_dynamic_uniform_buffer(Buffer* dynamic_buffer, VkDeviceSize new_size, 
+void Vulkan::Buffer::resize_dynamic_buffer(Buffer* dynamic_buffer, VkDeviceSize new_size, 
                                                    VkCommandPool command_pool, VkQueue graphics_queue) {
     Buffer new_buffer = create_dynamic_uniform_buffer(dynamic_buffer->_device, dynamic_buffer->_physical_device, new_size);
 
@@ -2986,6 +2984,20 @@ void Vulkan::set_uniforms(Uniforms** all_uniforms, int size) {
 
                 if(!member.name)continue;
 
+                if(set->bindings[i]->descriptor_type == SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_BUFFER ||
+                                                        SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC) {
+                    if(member.type_description->type_flags & SPV_REFLECT_TYPE_FLAG_ARRAY) {
+                        unwrap_reflected_storage_arrays(all_uniforms, member.type_description,
+                                                        set->bindings[i], 0, member.size,
+                                                        member.offset, member.name);
+                    } else {
+                        upload_storage_data(all_uniforms, member.type_description,
+                                            set->bindings[i], member.size,
+                                            member.offset, member.name);
+                    }
+
+                }
+
                 if(member.type_description->type_flags & SPV_REFLECT_TYPE_FLAG_ARRAY) {
                     unwrap_reflected_arrays(all_uniforms, member.type_description,
                                             set->bindings[i], 0,
@@ -3408,6 +3420,131 @@ void Vulkan::upload_uniform_data(Uniforms** all_uniforms, const SpvReflectTypeDe
     }
 }
 
+void Vulkan::upload_storage_data(Uniforms** all_uniforms, const SpvReflectTypeDescription* type_description,
+                                 const SpvReflectDescriptorBinding* binding,
+                                 size_t size, size_t offset, const char* name) {
+    UniformType type;
+
+    //translate type
+    if(!type_description) {
+        PLOGE << "Vulkan: Reflect type description of variable member was null; defaulting to float.";
+        type=kUniformFloat; 
+        return;
+    }
+    auto& numeric = type_description->traits.numeric;
+    const bool is_int = numeric.scalar.signedness != 0;
+
+    if(type_description->type_flags & SPV_REFLECT_TYPE_FLAG_MATRIX) {
+        const auto& matrix = numeric.matrix;
+        if(is_int) {
+            switch(matrix.column_count) {
+                case 2: type = kUniformIMat2x2; break;
+                case 3: type = kUniformIMat3x3; break;
+                case 4: type = kUniformIMat4x4; break;
+                default:
+                    PLOGE << "Vulkan: Unknown IMat type";
+                    type = kUniformInt;
+            }
+        } else {
+            switch(matrix.column_count) {
+                case 2:
+                    switch(matrix.row_count) {
+                        case 2: type = kUniformFMat2x2; break;
+                        case 3: type = kUniformFMat2x3; break;
+                        case 4: type = kUniformFMat2x4; break;
+                        default:
+                            PLOGE << "Vulkan: Unknown FMat type";
+                            type = kUniformFloat;
+                    } break;
+                case 3:
+                    switch(matrix.row_count) {
+                        case 2: type = kUniformFMat3x2; break;
+                        case 3: type = kUniformFMat3x3; break;
+                        case 4: type = kUniformFMat3x4; break;
+                        default: 
+                            PLOGE << "Vulkan: Unknown FMat type";
+                            type = kUniformFloat;
+                    } break;
+                case 4:
+                    switch(matrix.row_count) {
+                        case 2: type = kUniformFMat4x2; break;
+                        case 3: type = kUniformFMat4x3; break;
+                        case 4: type = kUniformFMat4x4; break;
+                        default:
+                            PLOGE << "Vulkan: Unknown FMat type";
+                            type = kUniformFloat;
+                    } break;
+            }
+        }
+    } else if(type_description->type_flags & SPV_REFLECT_TYPE_FLAG_VECTOR) {
+        switch(numeric.vector.component_count) {
+            case 2:
+                type = is_int ? kUniformIVec2 : kUniformFVec2; break;
+            case 3:
+                type = is_int ? kUniformIVec3 : kUniformFVec3; break;
+            case 4:
+                type = is_int ? kUniformIVec4 : kUniformFVec4; break;
+        }
+    } else if(type_description->type_flags & SPV_REFLECT_TYPE_FLAG_INT) {
+        type = kUniformInt;
+    } else if(type_description->type_flags & SPV_REFLECT_TYPE_FLAG_FLOAT) {
+        type = kUniformFloat;
+    }
+    bool found = false;
+    for(int x = 0; x < size; ++x) {
+        switch(type) {
+            case kUniformFloat:
+                found = upload_storage_data_piece(all_uniforms[x]->f, binding->set, 
+                                                  binding->binding, binding->block.size,
+                                                  offset, name);
+                break;
+            case kUniformFVec2:
+                found = upload_storage_data_piece(all_uniforms[x]->f2, binding->set,
+                                                  binding->binding, binding->block.size,
+                                                  offset, name);
+                break;
+            case kUniformFVec3:
+                found = upload_storage_data_piece(all_uniforms[x]->f3, binding->set,
+                                                  binding->binding, binding->block.size,
+                                                  offset, name);
+                break;
+            case kUniformFVec4:
+                found = upload_storage_data_piece(all_uniforms[x]->f4, binding->set,
+                                                  binding->binding, binding->block.size,
+                                                  offset, name);
+                break;
+            case kUniformFMat2x2:
+            case kUniformFMat2x3:
+            case kUniformFMat2x4:
+                found = upload_storage_data_piece(all_uniforms[x]->mat2, binding->set,
+                                                  binding->binding, binding->block.size,
+                                                  offset, name);
+                break;
+            case kUniformFMat3x2:
+            case kUniformFMat3x3:
+            case kUniformFMat3x4:
+                found = upload_storage_data_piece(all_uniforms[x]->mat3, binding->set,
+                                                  binding->binding, binding->block.size,
+                                                  offset, name);
+                break;
+            case kUniformFMat4x2:
+            case kUniformFMat4x3:
+            case kUniformFMat4x4:
+                found = upload_storage_data_piece(all_uniforms[x]->mat4, binding->set,
+                                                  binding->binding, binding->block.size,
+                                                  offset, name);
+                break;
+            default: 
+                PLOGE<<std::hex<<"Shader uses unknown uniform type, or it was an int: "<<type<<std::dec;
+                found = true;
+                break;
+        }
+    }
+    if(!found) {
+
+    }
+}
+
 void Vulkan::unwrap_reflected_arrays(Uniforms** all_uniforms,
                                      const SpvReflectTypeDescription* type_description,
                                      const SpvReflectDescriptorBinding* binding,
@@ -3429,6 +3566,32 @@ void Vulkan::unwrap_reflected_arrays(Uniforms** all_uniforms,
                 element_count += array.dims[x];
             }
             upload_uniform_data(all_uniforms, type_description, binding,
+                                size/element_count, element_offset, element_name.c_str());
+        }
+    }
+}
+
+void Vulkan::unwrap_reflected_storage_arrays(Uniforms** all_uniforms,
+                                             const SpvReflectTypeDescription* type_description,
+                                             const SpvReflectDescriptorBinding* binding,
+                                             uint32_t dimension,
+                                             uint32_t size,
+                                             uint32_t offset,
+                                             const std::string& name) {
+    const auto& array = type_description->traits.array;
+
+    for(int i = 0; i < array.dims[dimension]; ++i) {
+        std::string element_name = name + "[" + std::to_string(i) + "]";
+        uint32_t element_offset = offset + i*array.stride;
+        if(array.dims_count > dimension + 1) {
+            unwrap_reflected_storage_arrays(all_uniforms, type_description, binding,
+                                    dimension+1, size, element_offset, element_name);
+        } else {
+            size_t element_count = 0;
+            for(int x = 0; x < array.dims_count; ++x) {
+                element_count += array.dims[x];
+            }
+            upload_storage_data(all_uniforms, type_description, binding,
                                 size/element_count, element_offset, element_name.c_str());
         }
     }

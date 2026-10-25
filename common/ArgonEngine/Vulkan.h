@@ -510,10 +510,10 @@ class Vulkan:public RenderAPI {
 
 
         static Buffer create_dynamic_uniform_buffer(VkDevice device, VkPhysicalDevice physical_device, VkDeviceSize size);
-        static void update_dynamic_uniform_buffer(Buffer& dynamic_ubuffer, VkDeviceSize block_offset,
+        static void update_dynamic_buffer(Buffer& dynamic_ubuffer, VkDeviceSize block_offset,
                                                   VkDeviceSize uniform_offset, const void* data, VkDeviceSize data_size,
                                                   VkCommandPool command_pool, VkQueue graphics_queue);
-        static void resize_dynamic_uniform_buffer(Buffer* dynamic_ubuffer, VkDeviceSize new_size, 
+        static void resize_dynamic_buffer(Buffer* dynamic_ubuffer, VkDeviceSize new_size, 
                                                   VkCommandPool command_pool, VkQueue graphics_queue);
 
         static VkMemoryRequirements get_mem_requirements(VkDevice device, VkDeviceSize size,
@@ -823,6 +823,8 @@ class Vulkan:public RenderAPI {
 
     Buffer uniform_buffers[MAX_FRAMES_IN_FLIGHT];
 
+    Buffer storage_buffer;
+
     Required_Pipeline_State state;
 
     shader_data * current_shader;
@@ -865,10 +867,63 @@ class Vulkan:public RenderAPI {
 
         VkDeviceSize block_offset = offset_it->second;
 
-        Buffer::update_dynamic_uniform_buffer(buffer, block_offset, offset,
-                                              &it->second[0], it->second.size(),
-                                              _command_pool->_command_pool,
-                                              _device->_graphicsQ);
+        Buffer::update_dynamic_buffer(buffer, block_offset, offset,
+                                      &it->second[0], it->second.size(),
+                                      _command_pool->_command_pool,
+                                      _device->_graphicsQ);
+
+        return true;
+    }
+
+    template<typename map_strintern_T>
+    inline bool upload_storage_data_piece(const map_strintern_T& storage_piece,
+                                          uint32_t set, uint32_t binding,
+                                          uint32_t block_size, uint32_t offset, StringIntern name) {
+        bool wait = _sync->wait_for_frame(
+            (_current_frame + MAX_FRAMES_IN_FLIGHT - 1) % MAX_FRAMES_IN_FLIGHT,
+            100'000'000 // 10 FPS
+        );
+
+        if(!wait){
+            PLOGE << "Vulkan: Previous frame not complete; cancelling storage buffer data upload";
+            return false;
+        }
+
+        auto it = storage_piece.find(name);
+
+        uint64_t key = uniform_binding_key(set, binding);
+
+        if(it == storage_piece.end() || it->second.empty())return false;
+
+        if(storage_buffer._buffer == VK_NULL_HANDLE) {
+            // FIXME: DON'T HARDCODE SIZE
+            VkPhysicalDeviceProperties properties;
+            vkGetPhysicalDeviceProperties(_device->_physical_device, &properties);
+            storage_buffer._dynamic_alignment = properties.limits.minUniformBufferOffsetAlignment;
+            storage_buffer.create_buffer(_device->_device, _device->_physical_device,
+                                         1000, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                                         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                         VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        }
+        auto offset_it = storage_buffer._current_uniform_offsets.find(key);
+
+        if(offset_it == storage_buffer._current_uniform_offsets.end()) {
+            VkDeviceSize block_size = block_size;
+            VkDeviceSize block_stride = (block_size + storage_buffer._dynamic_alignment - 1) & 
+                                        ~(storage_buffer._dynamic_alignment -1);
+
+            VkDeviceSize block_offset = storage_buffer._current_uniform_buffer;
+            storage_buffer._current_uniform_buffer += block_stride;
+
+            offset_it = storage_buffer._current_uniform_offsets.emplace(key,block_offset).first;
+        }
+
+        VkDeviceSize block_offset = offset_it->second;
+
+        Buffer::update_dynamic_buffer(storage_buffer, block_offset, offset,
+                                      &it->second[0], it->second.size(),
+                                      _command_pool->_command_pool,
+                                      _device->_graphicsQ);
 
         return true;
     }
@@ -912,6 +967,16 @@ class Vulkan:public RenderAPI {
                                  uint32_t size,
                                  uint32_t offset,
                                  const std::string& name);
+    void unwrap_reflected_storage_arrays(Uniforms** all_uniforms,
+                                         const SpvReflectTypeDescription* type_description,
+                                         const SpvReflectDescriptorBinding* binding,
+                                         uint32_t dimension,
+                                         uint32_t size,
+                                         uint32_t offset,
+                                         const std::string& name);
+    void upload_storage_data(Uniforms** all_uniforms, const SpvReflectTypeDescription* type_description, 
+                             const SpvReflectDescriptorBinding* binding,
+                             size_t size, size_t offset, const char* name);
 
     static inline uint64_t uniform_binding_key(uint32_t set, uint32_t binding) {
         return (static_cast<uint64_t>(set) << 32) | binding;
