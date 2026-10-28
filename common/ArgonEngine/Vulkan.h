@@ -339,7 +339,7 @@ class Vulkan:public RenderAPI {
                    _current_shader != VK_NULL_HANDLE;
         }
 
-        void update_desc_sets(shader_data& shader, VkBuffer uniform_buffer, uint32_t set);
+        void update_desc_sets(shader_data& shader, VkBuffer uniform_buffer, VkBuffer storage_buffer, uint32_t set);
         VkPipelineVertexInputStateCreateInfo create_vertex_input_info();
         VkPipelineInputAssemblyStateCreateInfo create_input_assembly_info();
         VkPipelineViewportStateCreateInfo create_viewport_info();

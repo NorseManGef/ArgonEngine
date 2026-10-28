@@ -700,7 +700,7 @@ void Vulkan::Pipeline::create_graphics_pipeline() {
     }
 }
 
-void Vulkan::Pipeline::update_desc_sets(shader_data& shader, VkBuffer uniform_buffer, uint32_t set) {
+void Vulkan::Pipeline::update_desc_sets(shader_data& shader, VkBuffer uniform_buffer, VkBuffer storage_buffer, uint32_t set) {
     std::vector<VkWriteDescriptorSet> descriptor_writes;
     descriptor_writes.reserve(shader.desc_sets.size());
     IF_PLOG(plog::debug) {
@@ -755,7 +755,11 @@ void Vulkan::Pipeline::update_desc_sets(shader_data& shader, VkBuffer uniform_bu
                     break;
                 case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
                 case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
-
+                    bufferInfo = new VkDescriptorBufferInfo{
+                        .buffer = storage_buffer,
+                        .offset = shader.reflected_sets[i]->bindings[x]->block.offset,
+                        .range = shader.reflected_sets[i]->bindings[x]->block.size,
+                    };
                     break;
                 case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
                 case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
@@ -2834,6 +2838,9 @@ void Vulkan::draw_vertex_array(std::shared_ptr<VertexArray> array, int end_vert,
 
     _command_pool->bind_pipeline(current_cmd_buffer, pipe._pipeline);
     _command_pool->set_primitive_topology(current_cmd_buffer, topology);
+    for(int set = 0; set < current_shader->reflected_sets.size(); ++set) {
+        pipe.update_desc_sets(*current_shader, uniform_buffers[_current_frame]._buffer, storage_buffer._buffer, set);
+    }
     _command_pool->bind_desc_sets(current_cmd_buffer, pipe._current_shader->pipeline_layout,
                                   0, pipe._current_shader->desc_sets, dynamic_offsets);
     _command_pool->bind_vertex_buffers(current_cmd_buffer, 0, {vert_d.vert_buffer._buffer}, {0});
