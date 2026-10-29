@@ -648,6 +648,9 @@ pkg_check_modules(LIBTHAI IMPORTED_TARGET libthai)
 if(LIBTHAI_FOUND)
   set(HAVE_LIBTAI TRUE)
   set(HAVE_LIBTHAI_H TRUE)
+  list(APPEND LIB_LINUX
+    PkgConfig::LIBTHAI
+  )
 endif(LIBTHAI_FOUND)
 
 check_c_source_compiles("
