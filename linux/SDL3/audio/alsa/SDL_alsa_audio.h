@@ -25,7 +25,7 @@
 
 #include <alsa/asoundlib.h>
 
-#include "../SDL_sysaudio.h"
+#include "SDL_sysaudio.h"
 
 #define SDL_AUDIO_ALSA__CHMAP_CHANS_N_MAX    8
 #define SDL_AUDIO_ALSA__SDL_CHMAPS_N         9 // from 0 channels to 8 channels
