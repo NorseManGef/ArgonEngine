@@ -638,6 +638,10 @@ if(FRIBIDI_FOUND)
   )
   set(HAVE_FRIBIDI TRUE)
   set(HAVE_FRIBIDI_H TRUE)
+
+  list(APPEND LIB_LINUX
+      PkgConfig::FRIBIDI
+  )
 endif(FRIBIDI_FOUND)
 
 pkg_check_modules(LIBTHAI IMPORTED_TARGET libthai)

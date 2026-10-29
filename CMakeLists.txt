@@ -946,13 +946,6 @@ target_link_libraries(argonapp
         ${LIB_VULKAN}
 )
 
-if(HAVE_FRIBIDI)
-target_link_libraries(argonapp
-    PRIVATE
-        ${FRIBIDI_LIBRARIES}
-)
-endif()
-
 set_property(TARGET argonapp PROPERTY CXX_STANDARD 17)
 
 target_compile_definitions(argonapp
