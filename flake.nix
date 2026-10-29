@@ -62,6 +62,8 @@
               pipewire
               pulseaudio
 
+              fribidi
+
               #for generator scripts
               python3
             ] ++ (if system == "aarch64-darwin" then [ ] else [ gdb ]);
