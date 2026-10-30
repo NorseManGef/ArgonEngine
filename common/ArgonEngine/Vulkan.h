@@ -510,11 +510,21 @@ class Vulkan:public RenderAPI {
 
 
         static Buffer create_dynamic_uniform_buffer(VkDevice device, VkPhysicalDevice physical_device, VkDeviceSize size);
+        static Buffer create_dynamic_storage_buffer(VkDevice device, VkPhysicalDevice physical_device, VkDeviceSize size);
         static void update_dynamic_buffer(Buffer& dynamic_ubuffer, VkDeviceSize block_offset,
-                                                  VkDeviceSize uniform_offset, const void* data, VkDeviceSize data_size,
-                                                  VkCommandPool command_pool, VkQueue graphics_queue);
+                                          VkDeviceSize uniform_offset, const void* data, 
+                                          VkDeviceSize data_size,
+                                          VkCommandPool command_pool, VkQueue graphics_queue,
+                                          Buffer(&createbuffer)(VkDevice device, 
+                                                                VkPhysicalDevice physical_device,
+                                                                VkDeviceSize size));
+
+
         static void resize_dynamic_buffer(Buffer* dynamic_ubuffer, VkDeviceSize new_size, 
-                                                  VkCommandPool command_pool, VkQueue graphics_queue);
+                                          VkCommandPool command_pool, VkQueue graphics_queue,
+                                          Buffer(&createbuffer)(VkDevice device, 
+                                                                VkPhysicalDevice physical_device,
+                                                                VkDeviceSize size));
 
         static VkMemoryRequirements get_mem_requirements(VkDevice device, VkDeviceSize size,
                                                           VkBufferUsageFlags usage);
@@ -870,7 +880,8 @@ class Vulkan:public RenderAPI {
         Buffer::update_dynamic_buffer(buffer, block_offset, offset,
                                       &it->second[0], it->second.size(),
                                       _command_pool->_command_pool,
-                                      _device->_graphicsQ);
+                                      _device->_graphicsQ,
+                                      Buffer::create_dynamic_uniform_buffer);
 
         return true;
     }
@@ -896,14 +907,9 @@ class Vulkan:public RenderAPI {
         if(it == storage_piece.end() || it->second.empty())return false;
 
         if(storage_buffer._buffer == VK_NULL_HANDLE) {
-            // FIXME: DON'T HARDCODE SIZE
-            VkPhysicalDeviceProperties properties;
-            vkGetPhysicalDeviceProperties(_device->_physical_device, &properties);
-            storage_buffer._dynamic_alignment = properties.limits.minUniformBufferOffsetAlignment;
-            storage_buffer.create_buffer(_device->_device, _device->_physical_device,
-                                         1000, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-                                         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                                         VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+            storage_buffer = Buffer::create_dynamic_storage_buffer(_device->_device,
+                                                                   _device->_physical_device,
+                                                                   1000);
         }
         auto offset_it = storage_buffer._current_uniform_offsets.find(key);
 
@@ -923,7 +929,8 @@ class Vulkan:public RenderAPI {
         Buffer::update_dynamic_buffer(storage_buffer, block_offset, offset,
                                       &it->second[0], it->second.size(),
                                       _command_pool->_command_pool,
-                                      _device->_graphicsQ);
+                                      _device->_graphicsQ,
+                                      Buffer::create_dynamic_storage_buffer);
 
         return true;
     }

@@ -1785,22 +1785,44 @@ Vulkan::Buffer Vulkan::Buffer::create_dynamic_uniform_buffer(VkDevice device, Vk
     return buffer;
 }
 
+Vulkan::Buffer Vulkan::Buffer::create_dynamic_storage_buffer(VkDevice device, VkPhysicalDevice physical_device, VkDeviceSize size) {
+    VkPhysicalDeviceProperties properties;
+    vkGetPhysicalDeviceProperties(physical_device, &properties);
+    Buffer buffer;
+    buffer._dynamic_alignment = properties.limits.minUniformBufferOffsetAlignment;
+    buffer.create_buffer(device, physical_device,
+                  size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                  VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                  VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+    return buffer;
+}
 void Vulkan::Buffer::update_dynamic_buffer(Buffer& dynamic_buffer, VkDeviceSize block_offset, 
-                                                   VkDeviceSize uniform_offset, const void* data, 
-                                                   VkDeviceSize data_size, VkCommandPool command_pool, VkQueue graphics_queue) {
+                                           VkDeviceSize uniform_offset, const void* data, 
+                                           VkDeviceSize data_size, VkCommandPool command_pool, 
+                                           VkQueue graphics_queue, 
+                                           Buffer(&createbuffer)(VkDevice device, 
+                                                                 VkPhysicalDevice physical_device,
+                                                                 VkDeviceSize size)) {
 
     VkDeviceSize dst_offset = block_offset + uniform_offset;
 
     if(dst_offset+data_size > dynamic_buffer._size) {
-        resize_dynamic_buffer(&dynamic_buffer, dynamic_buffer._size*2, command_pool, graphics_queue);
+        resize_dynamic_buffer(&dynamic_buffer, dynamic_buffer._size*2, 
+                              command_pool, graphics_queue, createbuffer);
     }
 
     dynamic_buffer.upload_data(data, data_size, dst_offset);
 }
 
 void Vulkan::Buffer::resize_dynamic_buffer(Buffer* dynamic_buffer, VkDeviceSize new_size, 
-                                                   VkCommandPool command_pool, VkQueue graphics_queue) {
-    Buffer new_buffer = create_dynamic_uniform_buffer(dynamic_buffer->_device, dynamic_buffer->_physical_device, new_size);
+                                           VkCommandPool command_pool, VkQueue graphics_queue,
+                                           Buffer(&createbuffer)(VkDevice device, 
+                                                                 VkPhysicalDevice physical_device,
+                                                                 VkDeviceSize size)) {
+    Buffer new_buffer = createbuffer(dynamic_buffer->_device,
+                                     dynamic_buffer->_physical_device,
+                                     new_size);
 
     dynamic_buffer->copy_to(dynamic_buffer->_device, command_pool, graphics_queue, new_buffer, dynamic_buffer->_size);
 
