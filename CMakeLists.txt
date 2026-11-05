@@ -63,6 +63,10 @@ set(INC_OS_ADD
 )
 endif(APPLE)
 
+set(INC_GLSL-INCLUDE
+    common/GLSL-Include
+)
+
 set(INC_SDL
     common/SDL3
     common/SDL3/audio
@@ -157,6 +161,7 @@ include_directories(
     ${INC_PLOG}
     ${INC_LIBUSB}
     ${INC_STB}
+    ${INC_GLSL-INCLUDE}
     ${INC_SPIRV-REFLECT}
     ${INC_SPIRV-TOOLS}
     ${INC_SPIRV-HEADERS}
