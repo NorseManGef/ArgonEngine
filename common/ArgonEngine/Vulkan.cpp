@@ -456,9 +456,7 @@ Vulkan::Device::Queue_family_indices Vulkan::Device::find_queue_families(VkPhysi
         vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &present_support);
         if(present_support) indices.present = i;
 
-        if(indices.is_complete()) break; //TODO: Evaluate if compute or transfer queues could ever be needed
-                                         // and might require either the removal of this line or a way to specify the
-                                         // queues needed for a game
+        if(indices.is_complete()) break;
     }
 
     return indices;
@@ -1458,7 +1456,12 @@ void Vulkan::Buffer::create_buffer_with_data(VkDevice device, VkPhysicalDevice p
     create_buffer(device, physical_device, size, usage, memory_properties);
 
     if(data != nullptr && size > 0) {
-        upload_data(data, size);
+        if(memory_properties & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) {
+            upload_data(data, size);
+        } else {
+            PLOGF << "Vulkan: cannot upload directly to buffer without host visible memory";
+            terminate_engine();
+        }
     }
 }
 
@@ -1472,7 +1475,8 @@ void* Vulkan::Buffer::map(VkDeviceSize offset, VkDeviceSize size) {
         terminate_engine();
     }
 
-    VkResult result = vkMapMemory(_device, _memory, offset, size, _memory_properties, &_mapped_memory);
+    VkResult result = vkMapMemory(_device, _memory, offset, size,
+                                  0, &_mapped_memory);
 
     if(result != VK_SUCCESS) {
         PLOGF << "Vulkan: Failed to map buffer memory";
@@ -1629,6 +1633,7 @@ void Vulkan::Buffer::end_single_time_commands(VkDevice device, VkCommandPool com
     };
 
     {
+        PLOGV << "QUEUE SUBMITTED FROM END_SINGLE_TIME_COMMANDS";
         VkResult result = vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE);
 
         if(result != VK_SUCCESS) {
@@ -1651,21 +1656,29 @@ void Vulkan::Buffer::end_single_time_commands(VkDevice device, VkCommandPool com
 Vulkan::Buffer Vulkan::Buffer::create_vertex_buffer(VkDevice device, VkPhysicalDevice physical_device,
                                                     VkCommandPool command_pool, VkQueue graphics_queue,
                                                     std::shared_ptr<VertexArray> vertex_array) {
-    VkDeviceSize buffer_size = vertex_array->data.size();
-    Buffer staging_buffer;
-    staging_buffer.create_buffer_with_data(device, physical_device, &vertex_array->data, buffer_size,
-                                           VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
-                                           VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | 
-                                           VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    VkDeviceSize buffer_size = vertex_array->vertex_count()*vertex_array->stride;
 
     Buffer vertex_buffer;
-    vertex_buffer.create_buffer(device, physical_device, buffer_size,
-                         VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-                         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    if(!vertex_array->updates_frequently) {
+        Buffer staging_buffer;
+        staging_buffer.create_buffer_with_data(device, physical_device, vertex_array->data_start(),
+                                               buffer_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
+                                               VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | 
+                                               VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
-    staging_buffer.copy_to(device, command_pool, graphics_queue, vertex_buffer, buffer_size);
+        vertex_buffer.create_buffer(device, physical_device, buffer_size,
+                                    VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                                    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-    staging_buffer.clean();
+        staging_buffer.copy_to(device, command_pool, graphics_queue, vertex_buffer, buffer_size);
+
+        staging_buffer.clean();
+    } else {
+        vertex_buffer.create_buffer_with_data(device, physical_device, vertex_array->data_start(),
+                                              buffer_size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                                              VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | 
+                                              VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    }
 
     return vertex_buffer;
 }
@@ -1673,21 +1686,27 @@ Vulkan::Buffer Vulkan::Buffer::create_vertex_buffer(VkDevice device, VkPhysicalD
 Vulkan::Buffer Vulkan::Buffer::create_index_buffer(VkDevice device, VkPhysicalDevice physical_device,
                                                    VkCommandPool command_pool, VkQueue graphics_queue, 
                                                    std::shared_ptr<VertexArray> vertex_array) {
-    VkDeviceSize buffer_size = vertex_array->index_data.size();
-
-    Buffer staging_buffer;
-    staging_buffer.create_buffer_with_data(device, physical_device, &vertex_array->index_data, buffer_size, 
-                                           VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
-                                           VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                                           VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
+    VkDeviceSize buffer_size = vertex_array->vertex_count()*vertex_array->stride;
     Buffer index_buffer;
-    index_buffer.create_buffer(device, physical_device, buffer_size, 
-                               VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-                               VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    if(!vertex_array->updates_frequently) {
+        Buffer staging_buffer;
+        staging_buffer.create_buffer_with_data(device, physical_device, &vertex_array->index_data, buffer_size, 
+                                               VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
+                                               VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                               VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
-    staging_buffer.copy_to(device, command_pool, graphics_queue, index_buffer, buffer_size);
-    staging_buffer.clean();
+        index_buffer.create_buffer(device, physical_device, buffer_size, 
+                                   VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                                   VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+        staging_buffer.copy_to(device, command_pool, graphics_queue, index_buffer, buffer_size);
+        staging_buffer.clean();
+    } else {
+        index_buffer.create_buffer_with_data(device, physical_device, vertex_array->index_data.data(),
+                                             buffer_size, VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+                                             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | 
+                                             VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    }
 
     return index_buffer;
 }
@@ -1756,7 +1775,7 @@ void Vulkan::Buffer::update_vertex_buffer(Buffer& buffer, VkDevice device, VkPhy
 
     if(buffer._memory_properties == VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) {
         Buffer staging_buffer;
-        staging_buffer.create_buffer_with_data(device, physical_device, &vertex_array->data, size,
+        staging_buffer.create_buffer_with_data(device, physical_device, vertex_array->data_start(), size,
                                                VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                                                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                                                VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
@@ -1764,7 +1783,30 @@ void Vulkan::Buffer::update_vertex_buffer(Buffer& buffer, VkDevice device, VkPhy
         staging_buffer.copy_to(device, command_pool, graphics_queue, buffer, size, 0, offset);
         staging_buffer.clean();
     } else {
-        buffer.upload_data(&vertex_array->data, size);
+        buffer.upload_data(vertex_array->data_start(), size);
+    }
+}
+
+void Vulkan::Buffer::update_index_buffer(Buffer& buffer, VkDevice device, VkPhysicalDevice physical_device,
+                                          VkCommandPool command_pool, VkQueue graphics_queue,
+                                          std::shared_ptr<VertexArray> vertex_array, VkDeviceSize offset) {
+    VkDeviceSize size = vertex_array->index_data.size()*2;
+
+    if(offset+size>buffer._size) {
+        PLOGF << "Vulkan: Index buffer update exceeds buffer size";
+        terminate_engine();
+    }
+    if(buffer._memory_properties == VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) {
+        Buffer staging_buffer;
+        staging_buffer.create_buffer_with_data(device, physical_device, vertex_array->index_data.data(), size,
+                                               VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                                               VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                               VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+        staging_buffer.copy_to(device, command_pool, graphics_queue, buffer, size, 0, offset);
+        staging_buffer.clean();
+    } else {
+        buffer.upload_data(vertex_array->index_data.data(), size);
     }
 }
 
@@ -2167,7 +2209,7 @@ void Vulkan::Synchronization::submit_command_buffers(VkQueue queue,
     }
 
     VkSubmitInfo submitInfo{
-        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
+        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
         .waitSemaphoreCount = static_cast<uint32_t>(wait_semaphores.size()),
         .pWaitSemaphores = wait_semaphores.empty() ? nullptr : wait_semaphores.data(),
         .pWaitDstStageMask = wait_stages.empty() ? nullptr : wait_stages.data(),
@@ -2176,6 +2218,8 @@ void Vulkan::Synchronization::submit_command_buffers(VkQueue queue,
         .signalSemaphoreCount = static_cast<uint32_t>(signal_semaphores.size()),
         .pSignalSemaphores = signal_semaphores.empty() ? nullptr : signal_semaphores.data(),
     };
+
+    PLOGV << "submitting queue";
 
     VkResult result = vkQueueSubmit(queue, 1, &submitInfo, fence);
     if(result != VK_SUCCESS) {
@@ -2648,7 +2692,7 @@ void Vulkan::init_vulkan(std::vector<const char*>& required_extensions, SDL_Wind
     result = vkCreateImageView(_device->_device, &viewInfo, nullptr, &depth_image_view);
 
     if(result != VK_SUCCESS) {
-        PLOGF << "Vulkan: Failed to craete depth image view";
+        PLOGF << "Vulkan: Failed to create depth image view";
         terminate_engine();
     }
 
@@ -3044,6 +3088,7 @@ void Vulkan::set_uniforms(Uniforms** all_uniforms, int size) {
 void Vulkan::set_shader(Argon::Renderable* state, VirtualResource& shader, Uniforms** uniforms, int size) {
     if(!state->material)return;
     shader_data &s = shaders[shader];
+    s._device = _device->_device;
     s._last_frame=0;
     if(s.stages.empty())make_shader(shader);
     current_shader=&s;
@@ -3062,6 +3107,14 @@ void Vulkan::make_shader(VirtualResource& shader) {
     }
 
     for(const auto& stage : stages) {
+        const auto pos = shader_code.find("#stages");
+        if(pos != std::string::npos) {
+            PLOGF << "Stage declaration remains before compile at byte " << pos
+                  << ": " << shader_code.substr(pos, 200);
+
+            PLOGV << "Shader: " << shader.get_path_string();
+            terminate_engine();
+        }
         ShaderBinary spv = compile_shader(shader_code,
                                           stage.shaderc_kind,
                                           std::string(stage.define) + " VULKAN",
@@ -3177,7 +3230,7 @@ std::vector<Vulkan::shader_stage_info> Vulkan::parse_shader_stages(std::string& 
         const size_t begin = pos;
 
         while(pos<line.size() &&
-              std::isspace(static_cast<unsigned char>(line[pos]))) {
+              !std::isspace(static_cast<unsigned char>(line[pos]))) {
             ++pos;
         }
 
@@ -3193,7 +3246,7 @@ std::vector<Vulkan::shader_stage_info> Vulkan::parse_shader_stages(std::string& 
         stages.push_back(it->second);
     }
 
-    source.erase(0,line_end);
+    source.erase(0,line_end == std::string::npos ? source.size() : line_end + 1);
 
     return stages;
 }
@@ -3823,22 +3876,27 @@ void Vulkan::cache_array(std::shared_ptr<VertexArray> array) {
         d.index_size = array->index_data.size()*2;
         d.update_id = array->update_id;
 
-        VkMemoryPropertyFlags mem_props;
-        if(array->updates_frequently) {
-            mem_props = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+        if(d.vert_buffer._buffer == VK_NULL_HANDLE || d.vert_buffer._size != d.buff_size) {
+            d.vert_buffer.create_vertex_buffer(_device->_device, _device->_physical_device,
+                                               _command_pool->_command_pool, 
+                                               _device->_graphicsQ, array);
         } else {
-            mem_props = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+            Buffer::update_vertex_buffer(d.vert_buffer, _device->_device,
+                                         _device->_physical_device, 
+                                         _command_pool->_command_pool,
+                                         _device->_graphicsQ, array);
         }
 
-        d.vert_buffer.create_buffer_with_data(_device->_device, _device->_physical_device,
-                                              array->data_start(), d.buff_size, 
-                                              VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-                                              mem_props);
-
-        d.index_buffer.create_buffer_with_data(_device->_device, _device->_physical_device,
-                                               array->index_data.data(), d.index_size,
-                                               VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-                                               mem_props);
+        if(d.index_buffer._buffer == VK_NULL_HANDLE || d.index_buffer._size != d.index_size) {
+            d.index_buffer.create_index_buffer(_device->_device, _device->_physical_device, 
+                                               _command_pool->_command_pool,
+                                               _device->_graphicsQ, array);
+        } else {
+            Buffer::update_index_buffer(d.index_buffer, _device->_device,
+                                        _device->_physical_device,
+                                        _command_pool->_command_pool,
+                                        _device->_graphicsQ, array);
+        }
     }
 }
 

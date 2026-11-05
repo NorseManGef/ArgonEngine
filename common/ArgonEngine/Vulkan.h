@@ -154,6 +154,7 @@ class Vulkan:public RenderAPI {
             _surface = surface;
             pick_physical_device(instance, surface);
             create_logical_device(surface);
+            retrieve_queue_handles();
             create_swap_chain(surface, width, height);
         }
 
@@ -184,6 +185,9 @@ class Vulkan:public RenderAPI {
         {
             create(instance, surface, width, height);
         }
+
+        Device(const Device&) = delete;
+        Device& operator=(const Device&) = delete;
 
         ~Device() {
             clean();
@@ -499,10 +503,15 @@ class Vulkan:public RenderAPI {
         std::vector<Buffer> create_attrib_buffers(VkDevice device, VkPhysicalDevice physical_device,
                                                   VkCommandPool command_pool, VkQueue graphicsQueue,
                                                   std::shared_ptr<VertexArray> vertex_array);
-        void update_vertex_buffer(Buffer& buffer, VkDevice device, VkPhysicalDevice physical_device,
-                                  VkCommandPool command_pool, VkQueue graphics_queue,
-                                  std::shared_ptr<VertexArray> vertex_array,
-                                  VkDeviceSize offset = 0);
+        static void update_vertex_buffer(Buffer& buffer, VkDevice device, VkPhysicalDevice physical_device,
+                                         VkCommandPool command_pool, VkQueue graphics_queue,
+                                         std::shared_ptr<VertexArray> vertex_array,
+                                         VkDeviceSize offset = 0);
+
+        static void update_index_buffer(Buffer& buffer, VkDevice device, VkPhysicalDevice physical_device,
+                                        VkCommandPool command_pool, VkQueue graphics_queue,
+                                        std::shared_ptr<VertexArray> vertex_array,
+                                        VkDeviceSize offset = 0);
 
         uint32_t _dynamic_alignment = UINT32_MAX; // UINT32_MAX implies that the buffer is either not initialized or not a uniform buffer
         std::map<uint64_t, VkDeviceSize> _current_uniform_offsets;
@@ -804,9 +813,31 @@ class Vulkan:public RenderAPI {
         std::map<uint64_t, std::shared_ptr<TexturePrim>> texture_bindings;
         std::map<StringIntern, uint32_t> attribs;
 
+        VkDevice _device;
+
         size_t _last_frame = 0;
 
-        ~shader_data();
+        ~shader_data() {
+            if(_device != VK_NULL_HANDLE) {
+                for(auto& stage : stages) {
+                    vkDestroyShaderModule(_device, stage.module, nullptr);
+                }
+                stages.clear();
+                for(auto& desc_layout : desc_set_layouts) {
+                    vkDestroyDescriptorSetLayout(_device, desc_layout, nullptr);
+                }
+                desc_set_layouts.clear();
+                vkFreeDescriptorSets(_device, desc_pool, desc_sets.size(), desc_sets.data());
+                desc_sets.clear();
+                vkDestroyDescriptorPool(_device, desc_pool, nullptr);
+                desc_pool = VK_NULL_HANDLE;
+                reflected_sets.clear();
+                texture_bindings.clear();
+                attribs.clear();
+                _device = VK_NULL_HANDLE;
+            }
+            _last_frame = 0;
+        };
     };
 
     enum class CmdState {
@@ -855,6 +886,7 @@ class Vulkan:public RenderAPI {
     inline bool upload_uniform_data_piece(const map_strintern_T& uniform_piece,
                                           uint32_t set, uint32_t binding, 
                                           uint32_t block_size, uint32_t offset, StringIntern name) {
+        PLOGV << "Vulkan: uploading uniform data piece";
         auto it = uniform_piece.find(name);
 
         if(it == uniform_piece.end() || it->second.empty())return false;
@@ -882,6 +914,7 @@ class Vulkan:public RenderAPI {
                                       _command_pool->_command_pool,
                                       _device->_graphicsQ,
                                       Buffer::create_dynamic_uniform_buffer);
+        PLOGV << "Vulkan: uploaded uniform data piece";
 
         return true;
     }
