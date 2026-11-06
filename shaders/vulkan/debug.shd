@@ -1,22 +1,17 @@
 #stages VERTEX FRAGMENT
 
-#version 450
+#include "default.shd"
+// brings Matrices and Lighting into scope
+// set 0 should not be used
 
-layout(set = 0, binding = 0) uniform Globals
-{
-    mat4 matrix;
-    mat4 view_matrix;
-    mat4 projection_matrix;
-    vec4 color;
-} globals;
-
+layout(location = 0) in mediump vec4 color;
 #ifdef VERTEX_SHADER
-layout(location = 0) in vec3 PositionAttribute;
+layout(location = 1) in vec3 PositionAttribute;
 
 void main()
 {
-    vec4 pos= globals.matrix * vec4(PositionAttribute,1.);
-    gl_Position = globals.projection_matrix*(globals.view_matrix*pos);
+    vec4 pos= matrices.matrix * vec4(PositionAttribute,1.);
+    gl_Position = matrices.projection_matrix*(matrices.view_matrix*pos);
 }
 #endif
 
@@ -24,5 +19,5 @@ void main()
 layout(location = 0) out vec4 outColor;
 
 void main() {
-  outColor = globals.color;
+  outColor = color;
 }

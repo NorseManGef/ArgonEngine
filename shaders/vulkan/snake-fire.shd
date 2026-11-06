@@ -1,25 +1,21 @@
 #stages VERTEX FRAGMENT
 
-#version 450#ifdef VERTEX_SHADER
+#include "default.shd"
+// brings Matrices and Lighting into scope
+// set 0 should not be used
+
+#ifdef VERTEX_SHADER
 
 layout(location = 0) in vec3 PositionAttribute;
 layout(location = 1) in vec3 NormalAttribute;
 
 layout(location = 0) out vec2 texVarying;
 
-layout(set = 0, binding = 0) uniform Matrices
-{
-    mat4 matrix;
-    mat4 projection_matrix;
-    mat4 view_matrix;
-    float time;
-};
-
 void main()
 {
-    vec4 p = matrix * vec4(PositionAttribute, 1.0);
+    vec4 p = matrices.matrix * vec4(PositionAttribute, 1.0);
 
-    gl_Position = projection_matrix * view_matrix * p;
+    gl_Position = matrices.projection_matrix * matrices.view_matrix * p;
 
 #ifndef DEPTH_ONLY
     texVarying =
@@ -41,9 +37,9 @@ layout(location = 0) in vec2 texVarying;
 
 layout(location = 0) out vec4 outColor;
 
-layout(set = 0, binding = 1) uniform sampler2D textureSampler;
+layout(set = 1, binding = 0) uniform sampler2D textureSampler;
 
-layout(set = 0, binding = 2) uniform Material
+layout(set = 1, binding = 1) uniform Material
 {
     vec4 specular;
     vec4 color;

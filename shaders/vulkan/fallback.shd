@@ -1,9 +1,10 @@
 #stages VERTEX FRAGMENT
 
-#version 450
+#include "default.shd"
+// brings Matrices and Lighting into scope
+// set 0 should not be used
 
-
-layout(set = 0, binding = 0) uniform Material
+layout(set = 1, binding = 0) uniform Material
 {
     vec4 specular;
     vec4 color;
@@ -22,13 +23,13 @@ uniform mat4 view_normal;
 
 void main()
 {
-    ecPos = matrix * vec4(PositionAttribute, 1.0);
+    ecPos = matrices.matrix * vec4(PositionAttribute, 1.0);
 
-    gl_Position = projection_matrix * (view_matrix * ecPos);
+    gl_Position = matrices.projection_matrix * (matrices.view_matrix * ecPos);
 
 #ifndef DEPTH_ONLY
     ambient = vec3(0.2, 0.1, 0.05) * color.xyz;
-    normal = NormalAttribute * mat3(normal_matrix);
+    normal = NormalAttribute * mat3(matrices.normal_matrix);
 #endif
 }
 
@@ -47,7 +48,7 @@ void main()
 #ifndef DEPTH_ONLY
     vec3 pos = ecPos.xyz / ecPos.w;
     vec3 n = normalize(normal);
-    vec3 view = normalize(camera_pos - pos);
+    vec3 view = normalize(Lighting.camera_pos - pos);
 
     vec3 c = calculate_lighting_blinn_phong(
         pos,

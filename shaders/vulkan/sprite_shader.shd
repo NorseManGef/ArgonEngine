@@ -1,17 +1,12 @@
 #stages VERTEX FRAGMENT
 
-#version 450
+#include "default.shd"
+// brings Matrices and Lighting into scope
+// set 0 should not be used
 
 #ifdef VERTEX_SHADER
 
-layout(set = 0, binding = 0, std140) uniform Matrices
-{
-    mat4 projection_matrix;
-    mat4 view_matrix;
-    mat4 matrix;
-} matrices;
-
-layout(set = 0, binding = 1, std140) uniform Color
+layout(set = 1, binding = 0, std140) uniform Color
 {
     vec4 color;
 } colorData;
@@ -36,12 +31,12 @@ void main()
 
 #ifdef FRAGMENT_SHADER
 
-layout(set = 0, binding = 1, std140) uniform Color
+layout(set = 1, binding = 1, std140) uniform Color
 {
     vec4 color;
 } colorData;
 
-layout(set = 0, binding = 2) uniform sampler2D textureSampler;
+layout(set = 1, binding = 2) uniform sampler2D textureSampler;
 
 layout(location = 0) in mediump vec2 texVarying;
 

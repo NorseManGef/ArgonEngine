@@ -1,14 +1,8 @@
 #stages VERTEX FRAGMENT
 
-#version 450
-
-layout(set = 0, binding = 0) uniform Scene {
-    mat4 projection_matrix;
-    mat4 view_matrix;
-    mat4 matrix;
-    float time;
-    float scale;
-} scene;
+#include "default.shd"
+// brings Matrices and Lighting into scope
+// set 0 should not be used
 
 #ifdef VERTEX_SHADER
 
@@ -19,7 +13,7 @@ layout(location = 0) out vec2 texVarying;
 
 void main()
 {
-    gl_Position = scene.projection_matrix*scene.view_matrix*scene.matrix*vec4(position, 0.0, 1.0);
+    gl_Position = matrices.projection_matrix*matrices.view_matrix*matrices.matrix*vec4(position, 0.0, 1.0);
      texVarying = texture_coord;
 }
 #endif
