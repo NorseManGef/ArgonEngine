@@ -3198,55 +3198,50 @@ std::vector<Vulkan::shader_stage_info> Vulkan::parse_shader_stages(std::string& 
     
     std::vector<shader_stage_info> stages;
 
-    const size_t line_end = source.find_first_of("\n");
+    for(size_t i = 0; i < source.size(); i = source.find("#stages", i)) {
+        size_t stages_end = source.find("\n", i);
+        
 
-    std::string_view line(
-        source.data(),
-        line_end == std::string::npos ? source.size() : line_end
-    );
+        std::string_view line(
+            source.data()+i,
+            stages_end - i
+        );
 
-    const std::string_view prefix = "#stages";
+        size_t pos = 0;
 
-    if(!line.starts_with(prefix)) {
-        PLOGE << "Vulkan: Shader source must start with stage declaration";
-        return stages;
+        while(pos<line.size()) {
+            // skipping white space
+            while(pos<line.size() &&
+                  std::isspace(static_cast<unsigned char>(line[pos]))) {
+                ++pos;
+            }
+
+            if(pos>=line.size()) {
+                break;
+            }
+
+            const size_t begin = pos;
+
+            while(pos<line.size() &&
+                  !std::isspace(static_cast<unsigned char>(line[pos]))) {
+                ++pos;
+            }
+
+            const std::string_view name = line.substr(begin, pos - begin);
+
+            const auto it = shader_stage_map.find(name);
+
+            if(it==shader_stage_map.end()) {
+                PLOGE << "Vulkan: Unknown shader stage: " + std::string(name);
+                continue;
+            };
+            
+            if(std::find(stages.begin(), stages.end(), it->second) != stages.end())
+                stages.push_back(it->second);
+        }
+
+        source.erase(i, stages_end-i);
     }
-
-    line.remove_prefix(prefix.size());
-
-    size_t pos = 0;
-
-    while(pos<line.size()) {
-        // skipping white space
-        while(pos<line.size() &&
-              std::isspace(static_cast<unsigned char>(line[pos]))) {
-            ++pos;
-        }
-
-        if(pos>=line.size()) {
-            break;
-        }
-
-        const size_t begin = pos;
-
-        while(pos<line.size() &&
-              !std::isspace(static_cast<unsigned char>(line[pos]))) {
-            ++pos;
-        }
-
-        const std::string_view name = line.substr(begin, pos - begin);
-
-        const auto it = shader_stage_map.find(name);
-
-        if(it==shader_stage_map.end()) {
-            PLOGE << "Vulkan: Unknown shader stage: " + std::string(name);
-            continue;
-        };
-
-        stages.push_back(it->second);
-    }
-
-    source.erase(0,line_end == std::string::npos ? source.size() : line_end + 1);
 
     return stages;
 }
@@ -3270,13 +3265,11 @@ Vulkan::ShaderBinary Vulkan::compile_shader(const std::string& source,
         terminate_engine();
     }
 
-    if(!defines.empty()) {
         shaderc_compile_options_add_macro_definition(options, 
                                                      defines.c_str(),
-                                                     defines.size(),
+                                                     0,
                                                      nullptr,
                                                      0);
-    }
 
     shaderc_compilation_result_t result = shaderc_compile_into_spv(compiler, 
                                                                    source.c_str(),

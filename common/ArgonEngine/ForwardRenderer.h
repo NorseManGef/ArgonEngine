@@ -11,6 +11,7 @@
 #include <ArgonEngine/Sprite.h>
 #include <ArgonEngine/Thread.h>
 #include <ArgonEngine/BasicShape.h>
+#include <GLSL-Include/glsl_include.hpp>
 namespace Argon {
     class ForwardRenderer{
     private:
@@ -21,6 +22,8 @@ namespace Argon {
         };
     public:
         std::map<VirtualResource, ShaderData> shaders;
+
+        glsl_include::ShaderLoader shader_loader;
 
         Uniforms renderer_uniforms;
         std::vector<Vector4f> &light_positions=renderer_uniforms.f4["light_positions"];
@@ -39,7 +42,8 @@ namespace Argon {
         VirtualResource fallback_shader;
         VirtualResource& noise_texture=renderer_uniforms.get_texture("noise_texture");
 
-        ForwardRenderer()
+        ForwardRenderer():
+            shader_loader("#include")
         {
             light_positions.resize(32);
             light_colors.resize(32);
@@ -70,10 +74,10 @@ namespace Argon {
         ShaderData &get_shader_data(VirtualResource& r){
             ShaderData & d = shaders[r];
             if(!d.full_color)
-                d.full_color = "append:{shader://default.shd,"+r.get_path_string()+"}";
+                d.full_color = "append:{string:{"+shader_loader.load_shader(r.get_path_string())+"}}";
 
             if(!d.full_depth)
-                d.full_depth = "append:{shader://default.shd,string:{#define DEPTH_ONLY 1 \n},"+r.get_path_string()+"}";
+                d.full_depth = "append:{string:{#define DEPTH_ONLY 1 \n"+shader_loader.load_shader(r.get_path_string())+"}}";
 
             return d;
         }

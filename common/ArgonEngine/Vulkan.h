@@ -986,6 +986,12 @@ class Vulkan:public RenderAPI {
         std::string_view define;
         shaderc_shader_kind shaderc_kind;
         VkShaderStageFlagBits vk_stage;
+
+        bool operator==(const shader_stage_info& other)const {
+            return define == other.define &&
+                   shaderc_kind == other.shaderc_kind &&
+                   vk_stage == other.vk_stage; 
+        }
     };
 
     static const std::map<std::string_view, shader_stage_info> shader_stage_map;
