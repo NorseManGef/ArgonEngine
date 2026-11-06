@@ -6,6 +6,8 @@
 //  Copyright (c) 2012 __MyCompanyName__. All rights reserved.
 //
 
+#include "default.shd"
+
 uniform mediump vec4 color;
 #ifdef VERTEX_SHADER
 attribute mediump vec3 PositionAttribute;

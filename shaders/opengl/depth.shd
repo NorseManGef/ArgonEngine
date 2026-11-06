@@ -6,6 +6,8 @@
 //  Copyright (c) 2012 __MyCompanyName__. All rights reserved.
 //
 
+#include "default.shd"
+
 uniform mediump mat4 matrix;
 uniform mediump mat4 camera_matrix;
 

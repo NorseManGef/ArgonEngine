@@ -6,6 +6,8 @@
 //  Copyright (c) 2012 __MyCompanyName__. All rights reserved.
 //
 
+#include "default.shd"
+
 varying mediump vec2 tex_coord;
 varying mediump vec4 light_color;
 uniform mediump vec3 camera_pos;

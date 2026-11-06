@@ -6,6 +6,8 @@
 //  Copyright (c) 2012 __MyCompanyName__. All rights reserved.
 //
 
+#include "default.shd"
+
 uniform mediump vec4 specular;
 uniform mediump vec4 color;
 varying mediump vec3 ambient;

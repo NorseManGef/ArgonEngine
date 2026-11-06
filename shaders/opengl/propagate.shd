@@ -6,6 +6,8 @@
 //  Copyright (c) 2012 __MyCompanyName__. All rights reserved.
 //
 
+#include "default.shd"
+
 varying vec2 tex_coord;
 varying vec2 tex_coord1;
 varying vec2 tex_coord2;

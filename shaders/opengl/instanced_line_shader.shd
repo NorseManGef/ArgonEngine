@@ -1,3 +1,4 @@
+#include "default.shd"
 
 uniform mediump vec4 color;
 varying mediump vec2 texVarying;

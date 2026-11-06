@@ -6,6 +6,8 @@
 //  Copyright (c) 2012 __MyCompanyName__. All rights reserved.
 //
 
+#include "default.shd"
+
 varying lowp vec4 colorVarying;
 varying mediump vec2 texVarying;
 uniform lowp sampler2D texture;
