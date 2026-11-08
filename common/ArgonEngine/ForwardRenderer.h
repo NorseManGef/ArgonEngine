@@ -3,6 +3,7 @@
 
 #ifndef ArgonEngineApp_ForwardRender_h
 #define ArgonEngineApp_ForwardRender_h
+#include "ArgonEngine/VirtualResource.h"
 #include <ArgonEngine/RenderSystem.h>
 #include <vector>
 #include <ArgonEngine/RenderAPI.h>
@@ -73,12 +74,18 @@ namespace Argon {
         }
         ShaderData &get_shader_data(VirtualResource& r){
             ShaderData & d = shaders[r];
-            if(!d.full_color)
-                d.full_color = "append:{string:{"+shader_loader.load_shader(r.get_path_string())+"}}";
 
-            if(!d.full_depth)
-                d.full_depth = "append:{string:{#define DEPTH_ONLY 1 \n"+shader_loader.load_shader(r.get_path_string())+"}}";
+            auto io = r.get_source<Argon::VirtualResourceIO*>();
 
+            if(io) {
+                std::string path = io->path;
+
+                if(!d.full_color)
+                    d.full_color = "string:{"+shader_loader.load_shader(path)+"}";
+
+                if(!d.full_depth)
+                    d.full_depth = "string:{#define DEPTH_ONLY 1 \n"+shader_loader.load_shader(path)+"}";
+            }
             return d;
         }
         void do_shader(std::shared_ptr<Material> m){
