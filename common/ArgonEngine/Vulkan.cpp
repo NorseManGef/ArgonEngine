@@ -7,6 +7,7 @@
 #include <shaderc/env.h>
 #include <shaderc/shaderc.h>
 #include <spirv-tools/libspirv.h>
+#include <sstream>
 #include <vector>
 #include "ArgonEngine/ArgonInit.h"
 #include "ArgonEngine/RenderSystemConstants.h"
@@ -3117,12 +3118,13 @@ void Vulkan::make_shader(VirtualResource& shader) {
         }
         ShaderBinary spv = compile_shader(shader_code,
                                           stage.shaderc_kind,
-                                          std::string(stage.define) + " VULKAN",
+                                          std::string(stage.define),
                                           shader.get_path_string());
 
         if(spv.data == nullptr) {
             PLOGE << "Vulkan: Shader stage " << stage.define << " in " << shader.get_path_string() <<
             " failed to compile";
+            terminate_engine();
             continue;
         }
 
@@ -3198,14 +3200,20 @@ std::vector<Vulkan::shader_stage_info> Vulkan::parse_shader_stages(std::string& 
     
     std::vector<shader_stage_info> stages;
 
-    for(size_t i = 0; i < source.size(); i = source.find("#stages", i)) {
+    size_t i = 0;
+    while((i = source.find("#stages", i)) != std::string::npos) {
         size_t stages_end = source.find("\n", i);
-        
+
+        if(stages_end == std::string::npos)stages_end = source.size();
 
         std::string_view line(
             source.data()+i,
             stages_end - i
         );
+
+        std::string prefix = "#stages";
+
+        line.remove_prefix(prefix.size());
 
         size_t pos = 0;
 
@@ -3236,7 +3244,7 @@ std::vector<Vulkan::shader_stage_info> Vulkan::parse_shader_stages(std::string& 
                 continue;
             };
             
-            if(std::find(stages.begin(), stages.end(), it->second) != stages.end())
+            if(std::find(stages.begin(), stages.end(), it->second) == stages.end())
                 stages.push_back(it->second);
         }
 
@@ -3265,11 +3273,16 @@ Vulkan::ShaderBinary Vulkan::compile_shader(const std::string& source,
         terminate_engine();
     }
 
+    std::istringstream stream(defines);
+    std::string define;
+
+    while(stream >> define) {
         shaderc_compile_options_add_macro_definition(options, 
-                                                     defines.c_str(),
-                                                     0,
+                                                     define.c_str(),
+                                                     define.size(),
                                                      nullptr,
                                                      0);
+    }
 
     shaderc_compilation_result_t result = shaderc_compile_into_spv(compiler, 
                                                                    source.c_str(),
