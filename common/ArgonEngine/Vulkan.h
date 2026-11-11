@@ -969,17 +969,7 @@ class Vulkan:public RenderAPI {
     }
     
     struct ShaderBinary {
-        uint32_t* data = nullptr;
-        size_t word_count = 0;
-
-        ~ShaderBinary() {
-            if(data!=nullptr) {
-                free(data);
-            }
-
-            data = nullptr;
-            word_count = 0;
-        }
+        std::vector<uint32_t> data;
     };
 
     struct shader_stage_info {

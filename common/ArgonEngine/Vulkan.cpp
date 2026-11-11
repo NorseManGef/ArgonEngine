@@ -1634,7 +1634,6 @@ void Vulkan::Buffer::end_single_time_commands(VkDevice device, VkCommandPool com
     };
 
     {
-        PLOGV << "QUEUE SUBMITTED FROM END_SINGLE_TIME_COMMANDS";
         VkResult result = vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE);
 
         if(result != VK_SUCCESS) {
@@ -3103,42 +3102,30 @@ void Vulkan::make_shader(VirtualResource& shader) {
 
     std::vector<shader_stage_info> stages = parse_shader_stages(shader_code);
     if(stages.empty()) {
-        PLOGE << "Vulkan: Shader: " << shader.get_path_string() <<" has no valid stages";
+        PLOGE << "Vulkan: Shader: has no valid stages";
         return;
     }
 
     for(const auto& stage : stages) {
-        const auto pos = shader_code.find("#stages");
-        if(pos != std::string::npos) {
-            PLOGF << "Stage declaration remains before compile at byte " << pos
-                  << ": " << shader_code.substr(pos, 200);
-
-            PLOGV << "Shader: " << shader.get_path_string();
-            terminate_engine();
-        }
         ShaderBinary spv = compile_shader(shader_code,
                                           stage.shaderc_kind,
                                           std::string(stage.define),
-                                          shader.get_path_string());
+                                          "a shader");
 
-        if(spv.data == nullptr) {
-            PLOGE << "Vulkan: Shader stage " << stage.define << " in " << shader.get_path_string() <<
-            " failed to compile";
+        if(spv.data.empty()) {
+            PLOGE << "Vulkan: Shader stage " << stage.define << " failed to compile";
             terminate_engine();
             continue;
         }
 
         if(!validate_shader(spv)) {
-            PLOGE << "Vulkan: Shader stage " << stage.define << " in " << shader.get_path_string() <<
-            " is invalid";
+            PLOGE << "Vulkan: Shader stage " << stage.define << " is invalid";
             continue;
         }
 
         reflect_shader(spv, stage.vk_stage, s);
 
         VkShaderModule module = create_shader_module(spv);
-
-        free(spv.data);
 
         s.stages.push_back({
             module,
@@ -3296,7 +3283,7 @@ Vulkan::ShaderBinary Vulkan::compile_shader(const std::string& source,
         shaderc_compile_options_release(options);
         shaderc_compiler_release(compiler);
 
-        PLOGE << "Vulkan: Failed to compile shader stage: " << defines << " in " << filename;
+        PLOGE << "Vulkan: Failed to compile shader stage: " << defines;
         return {};
     }
 
@@ -3311,8 +3298,7 @@ Vulkan::ShaderBinary Vulkan::compile_shader(const std::string& source,
         shaderc_compile_options_release(options);
         shaderc_compiler_release(compiler);
 
-        PLOGE << "Vulkan: Failed to compile shader stage: " << defines << " in " << filename <<
-        "\n" << message;
+        PLOGE << "Vulkan: Failed to compile shader stage: " << defines << "\n" << message;
         return {};
     }
 
@@ -3321,12 +3307,9 @@ Vulkan::ShaderBinary Vulkan::compile_shader(const std::string& source,
 
     const size_t word_count = byte_size/sizeof(uint32_t);
 
-    ShaderBinary binary = {
-        .data = static_cast<uint32_t*>(malloc(byte_size)),
-        .word_count = word_count,
-    };
-
-    memcpy(binary.data, bytes, byte_size);
+    ShaderBinary binary;
+    binary.data.resize(word_count);
+    memcpy(binary.data.data(), bytes, byte_size);
 
     shaderc_result_release(result);
     shaderc_compile_options_release(options);
@@ -3338,8 +3321,8 @@ Vulkan::ShaderBinary Vulkan::compile_shader(const std::string& source,
 VkShaderModule Vulkan::create_shader_module(const ShaderBinary& shader_code) {
     VkShaderModuleCreateInfo createInfo{
         .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-        .codeSize = shader_code.word_count * sizeof(uint32_t),
-        .pCode = shader_code.data,
+        .codeSize = shader_code.data.size() * sizeof(uint32_t),
+        .pCode = shader_code.data.data(),
     };
 
     VkShaderModule mod;
@@ -3365,8 +3348,8 @@ bool Vulkan::validate_shader(const ShaderBinary& shader_code) {
     spv_diagnostic diagnostic = nullptr;
 
     spv_result_t result = spvValidateBinary(context,
-                                            shader_code.data,
-                                            shader_code.word_count,
+                                            shader_code.data.data(),
+                                            shader_code.data.size(),
                                             &diagnostic);
 
     if(result != SPV_SUCCESS) {
@@ -3688,8 +3671,8 @@ void Vulkan::unwrap_reflected_storage_arrays(Uniforms** all_uniforms,
 void Vulkan::reflect_shader(ShaderBinary& shader_code, VkShaderStageFlagBits stage, shader_data& data) {
     SpvReflectShaderModule module;
 
-    SpvReflectResult result = spvReflectCreateShaderModule(shader_code.word_count*sizeof(uint32_t),
-                                                           shader_code.data,
+    SpvReflectResult result = spvReflectCreateShaderModule(shader_code.data.size()*sizeof(uint32_t),
+                                                           shader_code.data.data(),
                                                            &module);
     if(result != SPV_REFLECT_RESULT_SUCCESS) {
         PLOGE << "Vulkan: Failed to reflect over shader";
