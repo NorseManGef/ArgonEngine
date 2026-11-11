@@ -206,7 +206,7 @@ float mandelbox(vec3 z)
 
 vec4 de(vec3 p)
 {
-    p.xz = rotate(p.xz, scene.time * 0.2 * scene.scale);
+    p.xz = rotate(p.xz, lighting.time * 0.2 * lighting.scale);
 
     return vec4(mandelbulb(p), vec3(1.0));
 }
@@ -228,7 +228,7 @@ vec3 get_normal(vec3 p)
 
 void main()
 {
-    light.x = cos(scene.time * 0.4) * 5.0;
+    light.x = cos(lighting.time * 0.4) * 5.0;
 
     float dist = 1.0;
     float total_dist = 1.0;

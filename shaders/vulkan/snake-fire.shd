@@ -22,8 +22,8 @@ void main()
         p.xy * 0.2 +
         NormalAttribute.xy * 0.4 +
         vec2(
-            sin(time + p.x),
-            cos(time * 0.9 + p.y)
+            sin(lighting.time + p.x),
+            cos(lighting.time * 0.9 + p.y)
         ) * 0.2;
 #endif
 }
