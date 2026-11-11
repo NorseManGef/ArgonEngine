@@ -46,7 +46,7 @@ void main()
 #ifndef DEPTH_ONLY
     vec3 pos = ecPos.xyz / ecPos.w;
     vec3 n = normalize(normal);
-    vec3 view = normalize(Lighting.camera_pos - pos);
+    vec3 view = normalize(lighting.camera_pos - pos);
 
     vec3 c = calculate_lighting_blinn_phong(
         pos,
