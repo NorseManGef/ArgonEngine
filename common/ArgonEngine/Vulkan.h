@@ -617,6 +617,9 @@ class Vulkan:public RenderAPI {
         std::vector<VkFramebuffer> framebuffers;
         VkExtent2D _extent{};
 
+        VkFormat _depth_format;
+        VkFormat _color_format;
+
         void create_render_pass(VkDevice device, VkFormat color_format, VkFormat depth_format,
                                 VkSampleCountFlagBits msaa_samples = VK_SAMPLE_COUNT_1_BIT);
 
@@ -638,7 +641,9 @@ class Vulkan:public RenderAPI {
         RenderPass(VkDevice device, VkFormat color_format, VkFormat depth_format,
                    VkSampleCountFlagBits msaa_samples = VK_SAMPLE_COUNT_1_BIT):
             _device(device),
-            _render_pass(nullptr)
+            _render_pass(nullptr),
+            _color_format(color_format),
+            _depth_format(depth_format)
         {
             create_render_pass(device, color_format, depth_format, msaa_samples);
         }
@@ -868,6 +873,9 @@ class Vulkan:public RenderAPI {
     size_t _current_frame = 0; // 0..MAX_FRAMES_IN_FLIGHT-1
     uint32_t _image_index = 0;
 
+    VkImageView _depth_view;
+    VkImage _depth_image;
+
     Buffer uniform_buffers[MAX_FRAMES_IN_FLIGHT];
 
     Buffer storage_buffer;
@@ -884,6 +892,8 @@ class Vulkan:public RenderAPI {
     void ensure_idle();
 
     uint32_t acquire_next_image();
+
+    void recreate_depth_image();
 
     static uint32_t find_mem_type(VkPhysicalDevice physical_device, uint32_t type_filter,
                            VkMemoryPropertyFlags properties);

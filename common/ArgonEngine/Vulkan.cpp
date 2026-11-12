@@ -548,8 +548,6 @@ VkPresentModeKHR Vulkan::Device::choose_present_mode(const std::vector<VkPresent
 }
 
 VkExtent2D Vulkan::Device::choose_swap_extent(const VkSurfaceCapabilitiesKHR& capabilities, uint32_t width, uint32_t height) {
-    if(capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max())
-        return capabilities.currentExtent;
     VkExtent2D actual_extent = {width, height};
     actual_extent.width = std::clamp(actual_extent.width,
                                      capabilities.minImageExtent.width,
@@ -598,6 +596,7 @@ void Vulkan::Device::clean_swapchain() {
 
     _image_format = VK_FORMAT_UNDEFINED;
     _extent = {0,0};
+    _swapchain_support.queried = false;
 }
 
   ///////////////////////////////////////
@@ -2635,9 +2634,7 @@ void Vulkan::init_vulkan(std::vector<const char*>& required_extensions, SDL_Wind
         .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
     };
 
-    VkImage depth_image;
-
-    VkResult result = vkCreateImage(_device->_device, &imageInfo, nullptr, &depth_image);
+    VkResult result = vkCreateImage(_device->_device, &imageInfo, nullptr, &_depth_image);
 
     if(result != VK_SUCCESS) {
         PLOGF << "Vulkan: Failed to create depth image";
@@ -2645,7 +2642,7 @@ void Vulkan::init_vulkan(std::vector<const char*>& required_extensions, SDL_Wind
     }
 
     VkMemoryRequirements mem_reqs;
-    vkGetImageMemoryRequirements(_device->_device, depth_image,  &mem_reqs);
+    vkGetImageMemoryRequirements(_device->_device, _depth_image,  &mem_reqs);
 
     VkPhysicalDeviceMemoryProperties mem_props;
     vkGetPhysicalDeviceMemoryProperties(_device->_physical_device, &mem_props);
@@ -2680,11 +2677,11 @@ void Vulkan::init_vulkan(std::vector<const char*>& required_extensions, SDL_Wind
         terminate_engine();
     }
 
-    vkBindImageMemory(_device->_device, depth_image, depth_image_mem, 0);
+    vkBindImageMemory(_device->_device, _depth_image, depth_image_mem, 0);
 
     VkImageViewCreateInfo viewInfo{
         .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-        .image = depth_image,
+        .image = _depth_image,
         .viewType = VK_IMAGE_VIEW_TYPE_2D,
         .format = chosen_depth_format,
         .subresourceRange = {
@@ -2696,15 +2693,14 @@ void Vulkan::init_vulkan(std::vector<const char*>& required_extensions, SDL_Wind
         },
     };
 
-    VkImageView depth_image_view;
-    result = vkCreateImageView(_device->_device, &viewInfo, nullptr, &depth_image_view);
+    result = vkCreateImageView(_device->_device, &viewInfo, nullptr, &_depth_view);
 
     if(result != VK_SUCCESS) {
         PLOGF << "Vulkan: Failed to create depth image view";
         terminate_engine();
     }
 
-    _render_pass->create_framebuffers(_device->_image_views, depth_image_view, _device->_extent);
+    _render_pass->create_framebuffers(_device->_image_views, _depth_view, _device->_extent);
     _command_pool = new CommandPool(_device->_device, 
                                     _device->_queue_families.graphics.value());
     for(int i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
@@ -2751,6 +2747,95 @@ uint32_t Vulkan::acquire_next_image() {
     return image_index;
 }
 
+void Vulkan::recreate_depth_image() {
+    vkDestroyImage(_device->_device, _depth_image, nullptr);
+    vkDestroyImageView(_device->_device, _depth_view, nullptr);
+
+    VkImageCreateInfo imageInfo{
+        .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+        .imageType = VK_IMAGE_TYPE_2D,
+        .format = _render_pass->_depth_format,
+        .extent = {
+            .width = _device->_extent.width,
+            .height = _device->_extent.height,
+            .depth = 1,
+        },
+        .mipLevels = 1,
+        .arrayLayers = 1,
+        .samples = VK_SAMPLE_COUNT_1_BIT,
+        .tiling = VK_IMAGE_TILING_OPTIMAL,
+        .usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+        .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+    };
+
+    VkResult result = vkCreateImage(_device->_device, &imageInfo, nullptr, &_depth_image);
+
+    if(result != VK_SUCCESS) {
+        PLOGF << "Vulkan: Failed to create depth image";
+        terminate_engine();
+    }
+
+    VkMemoryRequirements mem_reqs;
+    vkGetImageMemoryRequirements(_device->_device, _depth_image,  &mem_reqs);
+
+    VkPhysicalDeviceMemoryProperties mem_props;
+    vkGetPhysicalDeviceMemoryProperties(_device->_physical_device, &mem_props);
+
+    uint32_t memory_type_index = UINT32_MAX;
+    for (uint32_t i = 0; i < mem_props.memoryTypeCount; ++i) {
+        if ((mem_reqs.memoryTypeBits & (1 << i)) &&
+            (mem_props.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) ==
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) {
+            memory_type_index = i;
+            break;
+        }
+    }
+
+    if(memory_type_index == UINT32_MAX) {
+        PLOGF << "Vulkan: Failed to find suitable memory type for depth buffer";
+        terminate_engine();
+    }
+
+    VkMemoryAllocateInfo allocInfo{
+        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+        .allocationSize = mem_reqs.size,
+        .memoryTypeIndex = memory_type_index,
+    };
+
+    VkDeviceMemory depth_image_mem;
+
+    result = vkAllocateMemory(_device->_device, &allocInfo, nullptr, &depth_image_mem);
+    
+    if(result != VK_SUCCESS) {
+        PLOGF << "Vulkan: Failed to allocate depth image memory";
+        terminate_engine();
+    }
+
+    vkBindImageMemory(_device->_device, _depth_image, depth_image_mem, 0);
+
+    VkImageViewCreateInfo viewInfo{
+        .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+        .image = _depth_image,
+        .viewType = VK_IMAGE_VIEW_TYPE_2D,
+        .format = _render_pass->_depth_format,
+        .subresourceRange = {
+            .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
+            .baseMipLevel = 0,
+            .levelCount = 1,
+            .baseArrayLayer = 0,
+            .layerCount = 1,
+        },
+    };
+
+    result = vkCreateImageView(_device->_device, &viewInfo, nullptr, &_depth_view);
+
+    if(result != VK_SUCCESS) {
+        PLOGF << "Vulkan: Failed to create depth image view";
+        terminate_engine();
+    }
+}
+
 void Vulkan::begin_frame() {
     if(!_sync->wait_for_frame(_current_frame)){
         PLOGW << "Vulkan: Failed to wait for frame";
@@ -2758,13 +2843,15 @@ void Vulkan::begin_frame() {
     }
     _image_index = acquire_next_image();
 
+    if(_render_pass->_extent.width != _device->_extent.width ||
+       _render_pass->_extent.height != _device->_extent.height) {
+        recreate_depth_image();
+        _render_pass->recreate_framebuffers(_device->_image_views,
+                                            _depth_view, _device->_extent);
+    }
+
     ensure_recording();
     _sync->reset_frame_fence(_current_frame);
-    VkExtent2D extent{
-        .width = static_cast<uint32_t>(Argon::Screen::logical_size[0]),
-        .height = static_cast<uint32_t>(Argon::Screen::logical_size[1])
-    };
-    _device->_extent = extent;
     uniform_buffers[_current_frame]._current_uniform_buffer = 0;
 }
 
