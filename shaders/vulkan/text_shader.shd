@@ -58,7 +58,7 @@ void main()
 
 #ifdef FRAGMENT_SHADER
 
-layout(set = 1, binding = 0) uniform sampler2D texture;
+layout(set = 1, binding = 0) uniform sampler2D textureSampler;
 
 layout(set = 1, binding = 1, std140) uniform Material
 {
@@ -85,17 +85,17 @@ void main()
     float cutoff = 0.8;
 
     vec4 texMain = texture(
-        texture,
+        textureSampler,
         texVarying
     );
 
     vec4 texRed = texture(
-        texture,
+        textureSampler,
         texVarying + offset
     );
 
     vec4 texBlue = texture(
-        texture,
+        textureSampler,
         texVarying - offset
     );
 
