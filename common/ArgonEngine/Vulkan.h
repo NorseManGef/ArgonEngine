@@ -386,9 +386,9 @@ class Vulkan:public RenderAPI {
         void free_buffer(VkCommandBuffer buffer);
         void reset(bool release_resources = false);
 
-        void begin_buffer(VkCommandBuffer buffer, VkCommandBufferUsageFlags usage = 0,
+        static void begin_buffer(VkCommandBuffer buffer, VkCommandBufferUsageFlags usage = 0,
                           const VkCommandBufferInheritanceInfo* inheritance_info = nullptr);
-        void end_buffer(VkCommandBuffer buffer);
+        static void end_buffer(VkCommandBuffer buffer);
 
         VkCommandBuffer begin_single_time_commands();
         void end_single_time_commands(VkCommandBuffer buffer, VkQueue queue);
@@ -827,8 +827,10 @@ class Vulkan:public RenderAPI {
                     vkDestroyDescriptorSetLayout(_device, desc_layout, nullptr);
                 }
                 desc_set_layouts.clear();
-                vkFreeDescriptorSets(_device, desc_pool, desc_sets.size(), desc_sets.data());
-                desc_sets.clear();
+                if(!desc_sets.empty()) {
+                    vkFreeDescriptorSets(_device, desc_pool, desc_sets.size(), desc_sets.data());
+                    desc_sets.clear();
+                }
                 vkDestroyDescriptorPool(_device, desc_pool, nullptr);
                 desc_pool = VK_NULL_HANDLE;
                 reflected_sets.clear();
@@ -838,6 +840,10 @@ class Vulkan:public RenderAPI {
             }
             _last_frame = 0;
         };
+
+        shader_data(const shader_data&) = delete;
+        shader_data() = default;
+        shader_data(shader_data&&) = default;
     };
 
     enum class CmdState {

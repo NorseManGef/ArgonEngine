@@ -1196,16 +1196,15 @@ void Vulkan::CommandPool::begin_render_pass(VkCommandBuffer buffer, VkRenderPass
         .pClearValues = clear_values.data(),
     };
 
-    VkSubpassBeginInfo subpassInfo{
-        .sType = VK_STRUCTURE_TYPE_SUBPASS_BEGIN_INFO,
-        .contents = VK_SUBPASS_CONTENTS_INLINE,
+    VkSubpassContents subpassContents{
+        VK_SUBPASS_CONTENTS_INLINE
     };
 
-    vkCmdBeginRenderPass2(buffer, &render_passInfo, &subpassInfo);
+    vkCmdBeginRenderPass(buffer, &render_passInfo, subpassContents);
 }
 
 void Vulkan::CommandPool::end_render_pass(VkCommandBuffer buffer) {
-    vkCmdEndRenderPass2(buffer, nullptr);
+    vkCmdEndRenderPass(buffer);
 }
 
 void Vulkan::CommandPool::bind_pipeline(VkCommandBuffer buffer, VkPipeline pipeline, VkPipelineBindPoint bind_point) {
@@ -2219,12 +2218,21 @@ void Vulkan::Synchronization::submit_command_buffers(VkQueue queue,
         .pSignalSemaphores = signal_semaphores.empty() ? nullptr : signal_semaphores.data(),
     };
 
-    PLOGV << "submitting queue";
-
+    //FIXME: This can wait on a semaphore that cannot be signaled, and hang the program
     VkResult result = vkQueueSubmit(queue, 1, &submitInfo, fence);
     if(result != VK_SUCCESS) {
         PLOGF << "Vulkan: Failed to submit buffers to queue";
         terminate_engine();
+    }
+
+    wait_for_fences(_device, {fence});
+
+    for(auto& buffer : buffers) {
+        VkResult result = vkResetCommandBuffer(buffer, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
+        if(result != VK_SUCCESS) {
+            PLOGF << "Vulkan: Failed to reset command buffer";
+            terminate_engine();
+        }
     }
 }
 
@@ -2748,6 +2756,8 @@ void Vulkan::begin_frame() {
         PLOGW << "Vulkan: Failed to wait for frame";
         return;
     }
+    _image_index = acquire_next_image();
+
     ensure_recording();
     _sync->reset_frame_fence(_current_frame);
     VkExtent2D extent{
@@ -2759,18 +2769,11 @@ void Vulkan::begin_frame() {
 }
 
 void Vulkan::end_frame() {
-    _image_index = acquire_next_image();
-    VkResult result = vkResetCommandBuffer(_cmd_buffers[_current_frame], 0);
-    if(result != VK_SUCCESS) {
-        PLOGF << "Vulkan: Failed to reset command buffer";
-        terminate_engine();
-    }
-
-    ensure_recording();
-
     std::vector<VkSemaphore> wait_semaphores = {_sync->_frame_sync_objects[_current_frame].image_available_semaphore};
     std::vector<VkPipelineStageFlags> wait_stages = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
     std::vector<VkSemaphore> signal_semaphores = {_sync->_frame_sync_objects[_current_frame].render_finished_semaphore};
+
+    ensure_idle();
 
     _sync->submit_command_buffers(_device->_graphicsQ, 
                                   {_cmd_buffers[_current_frame]},
@@ -2779,7 +2782,7 @@ void Vulkan::end_frame() {
                                   signal_semaphores,
                                   _sync->_frame_sync_objects[_current_frame].in_flight_fence);
 
-    result = _sync->present_image(_device->_presentQ, _device->_swapchain, _image_index, signal_semaphores);
+    VkResult result = _sync->present_image(_device->_presentQ, _device->_swapchain, _image_index, signal_semaphores);
     if(result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
         _device->recreate_swapchain(_device->_surface, _device->_extent.width, _device->_extent.height);
     } else if (result != VK_SUCCESS) {
@@ -2833,21 +2836,7 @@ void Vulkan::RealTexFormat::set_format(int flag) {
 }
 
 void Vulkan::clean() {
-    for(auto s : shaders) {
-        for(auto i : s.second.stages) {
-            if(i.module != VK_NULL_HANDLE) {
-                vkDestroyShaderModule(_device->_device, i.module, nullptr);
-                i.module = VK_NULL_HANDLE;
-            }
-        }
-    }
     if(current_shader){
-        for(auto i : current_shader->stages) {
-            if(i.module != VK_NULL_HANDLE) {
-                vkDestroyShaderModule(_device->_device, i.module, nullptr);
-                i.module = VK_NULL_HANDLE;
-            }
-        }
         delete current_shader;
     };
     if(_sync)delete _sync;
@@ -3114,7 +3103,6 @@ void Vulkan::make_shader(VirtualResource& shader) {
 
         if(spv.data.empty()) {
             PLOGE << "Vulkan: Shader stage " << stage.define << " failed to compile";
-            terminate_engine();
             continue;
         }
 
@@ -3765,6 +3753,7 @@ void Vulkan::reflect_shader(ShaderBinary& shader_code, VkShaderStageFlagBits sta
 
         VkDescriptorPoolCreateInfo poolInfo {
             .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+            .flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,
             .maxSets = static_cast<uint32_t>(sets.size()),
             .poolSizeCount = static_cast<uint32_t>(desc_pool_sizes.size()),
             .pPoolSizes = desc_pool_sizes.data(),
@@ -3814,7 +3803,7 @@ void Vulkan::pre_draw() {
     };
     _command_pool->begin_render_pass(_cmd_buffers[_current_frame], _render_pass->_render_pass,
                                      _render_pass->framebuffers[_image_index], rect,
-                                     {state._current_clear_value});
+                                     {state._current_clear_value, state._current_clear_value});
 }
 
 void Vulkan::post_draw() {
