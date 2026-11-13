@@ -617,6 +617,7 @@ void Vulkan::Pipeline::create_graphics_pipeline(Required_Pipeline_State state) {
     _extent = state._extent;
 
     _current_shader = state._current_shader;
+    _vertex_array = state._vertex_array;
 
     _current_render_pass = state._current_render_pass;
     _device = state._device;
@@ -681,12 +682,14 @@ void Vulkan::Pipeline::create_graphics_pipeline() {
         .basePipelineIndex = -1,
     };
 
+    std::cout << "Here" << std::endl;
     VkResult result = vkCreateGraphicsPipelines(_device,
                                                 VK_NULL_HANDLE,
                                                 1,
                                                 &pipeline_createInfo,
                                                 VK_NULL_HANDLE,
                                                 &_pipeline);
+    std::cout << "Here2" << std::endl;
 
     if(result != VK_SUCCESS) {
         PLOGF << "Vulkan: Failed to create graphics pipeline";
@@ -795,6 +798,7 @@ VkPipelineVertexInputStateCreateInfo Vulkan::Pipeline::create_vertex_input_info(
         .inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
     };
 
+    _attribs.clear();
     _attribs.reserve(_vertex_array->attributes.size());
 
     auto attrib_location = [&](VertexAttribPair pair)-> uint32_t {
@@ -988,8 +992,8 @@ VkPipelineDepthStencilStateCreateInfo Vulkan::Pipeline::create_depth_stencil_inf
         .depthTestEnable = VK_TRUE,
         .depthWriteEnable = VK_TRUE, //needed for depthTest
         .depthCompareOp = VK_COMPARE_OP_LESS,
-        .depthBoundsTestEnable = VK_TRUE,
-        .stencilTestEnable = VK_TRUE, //TODO: determine if this should be implemented
+        .depthBoundsTestEnable = VK_FALSE,
+        .stencilTestEnable = VK_FALSE, //TODO: determine if this should be implemented
         .front = {}, //TODO: make this user-settable
         .back = {}, //TODO: make this user-settable
         .minDepthBounds = 0.0f,
@@ -1000,14 +1004,14 @@ VkPipelineDepthStencilStateCreateInfo Vulkan::Pipeline::create_depth_stencil_inf
 }
 
 VkPipelineDynamicStateCreateInfo Vulkan::Pipeline::create_dynamic_state_info() {
-    std::vector<VkDynamicState> dynamic_states = {
+    _dynamic_states = {
         VK_DYNAMIC_STATE_PRIMITIVE_TOPOLOGY,
     };
 
     VkPipelineDynamicStateCreateInfo dynamicInfo{
         .sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
-        .dynamicStateCount = static_cast<uint32_t>(dynamic_states.size()),
-        .pDynamicStates = dynamic_states.data()
+        .dynamicStateCount = static_cast<uint32_t>(_dynamic_states.size()),
+        .pDynamicStates = _dynamic_states.data()
     };
 
     return dynamicInfo;
@@ -1684,7 +1688,7 @@ Vulkan::Buffer Vulkan::Buffer::create_vertex_buffer(VkDevice device, VkPhysicalD
 Vulkan::Buffer Vulkan::Buffer::create_index_buffer(VkDevice device, VkPhysicalDevice physical_device,
                                                    VkCommandPool command_pool, VkQueue graphics_queue, 
                                                    std::shared_ptr<VertexArray> vertex_array) {
-    VkDeviceSize buffer_size = vertex_array->vertex_count()*vertex_array->stride;
+    VkDeviceSize buffer_size = vertex_array->index_data.size()*sizeof(uint16_t);
     Buffer index_buffer;
     if(!vertex_array->updates_frequently) {
         Buffer staging_buffer;
@@ -1764,7 +1768,7 @@ std::vector<Vulkan::Buffer> Vulkan::Buffer::create_attrib_buffers(VkDevice devic
 void Vulkan::Buffer::update_vertex_buffer(Buffer& buffer, VkDevice device, VkPhysicalDevice physical_device,
                                           VkCommandPool command_pool, VkQueue graphics_queue,
                                           std::shared_ptr<VertexArray> vertex_array, VkDeviceSize offset) {
-    VkDeviceSize size = vertex_array->stride * vertex_array->data.size();
+    VkDeviceSize size = vertex_array->stride * vertex_array->vertex_count();
 
     if(offset + size > buffer._size) {
         PLOGF << "Vulkan: Vertex buffer update exceeds buffer size";
@@ -1788,7 +1792,7 @@ void Vulkan::Buffer::update_vertex_buffer(Buffer& buffer, VkDevice device, VkPhy
 void Vulkan::Buffer::update_index_buffer(Buffer& buffer, VkDevice device, VkPhysicalDevice physical_device,
                                           VkCommandPool command_pool, VkQueue graphics_queue,
                                           std::shared_ptr<VertexArray> vertex_array, VkDeviceSize offset) {
-    VkDeviceSize size = vertex_array->index_data.size()*2;
+    VkDeviceSize size = vertex_array->index_data.size()*sizeof(uint16_t);
 
     if(offset+size>buffer._size) {
         PLOGF << "Vulkan: Index buffer update exceeds buffer size";
@@ -2616,6 +2620,8 @@ void Vulkan::init_vulkan(std::vector<const char*>& required_extensions, SDL_Wind
                                         _device->_swapchain_support.formats).format,
                                   chosen_depth_format);
 
+    state._current_render_pass = _render_pass->_render_pass;
+
     VkImageCreateInfo imageInfo{
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
         .imageType = VK_IMAGE_TYPE_2D,
@@ -2949,11 +2955,15 @@ void Vulkan::draw_vertex_array(std::shared_ptr<VertexArray> array, int end_vert,
 
     if(it == vertex_arrays.end())return;
 
+    state._vertex_array = array;
+
     vert_data& vert_d = it->second;
 
     if(vert_d.vert_buffer._buffer == VK_NULL_HANDLE ||
        vert_d.index_buffer._buffer == VK_NULL_HANDLE) {
-        PLOGW << "Vulkan: Buffers were null";
+        PLOGE << "Vulkan: Buffers were null";
+        PLOGD << "Index Buffer: " << vert_d.index_buffer._buffer;
+        PLOGD << "Vertex Buffer: " << vert_d.vert_buffer._buffer;
         return;
     }
 
@@ -3167,9 +3177,14 @@ void Vulkan::set_shader(Argon::Renderable* state, VirtualResource& shader, Unifo
     s._device = _device->_device;
     s._last_frame=0;
     if(s.stages.empty())make_shader(shader);
+    if(s.stages.empty()) {
+        PLOGE << "Vulkan: Shader has no successfully compiled stages";
+        return; //avoid giving the pipeline an empty shader array
+    }
     current_shader=&s;
 
     set_uniforms(uniforms, size);
+    Vulkan::state._current_shader = current_shader;
 }
 
 void Vulkan::make_shader(VirtualResource& shader) {
@@ -3207,6 +3222,52 @@ void Vulkan::make_shader(VirtualResource& shader) {
             stage.vk_stage
         });
     }
+
+    VkDescriptorPoolCreateInfo poolInfo {
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+        .flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,
+        .maxSets = static_cast<uint32_t>(s.reflected_sets.size()),
+        .poolSizeCount = static_cast<uint32_t>(s._desc_pool_sizes.size()),
+        .pPoolSizes = s._desc_pool_sizes.data(),
+    };
+
+    vkCreateDescriptorPool(_device->_device, &poolInfo, nullptr, &s.desc_pool);
+    
+    for(int i = 0; i < s.reflected_sets.size(); ++i) {
+        VkDescriptorSetLayoutCreateInfo layout_info = {
+            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+            .pNext = nullptr,
+            .bindingCount = static_cast<uint32_t>(s._layout_bindings_set[i].size()),
+            .pBindings = s._layout_bindings_set[i].data(),
+        };
+        VkDescriptorSetLayout layout;
+        VkResult result = vkCreateDescriptorSetLayout(_device->_device, &layout_info, nullptr, &layout);
+        if(result != VK_SUCCESS) {
+            PLOGF << "Vulkan: Failed to create descriptor set layout";
+            terminate_engine();
+        } 
+        s.desc_set_layouts.push_back(layout);
+    } 
+
+    VkDescriptorSetAllocateInfo setAllocInfo {
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+        .descriptorPool = s.desc_pool,
+        .descriptorSetCount = static_cast<uint32_t>(s.desc_set_layouts.size()),
+        .pSetLayouts = s.desc_set_layouts.data(),
+    };
+
+    s.desc_sets.resize(setAllocInfo.descriptorSetCount);
+    vkAllocateDescriptorSets(_device->_device, &setAllocInfo, s.desc_sets.data());
+
+    VkPipelineLayoutCreateInfo pipe_layout_info {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+        .setLayoutCount = static_cast<uint32_t>(s.desc_set_layouts.size()),
+        .pSetLayouts = s.desc_set_layouts.data(),
+        .pushConstantRangeCount = 0,
+        .pPushConstantRanges = nullptr, // consider implementing this in future
+    };
+
+    vkCreatePipelineLayout(_device->_device, &pipe_layout_info, nullptr, &s.pipeline_layout);
 }
 
 const std::map<std::string_view, Vulkan::shader_stage_info> Vulkan::shader_stage_map = {
@@ -3783,8 +3844,6 @@ void Vulkan::reflect_shader(ShaderBinary& shader_code, VkShaderStageFlagBits sta
 
         spvReflectEnumerateDescriptorSets(&module, &count, sets.data());
 
-        std::vector<VkDescriptorPoolSize> desc_pool_sizes;
-
         std::vector<std::vector<VkDescriptorSetLayoutBinding>> layout_bindings_set;
         layout_bindings_set.reserve(sets.size());
 
@@ -3830,7 +3889,7 @@ void Vulkan::reflect_shader(ShaderBinary& shader_code, VkShaderStageFlagBits sta
                     .pImmutableSamplers = nullptr,
                 });
                 
-                desc_pool_sizes.push_back({
+                data._desc_pool_sizes.push_back({
                     .type = type,
                     .descriptorCount = binding->count,
                 });
@@ -3838,49 +3897,30 @@ void Vulkan::reflect_shader(ShaderBinary& shader_code, VkShaderStageFlagBits sta
             layout_bindings_set.push_back(layout_bindings);
         }
 
-        VkDescriptorPoolCreateInfo poolInfo {
-            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-            .flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,
-            .maxSets = static_cast<uint32_t>(sets.size()),
-            .poolSizeCount = static_cast<uint32_t>(desc_pool_sizes.size()),
-            .pPoolSizes = desc_pool_sizes.data(),
-        };
+        for(int i = 0; i < layout_bindings_set.size(); ++i) {
+            if(i > data._layout_bindings_set.size()) {
+                data._layout_bindings_set.push_back(layout_bindings_set[i]);
+            } else {
+                for(auto& binding : layout_bindings_set[i]) {
+                    bool found = false;
+                    for(auto& _binding : data._layout_bindings_set[i]) {
+                        if(_binding.binding == binding.binding) {
+                            if(_binding.descriptorType != binding.descriptorType) {
+                                PLOGE << "Vulkan: Shader binding: " << binding.binding << " collision between stages: "
+                                      << binding.stageFlags << " and " << _binding.stageFlags;
+                            }
+                            found = true;
+                            break;
+                        }
+                    }
+                    if(found)break;
+                    
+                    data._layout_bindings_set[i].push_back(binding);
+                } 
+            }
+        }
 
-        vkCreateDescriptorPool(_device->_device, &poolInfo, nullptr, &data.desc_pool);
-        
-        for(int i = 0; i < sets.size(); ++i) {
-            VkDescriptorSetLayoutCreateInfo layout_info = {
-                .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-                .pNext = nullptr,
-                .bindingCount = static_cast<uint32_t>(layout_bindings_set[i].size()),
-                .pBindings = layout_bindings_set[i].data(),
-            };
-            VkDescriptorSetLayout layout;
-            VkResult result = vkCreateDescriptorSetLayout(_device->_device, &layout_info, nullptr, &layout);
-            if(result != VK_SUCCESS) {
-                PLOGF << "Vulkan: Failed to create descriptor set layout";
-                terminate_engine();
-            } 
-            data.desc_set_layouts.push_back(layout);
-        } 
-
-        VkDescriptorSetAllocateInfo setAllocInfo {
-            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-            .descriptorPool = data.desc_pool,
-            .descriptorSetCount = static_cast<uint32_t>(data.desc_set_layouts.size()),
-            .pSetLayouts = data.desc_set_layouts.data(),
-        };
-
-        data.desc_sets.reserve(setAllocInfo.descriptorSetCount);
-        vkAllocateDescriptorSets(_device->_device, &setAllocInfo, data.desc_sets.data());
-
-        VkPipelineLayoutCreateInfo pipe_layout_info {
-            .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-            .setLayoutCount = static_cast<uint32_t>(data.desc_set_layouts.size()),
-            .pSetLayouts = data.desc_set_layouts.data(),
-            .pushConstantRangeCount = 0,
-            .pPushConstantRanges = nullptr, // consider implementing this in future
-        };
+        data.reflected_sets = std::move(sets);
     }
 }
 
@@ -3941,10 +3981,11 @@ void Vulkan::cache_array(std::shared_ptr<VertexArray> array) {
         d.index_size = array->index_data.size()*2;
         d.update_id = array->update_id;
 
-        if(d.vert_buffer._buffer == VK_NULL_HANDLE || d.vert_buffer._size != d.buff_size) {
-            d.vert_buffer.create_vertex_buffer(_device->_device, _device->_physical_device,
-                                               _command_pool->_command_pool, 
-                                               _device->_graphicsQ, array);
+        if(d.vert_buffer._buffer == VK_NULL_HANDLE || d.buff_size != d.vert_buffer._size) {
+            d.vert_buffer = Buffer::create_vertex_buffer(_device->_device, 
+                                                         _device->_physical_device,
+                                                         _command_pool->_command_pool, 
+                                                         _device->_graphicsQ, array);
         } else {
             Buffer::update_vertex_buffer(d.vert_buffer, _device->_device,
                                          _device->_physical_device, 
@@ -3953,7 +3994,7 @@ void Vulkan::cache_array(std::shared_ptr<VertexArray> array) {
         }
 
         if(d.index_buffer._buffer == VK_NULL_HANDLE || d.index_buffer._size != d.index_size) {
-            d.index_buffer.create_index_buffer(_device->_device, _device->_physical_device, 
+            d.index_buffer = Buffer::create_index_buffer(_device->_device, _device->_physical_device, 
                                                _command_pool->_command_pool,
                                                _device->_graphicsQ, array);
         } else {

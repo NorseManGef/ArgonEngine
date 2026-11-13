@@ -210,6 +210,7 @@ class Vulkan:public RenderAPI {
         VkViewport _current_viewport;
 
         shader_data* _current_shader = VK_NULL_HANDLE;   
+        std::shared_ptr<VertexArray> _vertex_array;
 
         VkRenderPass _current_render_pass;
 
@@ -226,8 +227,6 @@ class Vulkan:public RenderAPI {
             _current_min_depth == b._current_min_depth &&
             _current_max_depth == b._current_max_depth &&
             _current_render_flags == b._current_render_flags &&
-
-            // TODO: compare the appropriate VkClearValue members
 
             _current_viewport.x == b._current_viewport.x &&
             _current_viewport.y == b._current_viewport.y &&
@@ -313,6 +312,8 @@ class Vulkan:public RenderAPI {
         VkExtent2D _extent{};
         std::shared_ptr<VertexArray> _vertex_array;
         VkPipelineColorBlendAttachmentState _color_blend_attachment{};
+
+        std::vector<VkDynamicState> _dynamic_states;
 
         VkVertexInputBindingDescription _binding_desc{};
         std::vector<VkVertexInputAttributeDescription> _attribs;
@@ -493,9 +494,9 @@ class Vulkan:public RenderAPI {
         void end_single_time_commands(VkDevice device, VkCommandPool command_pool,
                                       VkCommandBuffer buffer, VkQueue queue) const;
 
-        Buffer create_vertex_buffer(VkDevice device, VkPhysicalDevice physical_device, VkCommandPool command_pool,
+        static Buffer create_vertex_buffer(VkDevice device, VkPhysicalDevice physical_device, VkCommandPool command_pool,
                                     VkQueue graphics_queue, std::shared_ptr<VertexArray> vertex_array);
-        Buffer create_index_buffer(VkDevice device, VkPhysicalDevice physical_device, VkCommandPool command_pool,
+        static Buffer create_index_buffer(VkDevice device, VkPhysicalDevice physical_device, VkCommandPool command_pool,
                                    VkQueue graphics_queue, std::shared_ptr<VertexArray> vertex_array);
         Buffer create_uniform_buffer(VkDevice device, VkPhysicalDevice physical_device, VkDeviceSize size);
         Buffer create_staging_buffer(VkDevice device, VkPhysicalDevice physical_device, VkDeviceSize size);
@@ -812,13 +813,16 @@ class Vulkan:public RenderAPI {
 
         std::vector<VkDescriptorSet> desc_sets;
         std::vector<VkDescriptorSetLayout> desc_set_layouts;
-        VkPipelineLayout pipeline_layout;
-        VkDescriptorPool desc_pool;
+        VkPipelineLayout pipeline_layout = VK_NULL_HANDLE;
+        VkDescriptorPool desc_pool = VK_NULL_HANDLE;
         std::vector<SpvReflectDescriptorSet*> reflected_sets;
         std::map<uint64_t, std::shared_ptr<TexturePrim>> texture_bindings;
         std::map<StringIntern, uint32_t> attribs;
 
-        VkDevice _device;
+        std::vector<std::vector<VkDescriptorSetLayoutBinding>> _layout_bindings_set;
+        std::vector<VkDescriptorPoolSize> _desc_pool_sizes;
+
+        VkDevice _device = VK_NULL_HANDLE;
 
         size_t _last_frame = 0;
 
@@ -837,6 +841,9 @@ class Vulkan:public RenderAPI {
                     desc_sets.clear();
                 }
                 vkDestroyDescriptorPool(_device, desc_pool, nullptr);
+    
+                if(pipeline_layout!=VK_NULL_HANDLE)
+                    vkDestroyPipelineLayout(_device, pipeline_layout, nullptr);
                 desc_pool = VK_NULL_HANDLE;
                 reflected_sets.clear();
                 texture_bindings.clear();
@@ -848,7 +855,9 @@ class Vulkan:public RenderAPI {
 
         shader_data(const shader_data&) = delete;
         shader_data() = default;
-        shader_data(shader_data&&) = default;
+        shader_data(shader_data&& other) {
+            //TODO: Make this exist    
+        }
     };
 
     enum class CmdState {
