@@ -33,9 +33,9 @@ void main()
 
 #ifdef FRAGMENT_SHADER
 
-layout(location = 0) in vec2 texVarying;
+layout(location = 2) in vec2 texVarying;
 
-layout(location = 0) out vec4 outColor;
+layout(location = 1) out vec4 outColor;
 
 layout(set = 1, binding = 0) uniform sampler2D textureSampler;
 

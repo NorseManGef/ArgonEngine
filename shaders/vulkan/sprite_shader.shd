@@ -38,9 +38,9 @@ layout(set = 1, binding = 1, std140) uniform Color
 
 layout(set = 1, binding = 2) uniform sampler2D textureSampler;
 
-layout(location = 0) in mediump vec2 texVarying;
+layout(location = 2) in mediump vec2 texVarying;
 
-layout(location = 0) out mediump vec4 fragColor;
+layout(location = 1) out mediump vec4 fragColor;
 
 void main()
 {

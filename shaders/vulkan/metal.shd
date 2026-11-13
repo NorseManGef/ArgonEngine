@@ -47,13 +47,13 @@ void main()
 
 #ifdef FRAGMENT_SHADER
 
-layout(location = 0) in vec3 ambient;
-layout(location = 1) in vec3 normal;
-layout(location = 2) in vec3 normal2;
-layout(location = 3) in vec4 ecPos;
-layout(location = 4) in vec4 screen_pos;
+layout(location = 2) in vec3 ambient;
+layout(location = 3) in vec3 normal;
+layout(location = 4) in vec3 normal2;
+layout(location = 5) in vec4 ecPos;
+layout(location = 6) in vec4 screen_pos;
 
-layout(location = 0) out vec4 fragColor;
+layout(location = 5) out vec4 fragColor;
 
 layout(set = 1, binding = 1) uniform sampler2D textureSampler;
 
