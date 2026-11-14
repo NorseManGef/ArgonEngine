@@ -3898,7 +3898,7 @@ void Vulkan::reflect_shader(ShaderBinary& shader_code, VkShaderStageFlagBits sta
         }
 
         for(int i = 0; i < layout_bindings_set.size(); ++i) {
-            if(i > data._layout_bindings_set.size()) {
+            if(i >= data._layout_bindings_set.size()) {
                 data._layout_bindings_set.push_back(layout_bindings_set[i]);
             } else {
                 for(auto& binding : layout_bindings_set[i]) {
