@@ -203,6 +203,9 @@ public:
     bool operator==(int i){
         return d_==i;
     }
+    bool operator!=(int i){
+        return d_!=i;
+    }
 
     bool operator!(){
         return !d_;
