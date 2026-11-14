@@ -3226,14 +3226,14 @@ void Vulkan::make_shader(VirtualResource& shader) {
     VkDescriptorPoolCreateInfo poolInfo {
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
         .flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,
-        .maxSets = static_cast<uint32_t>(s.reflected_sets.size()),
+        .maxSets = static_cast<uint32_t>(s._layout_bindings_set.size()),
         .poolSizeCount = static_cast<uint32_t>(s._desc_pool_sizes.size()),
         .pPoolSizes = s._desc_pool_sizes.data(),
     };
 
     vkCreateDescriptorPool(_device->_device, &poolInfo, nullptr, &s.desc_pool);
     
-    for(int i = 0; i < s.reflected_sets.size(); ++i) {
+    for(int i = 0; i < s._layout_bindings_set.size(); ++i) {
         VkDescriptorSetLayoutCreateInfo layout_info = {
             .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
             .pNext = nullptr,
@@ -3919,8 +3919,6 @@ void Vulkan::reflect_shader(ShaderBinary& shader_code, VkShaderStageFlagBits sta
                 } 
             }
         }
-
-        data.reflected_sets = std::move(sets);
     }
 }
 
