@@ -27,7 +27,7 @@
 
 #ifdef HAVE_LIBURING_H
 
-#include "../SDL_sysasyncio.h"
+#include "SDL_sysasyncio.h"
 
 #include <liburing.h>
 #include <errno.h>

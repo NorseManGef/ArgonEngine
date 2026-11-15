@@ -175,36 +175,39 @@ public:
         return operator=(d_-1);
     }
 
-    int operator+(int i){
+    int operator+(int i) const{
         return d_+i;
     }
-    int operator-(int i){
+    int operator-(int i) const{
         return d_-i;
     }
-    int operator*(int i){
+    int operator*(int i) const{
         return d_*i;
     }
-    int operator/(int i){
+    int operator/(int i) const{
         return d_/i;
     }
 
-    bool operator<(int i){
+    bool operator<(int i) const{
         return d_<i;
     }
-    bool operator<=(int i){
+    bool operator<=(int i) const{
         return d_<=i;
     }
-    bool operator>(int i){
+    bool operator>(int i) const{
         return d_>i;
     }
-    bool operator>=(int i){
+    bool operator>=(int i) const{
         return d_>=i;
     }
-    bool operator==(int i){
+    bool operator==(int i) const{
         return d_==i;
     }
+    bool operator!=(int i) const{
+        return d_!=i;
+    }
 
-    bool operator!(){
+    bool operator!() const{
         return !d_;
     }
 };

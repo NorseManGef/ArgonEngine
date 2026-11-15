@@ -133,7 +133,7 @@ namespace Argon{
         float max_width;
         bool isMultiLine;
 
-        const char* TEXT_SHADER = "shader://text_shader.shd";
+        VirtualResource TEXT_SHADER = "shader://text_shader.shd";
         Label();
 
         /*!

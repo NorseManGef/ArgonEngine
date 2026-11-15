@@ -114,7 +114,7 @@ namespace Argon{
         if(d->materials.size())
         o->material=get_material(d->materials[0]);
 
-        o->parent = &*spawned_nodes[d->parent];
+        o->parent = spawned_nodes[d->parent].get();
         if(!o->parent)o->parent=this;
 
         return o;

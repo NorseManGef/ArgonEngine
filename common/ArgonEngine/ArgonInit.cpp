@@ -115,6 +115,7 @@ namespace Argon{
 #ifdef PLATFORM_MAC
         doc_dir = home+"/Documents";
         pref_dir = home+"/Library/Application Support/"+organization_name+"/"+app_name;
+        base = base+"Contents/MacOS/";
 #endif
 #ifdef PLATFORM_WINDOWS
         char output[MAX_PATH];
@@ -354,6 +355,10 @@ namespace Argon{
         Screen::actual_size=Vector2f(r.w,r.h);
         last_full_screen=Screen::full_screen;
         last_screen=Screen::logical_size;
+        #ifndef OPENGL_AUTO_VERSIONING
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
+        #endif
 
         if(renderer == Renderer::OGL) {
 #ifdef USE_OPENGL
@@ -362,7 +367,6 @@ namespace Argon{
             SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
             #endif
 
-            SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 
             SDL_PropertiesID props = SDL_CreateProperties();
             SDL_SetStringProperty(props, SDL_PROP_WINDOW_CREATE_TITLE_STRING, "test");

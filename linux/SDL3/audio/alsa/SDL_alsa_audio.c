@@ -36,9 +36,9 @@
 #define SDL_ALSA_DEBUG 1
 #endif
 
-#include "../SDL_sysaudio.h"
+#include "SDL_sysaudio.h"
 #include "SDL_alsa_audio.h"
-#include "../../core/linux/SDL_udev.h"
+#include "core/linux/SDL_udev.h"
 
 #if SDL_ALSA_DEBUG
 #define LOGDEBUG(...) SDL_LogDebug(SDL_LOG_CATEGORY_AUDIO, "ALSA: " __VA_ARGS__)

@@ -2,10 +2,6 @@ cmake_minimum_required(VERSION 3.20)
 project(argonengine)
 
 find_package(OpenGL REQUIRED)
-if(APPLE)
-find_package(CURL REQUIRED)
-pkg_check_modules(GLEW REQUIRED IMPORTED_TARGET glew)  
-endif(APPLE)
 
 set(GENERATED_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated)
 file(MAKE_DIRECTORY ${GENERATED_DIR})
@@ -39,6 +35,16 @@ set(SHADERC_SKIP_EXECUTABLES TRUE)
 set(SHADERC_SKIP_COPYRIGHT_CHECK TRUE)
 add_subdirectory(common/shaderc)
 
+if(APPLE)
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
+set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(BUILD_LIBCURL_DOCS OFF CACHE BOOL "" FORCE)
+set(BUILD_MISC_DOCS OFF CACHE BOOL "" FORCE)
+
+add_subdirectory(mac/curl)
+endif(APPLE)
+
 set(CMAKE_BUILD_TYPE Debug)
 
 if(WIN32)
@@ -57,9 +63,12 @@ set(INC_OS_ADD
 endif(UNIX AND NOT APPLE)
 
 if(APPLE)
-set(INC_OS mac)
+set(INC_OS 
+    mac
+)
 set(INC_OS_ADD
-    # nothing
+    mac/GL #For GLEW
+    mac/curl/include
 )
 endif(APPLE)
 
@@ -836,6 +845,7 @@ set(SRC_LINUX
 )
 
 set(SRC_MAC
+    mac/GL/glew.c
     mac/SDL3/audio/coreaudio/SDL_coreaudio.m
     mac/SDL3/camera/coremedia/SDL_camera_coremedia.m
     mac/SDL3/core/unix/SDL_appid.c
@@ -908,7 +918,6 @@ list(APPEND LIB_LINUX
 )
 
 set(LIB_MAC
-    PkgConfig::GLEW
     CURL::libcurl
     "-framework Cocoa"
     "-framework IOKit"
@@ -952,6 +961,9 @@ set(SOURCES
     ${SRC_OS}
 )
 
+if(APPLE)
+set(CMAKE_MACOSX_BUNDLE TRUE)
+endif(APPLE)
 add_executable(argonapp ${SOURCES} ) 
 target_link_libraries(argonapp 
     PRIVATE 
@@ -967,6 +979,11 @@ target_link_libraries(argonapp
     glslang
     shaderc
 )
+if(APPLE)
+set_target_properties(argonapp PROPERTIES
+  MACOSX_BUNDLE_INFO_PLIST "${CMAKE_SOURCE_DIR}/mac/Info.plist.in"
+)
+endif(APPLE)
 
 if(NOT APPLE)
 target_precompile_headers(argonapp
