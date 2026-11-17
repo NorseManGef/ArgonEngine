@@ -317,7 +317,6 @@ class Vulkan:public RenderAPI {
 
         VkVertexInputBindingDescription _binding_desc{};
         std::vector<VkVertexInputAttributeDescription> _attribs;
-        std::vector<VkDescriptorSetLayoutBinding> out_bindings;
 
         unsigned int _current_blend = kBlendReplace;
         bool _current_blend_enabled = true;

@@ -682,14 +682,12 @@ void Vulkan::Pipeline::create_graphics_pipeline() {
         .basePipelineIndex = -1,
     };
 
-    std::cout << "Here" << std::endl;
     VkResult result = vkCreateGraphicsPipelines(_device,
                                                 VK_NULL_HANDLE,
                                                 1,
                                                 &pipeline_createInfo,
                                                 VK_NULL_HANDLE,
                                                 &_pipeline);
-    std::cout << "Here2" << std::endl;
 
     if(result != VK_SUCCESS) {
         PLOGF << "Vulkan: Failed to create graphics pipeline";
@@ -2600,6 +2598,8 @@ void Vulkan::init_vulkan(std::vector<const char*>& required_extensions, SDL_Wind
 
     _device = new Device(_instance->_instance, surface, width, height);
 
+    state._device = _device->_device;
+
     VkFormat depth_formats[] = {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT};
     VkFormat chosen_depth_format;
 
@@ -2985,10 +2985,23 @@ void Vulkan::draw_vertex_array(std::shared_ptr<VertexArray> array, int end_vert,
         pipe.create_graphics_pipeline(state);
     };
 
-    // TODO: move this into the pipeline
     std::vector<uint32_t> dynamic_offsets;
-    for(int i = 0; i<pipe.out_bindings.size(); ++i) {
-        dynamic_offsets[i] = pipe.out_bindings[i].binding;
+    for(int set = 0; set < current_shader->reflected_sets.size(); ++set) {
+        for(int binding = 0; binding < current_shader->reflected_sets[set]->binding_count; ++binding) {
+            uint64_t key = uniform_binding_key(
+                current_shader->reflected_sets[set]->bindings[binding]->set, 
+                current_shader->reflected_sets[set]->bindings[binding]->binding
+            );
+            auto offset = uniform_buffers[_current_frame]._current_uniform_offsets.find(key);
+
+            if(offset==uniform_buffers[_current_frame]._current_uniform_offsets.end()) {
+                PLOGF << "Vulkan: Uniform offset for descriptor: " << 
+                    current_shader->reflected_sets[set]->bindings[binding]->name << " unknown";
+                terminate_engine();
+            } else {
+                dynamic_offsets.push_back(offset->second);
+            }
+        }
     }
 
     VkPrimitiveTopology& topology = pipe._current_topology;
