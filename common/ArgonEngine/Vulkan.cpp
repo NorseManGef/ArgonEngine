@@ -1927,20 +1927,20 @@ void Vulkan::RenderPass::create_render_pass(VkDevice device, VkFormat color_form
                                             VkSampleCountFlagBits msaa_samples) {
     _device = device;
 
-    VkAttachmentDescription2 color_attachment{
-        .sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2,
+    VkAttachmentDescription color_attachment {
+        .flags = 0,
         .format = color_format,
         .samples = msaa_samples,
         .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
         .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-        .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE, // TODO: potentially implement in future
+        .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
         .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
         .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
         .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
     };
 
-    VkAttachmentDescription2 depth_attachment{
-        .sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2,
+    VkAttachmentDescription depth_attachment {
+        .flags = 0,
         .format = depth_format,
         .samples = msaa_samples,
         .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
@@ -1951,27 +1951,32 @@ void Vulkan::RenderPass::create_render_pass(VkDevice device, VkFormat color_form
         .finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
     };
 
-    VkAttachmentReference2 color_attachment_ref{
-        .sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2,
+    VkAttachmentReference color_ref {
         .attachment = 0,
         .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
     };
 
-    VkAttachmentReference2 depth_attachment_ref{
-        .sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2,
+    VkAttachmentReference depth_ref {
         .attachment = 1,
-        .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+        .layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
     };
 
-    VkSubpassDescription2 subpass{
-        .sType = VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION_2,
+    std::array<VkAttachmentDescription, 2> attachments = {color_attachment, depth_attachment};
+
+    VkSubpassDescription subpass {
+        .flags = 0,
+        .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+        .inputAttachmentCount = 0,
+        .pInputAttachments = VK_NULL_HANDLE,
         .colorAttachmentCount = 1,
-        .pColorAttachments = &color_attachment_ref,
-        .pDepthStencilAttachment = &depth_attachment_ref,
+        .pColorAttachments = &color_ref,
+        .pResolveAttachments = VK_NULL_HANDLE,
+        .pDepthStencilAttachment = VK_NULL_HANDLE,
+        .preserveAttachmentCount = 0,
+        .pPreserveAttachments = VK_NULL_HANDLE,
     };
 
-    VkSubpassDependency2 subpass_dependency{
-        .sType = VK_STRUCTURE_TYPE_SUBPASS_DEPENDENCY_2,
+    VkSubpassDependency subpass_dep {
         .srcSubpass = VK_SUBPASS_EXTERNAL,
         .dstSubpass = 0,
         .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | 
@@ -1981,21 +1986,21 @@ void Vulkan::RenderPass::create_render_pass(VkDevice device, VkFormat color_form
         .srcAccessMask = 0,
         .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
                          VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+        .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT,
     };
 
-    std::array<VkAttachmentDescription2, 2> attachments = {color_attachment, depth_attachment};
-
-    VkRenderPassCreateInfo2 render_passInfo{
-        .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO_2,
+    VkRenderPassCreateInfo renderpass_info {
+        .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+        .flags = 0,
         .attachmentCount = static_cast<uint32_t>(attachments.size()),
         .pAttachments = attachments.data(),
         .subpassCount = 1,
         .pSubpasses = &subpass,
         .dependencyCount = 1,
-        .pDependencies = &subpass_dependency,
+        .pDependencies = &subpass_dep, 
     };
 
-    VkResult result = vkCreateRenderPass2(device, &render_passInfo, nullptr, &_render_pass);
+    VkResult result = vkCreateRenderPass(device, &renderpass_info, nullptr, &_render_pass);
     if(result != VK_SUCCESS) {
         PLOGF << "Vulkan: Failed to create render pass";
         terminate_engine();
