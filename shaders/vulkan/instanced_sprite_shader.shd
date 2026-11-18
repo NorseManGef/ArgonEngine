@@ -4,19 +4,19 @@
 // brings Matrices and Lighting into scope
 // set 0 should not be used
 
+#ifdef VERTEX_SHADER
+
 layout(location = 0) in vec4 ColorAttribute;
 layout(location = 1) in vec3 PositionAttribute;
 layout(location = 2) in vec2 TextureCoordAttribute;
 
-layout(location = 0) out vec2 texVarying;
-layout(location = 1) out vec4 color_v;
+layout(location = 2) out vec2 texVarying;
+layout(location = 3) out vec4 color_v;
 
 layout(set = 1, binding = 0) uniform Material
 {
     vec4 color;
 };
-
-#ifdef VERTEX_SHADER
 
 void main()
 {
@@ -35,7 +35,10 @@ void main()
 
 layout(set = 1, binding = 1) uniform sampler2D textureSampler;
 
-layout(location = 2) out vec4 FragColor;
+layout(location = 2) in vec2 texVarying;
+layout(location = 3) in vec4 color_v;
+
+layout(location = 0) out vec4 FragColor;
 
 void main()
 {
