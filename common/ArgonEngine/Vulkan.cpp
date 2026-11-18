@@ -3906,11 +3906,23 @@ void Vulkan::reflect_shader(ShaderBinary& shader_code, VkShaderStageFlagBits sta
                     .stageFlags = stage,
                     .pImmutableSamplers = nullptr,
                 });
-                
-                data._desc_pool_sizes.push_back({
-                    .type = type,
-                    .descriptorCount = binding->count,
-                });
+
+                auto it = std::find_if(
+                    data._desc_pool_sizes.begin(),
+                    data._desc_pool_sizes.end(),
+                    [&](const VkDescriptorPoolSize& size) {
+                        return size.type == type;
+                    }
+                );
+
+                if (it == data._desc_pool_sizes.end()) {
+                    data._desc_pool_sizes.push_back({
+                        .type = type,
+                        .descriptorCount = binding->count
+                    });
+                } else {
+                    it->descriptorCount += binding->count;
+                }
             }
             layout_bindings_set.push_back(layout_bindings);
         }
