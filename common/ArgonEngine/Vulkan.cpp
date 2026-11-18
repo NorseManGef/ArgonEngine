@@ -3928,10 +3928,11 @@ void Vulkan::reflect_shader(ShaderBinary& shader_code, VkShaderStageFlagBits sta
                                       << binding.stageFlags << " and " << _binding.stageFlags;
                             }
                             found = true;
+                            _binding.stageFlags |= binding.stageFlags;
                             break;
                         }
                     }
-                    if(found)break;
+                    if(found)continue;
                     
                     data._layout_bindings_set[i].push_back(binding);
                 } 
