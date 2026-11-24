@@ -703,7 +703,7 @@ void Vulkan::Pipeline::update_desc_sets(shader_data& shader, VkBuffer uniform_bu
     std::vector<VkWriteDescriptorSet> descriptor_writes;
     descriptor_writes.reserve(shader.desc_sets.size());
     IF_PLOG(plog::debug) {
-        if(shader.reflected_sets.size() != shader.desc_sets.size()) {
+        if(shader._reflected_sets.size() != shader.desc_sets.size()) {
             PLOGF << "Vulkan: Reflected sets does not match the size of desc sets";
             terminate_engine();
         }
@@ -727,9 +727,9 @@ void Vulkan::Pipeline::update_desc_sets(shader_data& shader, VkBuffer uniform_bu
         }
     };
 
-    for(int i = 0; i < shader.reflected_sets.size(); ++i) {
-        for(int x = 0; x < shader.reflected_sets[i]->binding_count; ++x) {
-            VkDescriptorType type = type_translate(shader.reflected_sets[i]->bindings[x]->descriptor_type);
+    for(int i = 0; i < shader._reflected_sets.size(); ++i) {
+        for(int x = 0; x < shader._reflected_sets[i].size(); ++x) {
+            VkDescriptorType type = type_translate(shader._reflected_sets[i][x]->descriptor_type);
 
             VkDescriptorImageInfo* imageInfo = nullptr;
             VkBufferView* texel_buffer_view = nullptr;
@@ -756,16 +756,16 @@ void Vulkan::Pipeline::update_desc_sets(shader_data& shader, VkBuffer uniform_bu
                 case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
                     bufferInfo = new VkDescriptorBufferInfo{
                         .buffer = storage_buffer,
-                        .offset = shader.reflected_sets[i]->bindings[x]->block.offset,
-                        .range = shader.reflected_sets[i]->bindings[x]->block.size,
+                        .offset = shader._reflected_sets[i][x]->block.offset,
+                        .range = shader._reflected_sets[i][x]->block.size,
                     };
                     break;
                 case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
                 case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
                     bufferInfo = new VkDescriptorBufferInfo{
                         .buffer = uniform_buffer,
-                        .offset = shader.reflected_sets[i]->bindings[x]->block.offset,
-                        .range = shader.reflected_sets[i]->bindings[x]->block.size,
+                        .offset = shader._reflected_sets[i][x]->block.offset,
+                        .range = shader._reflected_sets[i][x]->block.size,
                     }; 
                     break;
                 default: break; // Do nothing
@@ -775,9 +775,9 @@ void Vulkan::Pipeline::update_desc_sets(shader_data& shader, VkBuffer uniform_bu
                 .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
                 .pNext = nullptr,
                 .dstSet = shader.desc_sets[i],
-                .dstBinding = shader.reflected_sets[i]->bindings[x]->binding,
+                .dstBinding = shader._reflected_sets[i][x]->binding,
                 .dstArrayElement = 0,
-                .descriptorCount = shader.reflected_sets[i]->bindings[x]->count,
+                .descriptorCount = shader._reflected_sets[i][x]->count,
                 .descriptorType = type,
                 .pImageInfo = imageInfo,
                 .pBufferInfo = bufferInfo,
@@ -2986,20 +2986,45 @@ void Vulkan::draw_vertex_array(std::shared_ptr<VertexArray> array, int end_vert,
     };
 
     std::vector<uint32_t> dynamic_offsets;
-    for(int set = 0; set < current_shader->reflected_sets.size(); ++set) {
-        for(int binding = 0; binding < current_shader->reflected_sets[set]->binding_count; ++binding) {
-            uint64_t key = uniform_binding_key(
-                current_shader->reflected_sets[set]->bindings[binding]->set, 
-                current_shader->reflected_sets[set]->bindings[binding]->binding
-            );
-            auto offset = uniform_buffers[_current_frame]._current_uniform_offsets.find(key);
+    for(int set = 0; set < current_shader->_reflected_sets.size(); ++set) {
+        for(int binding = 0; binding < current_shader->_reflected_sets[set].size(); ++binding) {
+            switch(current_shader->_reflected_sets[set][binding]->descriptor_type) {
+                case SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+                case SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
+                {
+                    uint64_t key = uniform_binding_key(
+                        current_shader->_reflected_sets[set][binding]->set, 
+                        current_shader->_reflected_sets[set][binding]->binding
+                    );
+                    auto offset = uniform_buffers[_current_frame]._current_uniform_offsets.find(key);
 
-            if(offset==uniform_buffers[_current_frame]._current_uniform_offsets.end()) {
-                PLOGF << "Vulkan: Uniform offset for descriptor: " << 
-                    current_shader->reflected_sets[set]->bindings[binding]->name << " unknown";
-                terminate_engine();
-            } else {
-                dynamic_offsets.push_back(offset->second);
+                    if(offset==uniform_buffers[_current_frame]._current_uniform_offsets.end()) {
+                        PLOGF << "Vulkan: dynamic offset for descriptor: " << 
+                            current_shader->_reflected_sets[set][binding]->name << " unknown";
+                        terminate_engine();
+                    } else {
+                        dynamic_offsets.push_back(offset->second);
+                    }
+                }
+                case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+                case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
+                {
+                    uint64_t key = uniform_binding_key(
+                        current_shader->_reflected_sets[set][binding]->set, 
+                        current_shader->_reflected_sets[set][binding]->binding
+                    );
+                    auto offset = storage_buffer._current_uniform_offsets.find(key);
+                    
+                    if(offset==storage_buffer._current_uniform_offsets.end()) {
+                        PLOGF << "Vulkan: dynamic offset for descriptor: " << 
+                            current_shader->_reflected_sets[set][binding]->name << " unknown";
+                        terminate_engine();
+                    } else {
+                        dynamic_offsets.push_back(offset->second);
+                    }
+                }
+                default:
+                    continue;
             }
         }
     }
@@ -3008,7 +3033,7 @@ void Vulkan::draw_vertex_array(std::shared_ptr<VertexArray> array, int end_vert,
 
     _command_pool->bind_pipeline(current_cmd_buffer, pipe._pipeline);
     _command_pool->set_primitive_topology(current_cmd_buffer, topology);
-    for(int set = 0; set < current_shader->reflected_sets.size(); ++set) {
+    for(int set = 0; set < current_shader->_reflected_sets.size(); ++set) {
         pipe.update_desc_sets(*current_shader, uniform_buffers[_current_frame]._buffer, storage_buffer._buffer, set);
     }
     _command_pool->bind_desc_sets(current_cmd_buffer, pipe._current_shader->pipeline_layout,
@@ -3129,24 +3154,29 @@ void Vulkan::set_uniforms(Uniforms** all_uniforms, int size) {
 
     buffer._current_uniform_offsets.clear();
 
-    for(auto set : current_shader->reflected_sets) {
-        for(int i = 0; i < set->binding_count; ++i) {
-            for(int member_num = 0; member_num < set->bindings[i]->block.member_count; ++member_num) {
-                const SpvReflectBlockVariable& member = set->bindings[i]->block.members[member_num];
-                if(set->bindings[i]->descriptor_type == SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLER ||
-                                                        SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLED_IMAGE ||
-                                                        SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_IMAGE ||
-                                                        SPV_REFLECT_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) {
+    if(!current_shader->reflection_initialized) {
+        PLOGE << "Vulkan: Shader reflection not initialized";
+        return;
+    }
+
+    for(auto set : current_shader->_reflected_sets) {
+        for(int i = 0; i < set.size(); ++i) {
+            for(int member_num = 0; member_num < set[i]->block.member_count; ++member_num) {
+                const SpvReflectBlockVariable& member = set[i]->block.members[member_num];
+                if(set[i]->descriptor_type == SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLER ||
+                                                SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLED_IMAGE ||
+                                                SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_IMAGE ||
+                                                SPV_REFLECT_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) {
                     bool has_value = false;
                     for(int x = 0; x < size; ++x) {
-                        auto it2 = all_uniforms[x]->textures.find(set->bindings[i]->name);
+                        auto it2 = all_uniforms[x]->textures.find(set[i]->name);
                         if(it2 != all_uniforms[x]->textures.end()) {
                             has_value = true;
                             for(int s = 0; s < std::min(member.size,
                                                         static_cast<uint32_t>(it2->second.size())); ++s) {
                                 cache_texture(it2->second[s]);
                                 current_shader->texture_bindings[
-                                    uniform_binding_key(set->set, i)
+                                    uniform_binding_key(set[i]->set, i)
                                 ] = textures[it2->second[s]];
                             }
 
@@ -3154,22 +3184,22 @@ void Vulkan::set_uniforms(Uniforms** all_uniforms, int size) {
                         }
                     }
                     if(!has_value)
-                        PLOGW<<"No value was set for uniform: "<< set->bindings[i]->name 
+                        PLOGW<<"No value was set for uniform: "<< set[i]->name 
                              <<" of type: texture and size "<< member.size;
                     continue;
                 }
 
                 if(!member.name)continue;
 
-                if(set->bindings[i]->descriptor_type == SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_BUFFER ||
+                if(set[i]->descriptor_type == SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_BUFFER ||
                                                         SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC) {
                     if(member.type_description->type_flags & SPV_REFLECT_TYPE_FLAG_ARRAY) {
                         unwrap_reflected_storage_arrays(all_uniforms, member.type_description,
-                                                        set->bindings[i], 0, member.size,
+                                                        set[i], 0, member.size,
                                                         member.offset, member.name);
                     } else {
                         upload_storage_data(all_uniforms, member.type_description,
-                                            set->bindings[i], member.size,
+                                            set[i], member.size,
                                             member.offset, member.name);
                     }
 
@@ -3177,11 +3207,11 @@ void Vulkan::set_uniforms(Uniforms** all_uniforms, int size) {
 
                 if(member.type_description->type_flags & SPV_REFLECT_TYPE_FLAG_ARRAY) {
                     unwrap_reflected_arrays(all_uniforms, member.type_description,
-                                            set->bindings[i], 0,
+                                            set[i], 0,
                                             member.size, member.offset, member.name);
                 } else {
                     upload_uniform_data(all_uniforms, member.type_description,
-                                        set->bindings[i], member.size,
+                                        set[i], member.size,
                                         member.offset, member.name);
                 }
             }
@@ -3823,6 +3853,7 @@ void Vulkan::unwrap_reflected_storage_arrays(Uniforms** all_uniforms,
 }
 
 void Vulkan::reflect_shader(ShaderBinary& shader_code, VkShaderStageFlagBits stage, shader_data& data) {
+
     SpvReflectShaderModule module;
 
     SpvReflectResult result = spvReflectCreateShaderModule(shader_code.data.size()*sizeof(uint32_t),
@@ -3832,6 +3863,8 @@ void Vulkan::reflect_shader(ShaderBinary& shader_code, VkShaderStageFlagBits sta
         PLOGE << "Vulkan: Failed to reflect over shader";
         return;
     }
+
+    data.reflection_initialized = true;
     
     /*
     * attribs
@@ -3865,21 +3898,31 @@ void Vulkan::reflect_shader(ShaderBinary& shader_code, VkShaderStageFlagBits sta
         std::vector<std::vector<VkDescriptorSetLayoutBinding>> layout_bindings_set;
         layout_bindings_set.reserve(sets.size());
 
-        for(auto* set : sets) {
+        for(int i = 0; i < sets.size(); ++i) {
+            std::vector<SpvReflectDescriptorBinding*> reflected_bindings(sets[i]->bindings,
+                                                                         sets[i]->bindings+sets[i]->binding_count);
             std::vector<VkDescriptorSetLayoutBinding> layout_bindings;
-            layout_bindings.reserve(set->binding_count);
-            for(uint32_t i = 0; i < set->binding_count; ++i) {
+            layout_bindings.reserve(sets[i]->binding_count);
+
+            bool skip_merge = false;
+            if(i >= data._reflected_sets.size()) {
+                data._reflected_sets.push_back(reflected_bindings);
+                skip_merge = true;
+            }
+            for(uint32_t x = 0; x < sets[i]->binding_count; ++x) {
                 VkDescriptorSetLayoutBinding layout_binding;
-                auto* binding = set->bindings[i];
+                auto* binding = sets[i]->bindings[x];
 
                 VkDescriptorType type;
 
                 switch(binding->descriptor_type) {
+                    case SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
                     case SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
                         type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
                         break;
+                    case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
                     case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_BUFFER:
-                        type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+                        type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
                         break;
                     case SPV_REFLECT_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
                         type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -3923,6 +3966,22 @@ void Vulkan::reflect_shader(ShaderBinary& shader_code, VkShaderStageFlagBits sta
                 } else {
                     it->descriptorCount += binding->count;
                 }
+
+                if(!skip_merge) {
+                    bool found = false;
+                    for(auto _binding : data._reflected_sets[i]) {
+                        if(_binding->binding == binding->binding) {
+                            if(_binding->descriptor_type != binding->descriptor_type) {
+                                PLOGE << "Vulkan: Shader binding collides";
+                            }
+                            found = true;
+                            break;
+                        }
+                    }
+                    if(found) continue;
+
+                    data._reflected_sets[i].push_back(binding);
+                }                
             }
             layout_bindings_set.push_back(layout_bindings);
         }
@@ -3950,6 +4009,8 @@ void Vulkan::reflect_shader(ShaderBinary& shader_code, VkShaderStageFlagBits sta
                 } 
             }
         }
+
+        data.reflection_modules.push_back(module);
     }
 }
 
