@@ -3192,7 +3192,7 @@ void Vulkan::set_uniforms(Uniforms** all_uniforms, int size) {
                 if(!member.name)continue;
 
                 if(set[i]->descriptor_type == SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_BUFFER ||
-                                                        SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC) {
+                   set[i]->descriptor_type == SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC) {
                     if(member.type_description->type_flags & SPV_REFLECT_TYPE_FLAG_ARRAY) {
                         unwrap_reflected_storage_arrays(all_uniforms, member.type_description,
                                                         set[i], 0, member.size,
