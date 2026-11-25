@@ -1023,6 +1023,7 @@ add_compile_definitions(argonapp
         SDL_MAIN_USE_CALLBACKS
         SDL_MAIN_NOIMPL
         ARGON_WINDOW_HIGH_PIXEL_DENSITY
+        USE_VULKAN
     )
 endif(WIN32)
 
