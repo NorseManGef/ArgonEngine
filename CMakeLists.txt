@@ -33,6 +33,9 @@ set(SHADERC_SKIP_TESTS TRUE)
 set(SHADERC_SKIP_EXAMPLES TRUE)
 set(SHADERC_SKIP_EXECUTABLES TRUE)
 set(SHADERC_SKIP_COPYRIGHT_CHECK TRUE)
+if(WIN32)
+    set(SHADERC_ENABLE_SHARED_CRT TRUE)
+endif(WIN32)
 add_subdirectory(common/shaderc)
 
 if(APPLE)
@@ -1020,6 +1023,7 @@ add_compile_definitions(argonapp
         SDL_MAIN_USE_CALLBACKS
         SDL_MAIN_NOIMPL
         ARGON_WINDOW_HIGH_PIXEL_DENSITY
+        USE_VULKAN
     )
 endif(WIN32)
 
