@@ -3203,23 +3203,21 @@ void Vulkan::set_uniforms(Uniforms** all_uniforms, int size) {
                    set[i]->descriptor_type == SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC) {
                     if(member.type_description->type_flags & SPV_REFLECT_TYPE_FLAG_ARRAY) {
                         unwrap_reflected_storage_arrays(all_uniforms, member.type_description,
-                                                        set[i], 0, member.size,
+                                                        set[i], 0, size,
                                                         member.offset, member.name);
                     } else {
                         upload_storage_data(all_uniforms, member.type_description,
-                                            set[i], member.size,
+                                            set[i], size,
                                             member.offset, member.name);
                     }
 
-                }
-
-                if(member.type_description->type_flags & SPV_REFLECT_TYPE_FLAG_ARRAY) {
+                }else if(member.type_description->type_flags & SPV_REFLECT_TYPE_FLAG_ARRAY) {
                     unwrap_reflected_arrays(all_uniforms, member.type_description,
                                             set[i], 0,
-                                            member.size, member.offset, member.name);
+                                            size, member.offset, member.name);
                 } else {
                     upload_uniform_data(all_uniforms, member.type_description,
-                                        set[i], member.size,
+                                        set[i], size,
                                         member.offset, member.name);
                 }
             }
@@ -3667,6 +3665,13 @@ void Vulkan::upload_uniform_data(Uniforms** all_uniforms, const SpvReflectTypeDe
             case kUniformFMat4x2:
             case kUniformFMat4x3:
             case kUniformFMat4x4:
+                std::cout << "all_uniforms: " << all_uniforms << std::endl;
+                std::cout << "x: " << x << std::endl;
+                std::cout << "all_uniforms[x]: " << all_uniforms[x] << std::endl;
+
+                if (all_uniforms[x]) {
+                    std::cout << "&mat4: " << &all_uniforms[x]->mat4 << std::endl;
+                }
                 found = upload_uniform_data_piece(all_uniforms[x]->mat4, binding->set,
                                                   binding->binding, binding->block.size,
                                                   offset, name);

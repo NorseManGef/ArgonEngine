@@ -916,7 +916,6 @@ class Vulkan:public RenderAPI {
     inline bool upload_uniform_data_piece(const map_strintern_T& uniform_piece,
                                           uint32_t set, uint32_t binding, 
                                           uint32_t block_size, uint32_t offset, StringIntern name) {
-        PLOGV << "Vulkan: uploading uniform data piece";
         auto it = uniform_piece.find(name);
 
         if(it == uniform_piece.end() || it->second.empty())return false;
@@ -948,8 +947,6 @@ class Vulkan:public RenderAPI {
                                       _command_pool->_command_pool,
                                       _device->_graphicsQ,
                                       Buffer::create_dynamic_uniform_buffer);
-        PLOGV << "Vulkan: uploaded uniform data piece";
-
         return true;
     }
 
