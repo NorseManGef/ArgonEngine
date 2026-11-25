@@ -814,7 +814,7 @@ class Vulkan:public RenderAPI {
         std::vector<VkDescriptorSetLayout> desc_set_layouts;
         VkPipelineLayout pipeline_layout = VK_NULL_HANDLE;
         VkDescriptorPool desc_pool = VK_NULL_HANDLE;
-        std::vector<SpvReflectShaderModule> reflection_modules;
+        std::vector<std::unique_ptr<SpvReflectShaderModule>> reflection_modules;
         bool reflection_initialized = false;
         std::map<uint64_t, std::shared_ptr<TexturePrim>> texture_bindings;
         std::map<StringIntern, uint32_t> attribs;

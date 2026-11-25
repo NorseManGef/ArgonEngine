@@ -3164,9 +3164,9 @@ void Vulkan::set_uniforms(Uniforms** all_uniforms, int size) {
             for(int member_num = 0; member_num < set[i]->block.member_count; ++member_num) {
                 const SpvReflectBlockVariable& member = set[i]->block.members[member_num];
                 if(set[i]->descriptor_type == SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLER ||
-                                                SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLED_IMAGE ||
-                                                SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_IMAGE ||
-                                                SPV_REFLECT_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) {
+                   set[i]->descriptor_type == SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLED_IMAGE ||
+                   set[i]->descriptor_type == SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_IMAGE ||
+                   set[i]->descriptor_type == SPV_REFLECT_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) {
                     bool has_value = false;
                     for(int x = 0; x < size; ++x) {
                         auto it2 = all_uniforms[x]->textures.find(set[i]->name);
@@ -3854,11 +3854,11 @@ void Vulkan::unwrap_reflected_storage_arrays(Uniforms** all_uniforms,
 
 void Vulkan::reflect_shader(ShaderBinary& shader_code, VkShaderStageFlagBits stage, shader_data& data) {
 
-    SpvReflectShaderModule module;
+    auto module = std::make_unique<SpvReflectShaderModule>();
 
     SpvReflectResult result = spvReflectCreateShaderModule(shader_code.data.size()*sizeof(uint32_t),
                                                            shader_code.data.data(),
-                                                           &module);
+                                                           module.get());
     if(result != SPV_REFLECT_RESULT_SUCCESS) {
         PLOGE << "Vulkan: Failed to reflect over shader";
         return;
@@ -3871,11 +3871,11 @@ void Vulkan::reflect_shader(ShaderBinary& shader_code, VkShaderStageFlagBits sta
     * */ {
         uint32_t count = 0;
 
-        spvReflectEnumerateInputVariables(&module, &count, nullptr);
+        spvReflectEnumerateInputVariables(module.get(), &count, nullptr);
 
         std::vector<SpvReflectInterfaceVariable*> vars(count);
 
-        spvReflectEnumerateInputVariables(&module, &count, vars.data());
+        spvReflectEnumerateInputVariables(module.get(), &count, vars.data());
 
         for(auto* var : vars) {
             if(var->decoration_flags & SPV_REFLECT_DECORATION_BUILT_IN)continue;
@@ -3889,11 +3889,11 @@ void Vulkan::reflect_shader(ShaderBinary& shader_code, VkShaderStageFlagBits sta
     * */ {
         uint32_t count = 0;
 
-        spvReflectEnumerateDescriptorSets(&module, &count, nullptr);
+        spvReflectEnumerateDescriptorSets(module.get(), &count, nullptr);
 
         std::vector<SpvReflectDescriptorSet*> sets(count);
 
-        spvReflectEnumerateDescriptorSets(&module, &count, sets.data());
+        spvReflectEnumerateDescriptorSets(module.get(), &count, sets.data());
 
         std::vector<std::vector<VkDescriptorSetLayoutBinding>> layout_bindings_set;
         layout_bindings_set.reserve(sets.size());
@@ -4010,7 +4010,7 @@ void Vulkan::reflect_shader(ShaderBinary& shader_code, VkShaderStageFlagBits sta
             }
         }
 
-        data.reflection_modules.push_back(module);
+        data.reflection_modules.push_back(std::move(module));
     }
 }
 
