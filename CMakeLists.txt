@@ -1102,6 +1102,7 @@ if(ENABLE_SANITIZERS)
         -fsanitize=address,undefined
         -fno-omit-frame-pointer
         -g
+        -Og
     )
 
     add_link_options(
