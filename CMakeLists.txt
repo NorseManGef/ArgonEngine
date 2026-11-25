@@ -1094,6 +1094,20 @@ add_compile_definitions(argonapp
 )
 endif(APPLE)
 
+option(ENABLE_SANITIZERS "Enable compiler sanitizers" OFF)
+
+if(ENABLE_SANITIZERS)
+    add_compile_options(
+        -fsanitize=address,undefined
+        -fno-omit-frame-pointer
+        -g
+    )
+
+    add_link_options(
+        -fsanitize=address,undefined
+    )
+endif()
+
 add_custom_command(TARGET argonapp POST_BUILD
     COMMAND "${CMAKE_COMMAND}" -E copy_directory "${PROJECT_SOURCE_DIR}/resources" "$<TARGET_FILE_DIR:argonapp>/resources"
     COMMAND "${CMAKE_COMMAND}" -E copy_directory "${PROJECT_SOURCE_DIR}/shaders" "$<TARGET_FILE_DIR:argonapp>/shaders"

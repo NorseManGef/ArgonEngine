@@ -814,12 +814,14 @@ class Vulkan:public RenderAPI {
         std::vector<VkDescriptorSetLayout> desc_set_layouts;
         VkPipelineLayout pipeline_layout = VK_NULL_HANDLE;
         VkDescriptorPool desc_pool = VK_NULL_HANDLE;
-        std::vector<SpvReflectDescriptorSet*> reflected_sets;
+        std::vector<std::unique_ptr<SpvReflectShaderModule>> reflection_modules;
+        bool reflection_initialized = false;
         std::map<uint64_t, std::shared_ptr<TexturePrim>> texture_bindings;
         std::map<StringIntern, uint32_t> attribs;
 
         std::vector<std::vector<VkDescriptorSetLayoutBinding>> _layout_bindings_set;
         std::vector<VkDescriptorPoolSize> _desc_pool_sizes;
+        std::vector<std::vector<SpvReflectDescriptorBinding*>> _reflected_sets;
 
         VkDevice _device = VK_NULL_HANDLE;
 
@@ -840,15 +842,18 @@ class Vulkan:public RenderAPI {
                     desc_sets.clear();
                 }
                 vkDestroyDescriptorPool(_device, desc_pool, nullptr);
-    
+
                 if(pipeline_layout!=VK_NULL_HANDLE)
                     vkDestroyPipelineLayout(_device, pipeline_layout, nullptr);
                 desc_pool = VK_NULL_HANDLE;
-                reflected_sets.clear();
                 texture_bindings.clear();
                 attribs.clear();
                 _device = VK_NULL_HANDLE;
             }
+            for(auto& module : reflection_modules) {
+                spvReflectDestroyShaderModule(module.get());
+            }
+            reflection_modules.clear();
             _last_frame = 0;
         };
 
