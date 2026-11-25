@@ -1812,6 +1812,10 @@ void Vulkan::Buffer::update_index_buffer(Buffer& buffer, VkDevice device, VkPhys
 
 Vulkan::Buffer Vulkan::Buffer::create_dynamic_uniform_buffer(VkDevice device, VkPhysicalDevice physical_device, VkDeviceSize size) {
     VkPhysicalDeviceProperties properties;
+    if(physical_device==VK_NULL_HANDLE) {
+        PLOGF << "Vulkan: physical device was null";
+        terminate_engine();
+    }
     vkGetPhysicalDeviceProperties(physical_device, &properties);
 
     Buffer buffer;
@@ -1829,6 +1833,10 @@ Vulkan::Buffer Vulkan::Buffer::create_dynamic_uniform_buffer(VkDevice device, Vk
 
 Vulkan::Buffer Vulkan::Buffer::create_dynamic_storage_buffer(VkDevice device, VkPhysicalDevice physical_device, VkDeviceSize size) {
     VkPhysicalDeviceProperties properties;
+    if(physical_device==VK_NULL_HANDLE) {
+        PLOGF << "Vulkan: physical device was null";
+        terminate_engine();
+    }
     vkGetPhysicalDeviceProperties(physical_device, &properties);
     Buffer buffer;
     buffer._dynamic_alignment = properties.limits.minUniformBufferOffsetAlignment;

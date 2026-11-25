@@ -25,6 +25,7 @@
 
 #ifdef USE_VULKAN
 #define MAX_FRAMES_IN_FLIGHT 2
+#define DEFAULT_BUFFER_SIZE 1024
 namespace Argon {
 class Vulkan:public RenderAPI {
     struct Instance {
@@ -460,11 +461,11 @@ class Vulkan:public RenderAPI {
     };
 
     struct Buffer {
-        VkDevice _device;
-        VkPhysicalDevice _physical_device;
-        VkBuffer _buffer;
-        VkDeviceMemory _memory;
-        VkDeviceSize _size;
+        VkDevice _device = VK_NULL_HANDLE;
+        VkPhysicalDevice _physical_device = VK_NULL_HANDLE;
+        VkBuffer _buffer = VK_NULL_HANDLE;
+        VkDeviceMemory _memory = VK_NULL_HANDLE;
+        VkDeviceSize _size = 0;
         VkBufferUsageFlags _usage;
         VkMemoryPropertyFlags _memory_properties;
 
@@ -922,6 +923,10 @@ class Vulkan:public RenderAPI {
 
         auto& buffer = uniform_buffers[_current_frame];
 
+        if(buffer._buffer == VK_NULL_HANDLE) {
+            buffer = Buffer::create_dynamic_uniform_buffer(_device->_device, _device->_physical_device, DEFAULT_BUFFER_SIZE);
+        } 
+
         uint64_t key = uniform_binding_key(set, binding);
 
         auto offset_it = buffer._current_uniform_offsets.find(key);
@@ -971,7 +976,7 @@ class Vulkan:public RenderAPI {
         if(storage_buffer._buffer == VK_NULL_HANDLE) {
             storage_buffer = Buffer::create_dynamic_storage_buffer(_device->_device,
                                                                    _device->_physical_device,
-                                                                   1000);
+                                                                   DEFAULT_BUFFER_SIZE);
         }
         auto offset_it = storage_buffer._current_uniform_offsets.find(key);
 
