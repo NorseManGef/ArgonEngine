@@ -3665,13 +3665,6 @@ void Vulkan::upload_uniform_data(Uniforms** all_uniforms, const SpvReflectTypeDe
             case kUniformFMat4x2:
             case kUniformFMat4x3:
             case kUniformFMat4x4:
-                std::cout << "all_uniforms: " << all_uniforms << std::endl;
-                std::cout << "x: " << x << std::endl;
-                std::cout << "all_uniforms[x]: " << all_uniforms[x] << std::endl;
-
-                if (all_uniforms[x]) {
-                    std::cout << "&mat4: " << &all_uniforms[x]->mat4 << std::endl;
-                }
                 found = upload_uniform_data_piece(all_uniforms[x]->mat4, binding->set,
                                                   binding->binding, binding->block.size,
                                                   offset, name);
