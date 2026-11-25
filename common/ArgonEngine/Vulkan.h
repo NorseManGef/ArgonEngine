@@ -842,7 +842,7 @@ class Vulkan:public RenderAPI {
                     desc_sets.clear();
                 }
                 vkDestroyDescriptorPool(_device, desc_pool, nullptr);
-    
+
                 if(pipeline_layout!=VK_NULL_HANDLE)
                     vkDestroyPipelineLayout(_device, pipeline_layout, nullptr);
                 desc_pool = VK_NULL_HANDLE;
@@ -850,6 +850,10 @@ class Vulkan:public RenderAPI {
                 attribs.clear();
                 _device = VK_NULL_HANDLE;
             }
+            for(auto& module : reflection_modules) {
+                spvReflectDestroyShaderModule(module.get());
+            }
+            reflection_modules.clear();
             _last_frame = 0;
         };
 
