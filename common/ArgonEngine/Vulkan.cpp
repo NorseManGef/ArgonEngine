@@ -1824,7 +1824,9 @@ Vulkan::Buffer Vulkan::Buffer::create_dynamic_uniform_buffer(VkDevice device, Vk
     buffer._dynamic_alignment = min_uniform_alignment;
 
     buffer.create_buffer(device, physical_device, size,
-                                 VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                                 VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | 
+                                        VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
+                                        VK_BUFFER_USAGE_TRANSFER_DST_BIT,
                                  VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | 
                                  VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
@@ -1841,7 +1843,9 @@ Vulkan::Buffer Vulkan::Buffer::create_dynamic_storage_buffer(VkDevice device, Vk
     Buffer buffer;
     buffer._dynamic_alignment = properties.limits.minUniformBufferOffsetAlignment;
     buffer.create_buffer(device, physical_device,
-                  size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                  size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+                               VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
+                               VK_BUFFER_USAGE_TRANSFER_DST_BIT,
                   VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                   VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
@@ -3677,7 +3681,7 @@ void Vulkan::upload_uniform_data(Uniforms** all_uniforms, const SpvReflectTypeDe
     }
     if(!found) {
         PLOGW << "No value was set for uniform: " << name << " of type: " << type <<
-        "and size " << size;
+        " and size " << size;
     }
 }
 
