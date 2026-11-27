@@ -12,6 +12,7 @@
 #include "RenderSystem.h"
 #include "Hardware.h"
 #include "vulkan/vulkan_core.h"
+#include <cstdint>
 #include <type_traits>
 #include <vulkan/vulkan.h>
 #include <plog/Log.h>
@@ -911,11 +912,12 @@ class Vulkan:public RenderAPI {
 
     static uint32_t find_mem_type(VkPhysicalDevice physical_device, uint32_t type_filter,
                            VkMemoryPropertyFlags properties);
-
+    
     template<typename map_strintern_T>
     inline bool upload_uniform_data_piece(const map_strintern_T& uniform_piece,
                                           uint32_t set, uint32_t binding, 
-                                          uint32_t block_size, uint32_t offset, StringIntern name) {
+                                          uint32_t block_size, uint32_t offset, StringIntern name,
+                                          bool is_int = false) {
         auto it = uniform_piece.find(name);
 
         if(it == uniform_piece.end() || it->second.empty())return false;
@@ -942,18 +944,86 @@ class Vulkan:public RenderAPI {
 
         VkDeviceSize block_offset = offset_it->second;
 
-        Buffer::update_dynamic_buffer(buffer, block_offset, offset,
-                                      &it->second[0], it->second.size(),
-                                      _command_pool->_command_pool,
-                                      _device->_graphicsQ,
-                                      Buffer::create_dynamic_uniform_buffer);
+        if(is_int) {
+            using T = typename std::decay_t<decltype(it->second)>::value_type;
+            
+
+            if constexpr (std::is_same_v<T, float>) {
+                std::vector<int32_t> converted_data;
+                converted_data.reserve(it->second.size());
+
+                for(float f : it->second) {
+                    converted_data.push_back(static_cast<int32_t>(f));
+                }
+
+                Buffer::update_dynamic_buffer(buffer, block_offset, offset,
+                                              converted_data.data(), 
+                                              converted_data.size() * sizeof(converted_data[0]),
+                                              _command_pool->_command_pool,
+                                              _device->_graphicsQ,
+                                              Buffer::create_dynamic_uniform_buffer);
+            }
+            if constexpr (std::is_same_v<T, Vector2f>) {
+                std::vector<Vector2i> converted_data;
+                converted_data.reserve(it->second.size());
+
+                for(Vector2f v2f : it->second) {
+                    converted_data.push_back(Vector2i(v2f));
+                } 
+
+                Buffer::update_dynamic_buffer(buffer, block_offset, offset,
+                                              converted_data.data(), 
+                                              converted_data.size() * sizeof(converted_data[0]),
+                                              _command_pool->_command_pool,
+                                              _device->_graphicsQ,
+                                              Buffer::create_dynamic_uniform_buffer);
+            }
+            if constexpr (std::is_same_v<T, Vector3f>) {
+                std::vector<Vector3i> converted_data;
+                converted_data.reserve(it->second.size());
+
+                for(Vector3f v3f : it->second) {
+                    converted_data.push_back(Vector3f(v3f));
+                }
+
+                Buffer::update_dynamic_buffer(buffer, block_offset, offset,
+                                              converted_data.data(), 
+                                              converted_data.size() * sizeof(converted_data[0]),
+                                              _command_pool->_command_pool,
+                                              _device->_graphicsQ,
+                                              Buffer::create_dynamic_uniform_buffer);
+            }
+            if constexpr (std::is_same_v<T, Vector4f>) {
+                std::vector<Vector4i> converted_data;
+                converted_data.reserve(it->second.size());
+
+                for(Vector4f v4f : it->second) {
+                    converted_data.push_back(Vector4f(v4f));
+                }
+
+                Buffer::update_dynamic_buffer(buffer, block_offset, offset,
+                                              converted_data.data(), 
+                                              converted_data.size() * sizeof(converted_data[0]),
+                                              _command_pool->_command_pool,
+                                              _device->_graphicsQ,
+                                              Buffer::create_dynamic_uniform_buffer);
+            }
+
+        } else {
+            Buffer::update_dynamic_buffer(buffer, block_offset, offset,
+                                          it->second.data(), it->second.size()*sizeof(it->second[0]),
+                                          _command_pool->_command_pool,
+                                          _device->_graphicsQ,
+                                          Buffer::create_dynamic_uniform_buffer);
+        }
         return true;
     }
 
     template<typename map_strintern_T>
     inline bool upload_storage_data_piece(const map_strintern_T& storage_piece,
                                           uint32_t set, uint32_t binding,
-                                          uint32_t block_size, uint32_t offset, StringIntern name) {
+                                          uint32_t block_size, uint32_t offset, StringIntern name,
+                                          bool is_int = false) {
         bool wait = _sync->wait_for_frame(
             (_current_frame + MAX_FRAMES_IN_FLIGHT - 1) % MAX_FRAMES_IN_FLIGHT,
             100'000'000 // 10 FPS
@@ -990,12 +1060,78 @@ class Vulkan:public RenderAPI {
 
         VkDeviceSize block_offset = offset_it->second;
 
-        Buffer::update_dynamic_buffer(storage_buffer, block_offset, offset,
-                                      &it->second[0], it->second.size(),
-                                      _command_pool->_command_pool,
-                                      _device->_graphicsQ,
-                                      Buffer::create_dynamic_storage_buffer);
+        if(is_int) {
+            using T = typename std::decay_t<decltype(it->second)>::value_type;
+            
 
+            if constexpr (std::is_same_v<T, float>) {
+                std::vector<int32_t> converted_data;
+                converted_data.reserve(it->second.size());
+
+                for(float f : it->second) {
+                    converted_data.push_back(static_cast<int32_t>(f));
+                }
+
+                Buffer::update_dynamic_buffer(storage_buffer, block_offset, offset,
+                                              converted_data.data(), 
+                                              converted_data.size() * sizeof(converted_data[0]),
+                                              _command_pool->_command_pool,
+                                              _device->_graphicsQ,
+                                              Buffer::create_dynamic_storage_buffer);
+            }
+            if constexpr (std::is_same_v<T, Vector2f>) {
+                std::vector<Vector2i> converted_data;
+                converted_data.reserve(it->second.size());
+
+                for(Vector2f v2f : it->second) {
+                    converted_data.push_back(Vector2i(v2f));
+                } 
+
+                Buffer::update_dynamic_buffer(storage_buffer, block_offset, offset,
+                                              converted_data.data(), 
+                                              converted_data.size() * sizeof(converted_data[0]),
+                                              _command_pool->_command_pool,
+                                              _device->_graphicsQ,
+                                              Buffer::create_dynamic_storage_buffer);
+            }
+            if constexpr (std::is_same_v<T, Vector3f>) {
+                std::vector<Vector3i> converted_data;
+                converted_data.reserve(it->second.size());
+
+                for(Vector3f v3f : it->second) {
+                    converted_data.push_back(Vector3f(v3f));
+                }
+
+                Buffer::update_dynamic_buffer(storage_buffer, block_offset, offset,
+                                              converted_data.data(), 
+                                              converted_data.size() * sizeof(converted_data[0]),
+                                              _command_pool->_command_pool,
+                                              _device->_graphicsQ,
+                                              Buffer::create_dynamic_storage_buffer);
+            }
+            if constexpr (std::is_same_v<T, Vector4f>) {
+                std::vector<Vector4i> converted_data;
+                converted_data.reserve(it->second.size());
+
+                for(Vector4f v4f : it->second) {
+                    converted_data.push_back(Vector4f(v4f));
+                }
+
+                Buffer::update_dynamic_buffer(storage_buffer, block_offset, offset,
+                                              converted_data.data(), 
+                                              converted_data.size() * sizeof(converted_data[0]),
+                                              _command_pool->_command_pool,
+                                              _device->_graphicsQ,
+                                              Buffer::create_dynamic_storage_buffer);
+            }
+
+        } else {
+            Buffer::update_dynamic_buffer(storage_buffer, block_offset, offset,
+                                          it->second.data(), it->second.size()*sizeof(it->second[0]),
+                                          _command_pool->_command_pool,
+                                          _device->_graphicsQ,
+                                          Buffer::create_dynamic_storage_buffer);
+        }
         return true;
     }
     

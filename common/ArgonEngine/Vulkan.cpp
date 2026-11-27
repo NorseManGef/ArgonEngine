@@ -3571,7 +3571,8 @@ void Vulkan::upload_uniform_data(Uniforms** all_uniforms, const SpvReflectTypeDe
         return;
     }
     auto& numeric = type_description->traits.numeric;
-    const bool is_int = numeric.scalar.signedness != 0;
+    const bool is_int = numeric.scalar.signedness != 0 && 
+                        (type_description->type_flags & SPV_REFLECT_TYPE_FLAG_INT);
 
     if(type_description->type_flags & SPV_REFLECT_TYPE_FLAG_MATRIX) {
         const auto& matrix = numeric.matrix;
@@ -3632,6 +3633,7 @@ void Vulkan::upload_uniform_data(Uniforms** all_uniforms, const SpvReflectTypeDe
     bool found = false;
     for(int x = 0; x < size; ++x) {
         switch(type) {
+            found = false;
             case kUniformFloat:
                 found = upload_uniform_data_piece(all_uniforms[x]->f, binding->set, 
                                                   binding->binding, binding->block.size,
@@ -3673,15 +3675,37 @@ void Vulkan::upload_uniform_data(Uniforms** all_uniforms, const SpvReflectTypeDe
                                                   binding->binding, binding->block.size,
                                                   offset, name);
                 break;
+            case kUniformInt:
+                found = upload_uniform_data_piece(all_uniforms[x]->f, binding->set,
+                                                  binding->binding, binding->block.size,
+                                                  offset, name, true);
+                break;
+            case kUniformIVec2:
+                found = upload_uniform_data_piece(all_uniforms[x]->f2, binding->set,
+                                                  binding->binding, binding->block.size,
+                                                  offset, name, true);
+                break;
+            case kUniformIVec3:
+                found = upload_uniform_data_piece(all_uniforms[x]->f3, binding->set,
+                                                  binding->binding, binding->block.size,
+                                                  offset, name, true);
+                break;
+            case kUniformIVec4:
+                found = upload_uniform_data_piece(all_uniforms[x]->f4, binding->set,
+                                                  binding->binding, binding->block.size,
+                                                  offset, name, true);
+                break;
             default: 
-                PLOGE<<std::hex<<"Shader uses unknown uniform type, or it was an int: "<<type<<std::dec;
+                PLOGE<<std::hex<<"Shader uniform: " << name << " uses unknown uniform type, or it was a uint: "
+                     <<type<<std::dec<< "\n Currently, uints are unsupported";
                 found = true;
                 break;
         }
+        if(found)break;
     }
     if(!found) {
         PLOGW << "No value was set for uniform: " << name << " of type: " << type <<
-        " and size " << size;
+        " and size " << binding->block.size;
     }
 }
 
@@ -3799,8 +3823,29 @@ void Vulkan::upload_storage_data(Uniforms** all_uniforms, const SpvReflectTypeDe
                                                   binding->binding, binding->block.size,
                                                   offset, name);
                 break;
+            case kUniformInt:
+                found = upload_storage_data_piece(all_uniforms[x]->f, binding->set, 
+                                                  binding->binding, binding->block.size,
+                                                  offset, name, true);
+                break;
+            case kUniformIVec2:
+                found = upload_storage_data_piece(all_uniforms[x]->f2, binding->set,
+                                                  binding->binding, binding->block.size,
+                                                  offset, name, true);
+                break;
+            case kUniformIVec3:
+                found = upload_storage_data_piece(all_uniforms[x]->f3, binding->set,
+                                                  binding->binding, binding->block.size,
+                                                  offset, name, true);
+                break;
+            case kUniformIVec4:
+                found = upload_storage_data_piece(all_uniforms[x]->f4, binding->set,
+                                                  binding->binding, binding->block.size,
+                                                  offset, name, true);
+                break;
             default: 
-                PLOGE<<std::hex<<"Shader uses unknown uniform type, or it was an int: "<<type<<std::dec;
+                PLOGE<<std::hex<<"Shader storage uniform: " << name << " uses unknown uniform type, or it was a uint: "
+                     <<type<<std::dec<< "\n Currently, uints are unsupported";
                 found = true;
                 break;
         }
