@@ -724,6 +724,8 @@ void Vulkan::Pipeline::update_desc_sets(shader_data& shader, VkBuffer uniform_bu
             case 10: return VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
             case SPV_REFLECT_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR:
                      return VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
+            default:
+                return VK_DESCRIPTOR_TYPE_MAX_ENUM;
         }
     };
 
@@ -3205,20 +3207,9 @@ void Vulkan::set_uniforms(Uniforms** all_uniforms, int size) {
 
                 if(set[i]->descriptor_type == SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_BUFFER ||
                    set[i]->descriptor_type == SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC) {
-                    if(member.type_description->type_flags & SPV_REFLECT_TYPE_FLAG_ARRAY) {
-                        unwrap_reflected_storage_arrays(all_uniforms, member.type_description,
-                                                        set[i], 0, size,
-                                                        member.offset, member.name);
-                    } else {
                         upload_storage_data(all_uniforms, member.type_description,
                                             set[i], size,
                                             member.offset, member.name);
-                    }
-
-                }else if(member.type_description->type_flags & SPV_REFLECT_TYPE_FLAG_ARRAY) {
-                    unwrap_reflected_arrays(all_uniforms, member.type_description,
-                                            set[i], 0,
-                                            size, member.offset, member.name);
                 } else {
                     upload_uniform_data(all_uniforms, member.type_description,
                                         set[i], size,
@@ -3632,8 +3623,8 @@ void Vulkan::upload_uniform_data(Uniforms** all_uniforms, const SpvReflectTypeDe
     }
     bool found = false;
     for(int x = 0; x < size; ++x) {
+        found = false;
         switch(type) {
-            found = false;
             case kUniformFloat:
                 found = upload_uniform_data_piece(all_uniforms[x]->f, binding->set, 
                                                   binding->binding, binding->block.size,
@@ -3781,6 +3772,7 @@ void Vulkan::upload_storage_data(Uniforms** all_uniforms, const SpvReflectTypeDe
     }
     bool found = false;
     for(int x = 0; x < size; ++x) {
+        found = false;
         switch(type) {
             case kUniformFloat:
                 found = upload_storage_data_piece(all_uniforms[x]->f, binding->set, 
@@ -3849,9 +3841,11 @@ void Vulkan::upload_storage_data(Uniforms** all_uniforms, const SpvReflectTypeDe
                 found = true;
                 break;
         }
+        if(found)break;
     }
     if(!found) {
-
+        PLOGW << "No value was set for storage uniform: " << name << " of type: " << type <<
+        " and size " << binding->block.size;
     }
 }
 
