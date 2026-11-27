@@ -735,8 +735,8 @@ class Vulkan:public RenderAPI {
     };
 
     struct TexturePrim {
-        VkDevice _device;
-        VkPhysicalDevice _physical_device;
+        VkDevice _device = VK_NULL_HANDLE;
+        VkPhysicalDevice _physical_device = VK_NULL_HANDLE;
 
         VkImage _image;
         VkDeviceMemory _memory;
@@ -745,7 +745,7 @@ class Vulkan:public RenderAPI {
         VkSampler _sampler;
 
         VkFormat _format;
-        uint32_t _width, _height;
+        uint32_t _width, _height = 0;
 
         VkImageLayout _layout;
 

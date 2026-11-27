@@ -2511,7 +2511,7 @@ void Vulkan::TexturePrim::upload_data(VkCommandBuffer buffer,
 
     Buffer staging;
 
-    staging.create_staging_buffer(_device, _physical_device, size);
+    staging = staging.create_staging_buffer(_device, _physical_device, size);
 
     staging.upload_data(data, size);
 
@@ -3216,7 +3216,8 @@ void Vulkan::set_uniforms(Uniforms** all_uniforms, int size) {
                set[i]->descriptor_type == SPV_REFLECT_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) {
                 bool has_value = false;
                 for(int x = 0; x < size; ++x) {
-                    auto it2 = all_uniforms[x]->textures.find(set[i]->name);
+                    //auto it2 = all_uniforms[x]->textures.find(set[i]->name);
+                    auto it2 = all_uniforms[x]->textures.find("texture");
                     if(it2 != all_uniforms[x]->textures.end()) {
                         has_value = true;
                         for(int s = 0; s < std::min(set[i]->count,
@@ -4130,6 +4131,10 @@ void Vulkan::cache_texture(VirtualResource tex) {
         }
 
         if(p->_update_id!=image->update_id()||realloc) {
+            if(!realloc) {
+                p->_device = _device->_device;
+                p->_physical_device = _device->_physical_device;
+            }
             p->upload_data(_cmd_buffers[_current_frame], image->get_image_data(),
                           tex.size(), 0);
             p->_update_id = image->update_id();
