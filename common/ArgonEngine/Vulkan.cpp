@@ -733,7 +733,7 @@ void Vulkan::Pipeline::update_desc_sets(shader_data& shader, VkBuffer uniform_bu
         for(int x = 0; x < shader._reflected_sets[i].size(); ++x) {
             VkDescriptorType type = type_translate(shader._reflected_sets[i][x]->descriptor_type);
 
-            VkDescriptorImageInfo* imageInfo = nullptr;
+            std::vector<VkDescriptorImageInfo> imageInfo;
             VkBufferView* texel_buffer_view = nullptr;
             VkDescriptorBufferInfo* bufferInfo = nullptr;
 
@@ -742,12 +742,24 @@ void Vulkan::Pipeline::update_desc_sets(shader_data& shader, VkBuffer uniform_bu
                 case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
                 case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
                 {
-                    auto tex = shader.texture_bindings[uniform_binding_key(i, x)];
-                    imageInfo = new VkDescriptorImageInfo {
-                        .sampler = tex->_sampler,
-                        .imageView = tex->_view,
-                        .imageLayout = tex->_layout,
-                    };
+                    uint64_t key = uniform_binding_key(
+                            shader._reflected_sets[i][x]->set, 
+                            shader._reflected_sets[i][x]->binding
+                    );
+
+                    auto tex_it= shader.texture_bindings.find(key);
+                    if(tex_it == shader.texture_bindings.end() || tex_it->second.empty()) {
+                        PLOGF << "Missing texture binding:" << shader._reflected_sets[i][x]->name;
+                        terminate_engine();
+                    }
+
+                    for(auto tex : tex_it->second) {
+                        imageInfo.push_back({
+                            .sampler = tex->_sampler, // CRASH HERE
+                            .imageView = tex->_view,
+                            .imageLayout = tex->_layout,
+                        });
+                    }
                     break;
                 }
                 case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
@@ -781,7 +793,7 @@ void Vulkan::Pipeline::update_desc_sets(shader_data& shader, VkBuffer uniform_bu
                 .dstArrayElement = 0,
                 .descriptorCount = shader._reflected_sets[i][x]->count,
                 .descriptorType = type,
-                .pImageInfo = imageInfo,
+                .pImageInfo = imageInfo.data(),
                 .pBufferInfo = bufferInfo,
                 .pTexelBufferView = texel_buffer_view,
             });
@@ -1883,6 +1895,10 @@ void Vulkan::Buffer::resize_dynamic_buffer(Buffer* dynamic_buffer, VkDeviceSize 
     dynamic_buffer->copy_to(dynamic_buffer->_device, command_pool, graphics_queue, new_buffer, dynamic_buffer->_size);
 
     dynamic_buffer->clean();
+    new_buffer._current_uniform_offsets = std::move(dynamic_buffer->_current_uniform_offsets);
+
+    new_buffer._current_uniform_buffer = dynamic_buffer->_current_uniform_buffer;
+    new_buffer._current_uniform_offsets = std::move(dynamic_buffer->_current_uniform_offsets);
 
     *dynamic_buffer = std::move(new_buffer);
 }
@@ -2406,6 +2422,7 @@ void Vulkan::TexturePrim::create_image(VkDevice device, VkPhysicalDevice physica
     _width = width;
     _height = height;
     _layout = VK_IMAGE_LAYOUT_UNDEFINED;
+    _format = format.actual_format;
 
     VkImageCreateInfo imageInfo{
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
@@ -2422,7 +2439,7 @@ void Vulkan::TexturePrim::create_image(VkDevice device, VkPhysicalDevice physica
         .tiling = VK_IMAGE_TILING_OPTIMAL,
         .usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
         .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-        .initialLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
     };
 
     VkResult result = vkCreateImage(_device, &imageInfo, nullptr, &_image);
@@ -2907,7 +2924,9 @@ void Vulkan::end_frame() {
 
 void Vulkan::RealTexFormat::set_format(int flag) {
     argon_format_flag = flag;
-    switch(flag) {
+
+    const int format = flag & kTextureFormatMask;
+    switch(format) {
         case kTextureRGB565:
             actual_format = VK_FORMAT_R5G6B5_UNORM_PACK16;
             break;
@@ -2941,9 +2960,25 @@ void Vulkan::RealTexFormat::set_format(int flag) {
         case kTextureRGBAF64:
             actual_format = VK_FORMAT_R64G64B64A64_SFLOAT;
             break;
+        case kTextureDepth16:
+            actual_format = VK_FORMAT_D16_UNORM;
+            break;
+        case kTextureDepth24:
+            actual_format = VK_FORMAT_X8_D24_UNORM_PACK32;
+            break;
+        case kTextureDepth32:
+            actual_format = VK_FORMAT_D32_SFLOAT;
+            break;
+        case kTextureStencil8:
+            actual_format = VK_FORMAT_S8_UINT;
+            break;
+        case kTextureDepthStencil:
+            actual_format = VK_FORMAT_D24_UNORM_S8_UINT;
+            break;
         default:
             PLOGE << "Vulkan: No valid texture format provided";
             actual_format = VK_FORMAT_UNDEFINED;
+            return;
     }
 }
 
@@ -3003,7 +3038,6 @@ void Vulkan::draw_vertex_array(std::shared_ptr<VertexArray> array, int end_vert,
     for(int set = 0; set < current_shader->_reflected_sets.size(); ++set) {
         for(int binding = 0; binding < current_shader->_reflected_sets[set].size(); ++binding) {
             switch(current_shader->_reflected_sets[set][binding]->descriptor_type) {
-                case SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
                 case SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
                 {
                     uint64_t key = uniform_binding_key(
@@ -3019,8 +3053,8 @@ void Vulkan::draw_vertex_array(std::shared_ptr<VertexArray> array, int end_vert,
                     } else {
                         dynamic_offsets.push_back(offset->second);
                     }
+                    break;
                 }
-                case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_BUFFER:
                 case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
                 {
                     uint64_t key = uniform_binding_key(
@@ -3036,6 +3070,7 @@ void Vulkan::draw_vertex_array(std::shared_ptr<VertexArray> array, int end_vert,
                     } else {
                         dynamic_offsets.push_back(offset->second);
                     }
+                    break;
                 }
                 default:
                     continue;
@@ -3175,33 +3210,32 @@ void Vulkan::set_uniforms(Uniforms** all_uniforms, int size) {
 
     for(auto set : current_shader->_reflected_sets) {
         for(int i = 0; i < set.size(); ++i) {
+            if(set[i]->descriptor_type == SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLER ||
+               set[i]->descriptor_type == SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLED_IMAGE ||
+               set[i]->descriptor_type == SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_IMAGE ||
+               set[i]->descriptor_type == SPV_REFLECT_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) {
+                bool has_value = false;
+                for(int x = 0; x < size; ++x) {
+                    auto it2 = all_uniforms[x]->textures.find(set[i]->name);
+                    if(it2 != all_uniforms[x]->textures.end()) {
+                        has_value = true;
+                        for(int s = 0; s < std::min(set[i]->count,
+                                                    static_cast<uint32_t>(it2->second.size())); ++s) {
+                            cache_texture(it2->second[s]);
+                            current_shader->texture_bindings[
+                                uniform_binding_key(set[i]->set, set[i]->binding)
+                            ].push_back(textures[it2->second[s]]);
+                        }
+                        break;
+                    }
+                }
+                if(!has_value)
+                    PLOGW<<"No value was set for image: "<< set[i]->name 
+                         <<" of type: "<< set[i]->descriptor_type << " and count: "<< set[i]->count;
+                continue;
+            }
             for(int member_num = 0; member_num < set[i]->block.member_count; ++member_num) {
                 const SpvReflectBlockVariable& member = set[i]->block.members[member_num];
-                if(set[i]->descriptor_type == SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLER ||
-                   set[i]->descriptor_type == SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLED_IMAGE ||
-                   set[i]->descriptor_type == SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_IMAGE ||
-                   set[i]->descriptor_type == SPV_REFLECT_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) {
-                    bool has_value = false;
-                    for(int x = 0; x < size; ++x) {
-                        auto it2 = all_uniforms[x]->textures.find(set[i]->name);
-                        if(it2 != all_uniforms[x]->textures.end()) {
-                            has_value = true;
-                            for(int s = 0; s < std::min(member.size,
-                                                        static_cast<uint32_t>(it2->second.size())); ++s) {
-                                cache_texture(it2->second[s]);
-                                current_shader->texture_bindings[
-                                    uniform_binding_key(set[i]->set, i)
-                                ] = textures[it2->second[s]];
-                            }
-
-                            break;
-                        }
-                    }
-                    if(!has_value)
-                        PLOGW<<"No value was set for uniform: "<< set[i]->name 
-                             <<" of type: texture and size "<< member.size;
-                    continue;
-                }
 
                 if(!member.name)continue;
 
@@ -4083,9 +4117,9 @@ void Vulkan::clear(bool color, bool depth, bool stencil) {
 
 void Vulkan::cache_texture(VirtualResource tex) {
     VirtualResourceImage* image = tex.get_data<VirtualResourceImage*>();
-    RealTexFormat format;
-    format.set_format(image->get_format());
     if(image){
+        RealTexFormat format;
+        format.set_format(image->get_format());
         std::shared_ptr<TexturePrim> p = std::make_shared<TexturePrim>();
         textures[tex] = p;
         p->_last_frame = 0;
@@ -4093,8 +4127,6 @@ void Vulkan::cache_texture(VirtualResource tex) {
         if(realloc) {
             p->create_image(_device->_device, _device->_physical_device,
                        image->get_width(), image->get_height(), format);
-            p->upload_data(_cmd_buffers[_current_frame], image->get_image_data(),
-                          tex.size(), 0);
         }
 
         if(p->_update_id!=image->update_id()||realloc) {

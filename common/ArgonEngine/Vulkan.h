@@ -818,7 +818,7 @@ class Vulkan:public RenderAPI {
         VkDescriptorPool desc_pool = VK_NULL_HANDLE;
         std::vector<std::unique_ptr<SpvReflectShaderModule>> reflection_modules;
         bool reflection_initialized = false;
-        std::map<uint64_t, std::shared_ptr<TexturePrim>> texture_bindings;
+        std::map<uint64_t, std::vector<std::shared_ptr<TexturePrim>>> texture_bindings;
         std::map<StringIntern, uint32_t> attribs;
 
         std::vector<std::vector<VkDescriptorSetLayoutBinding>> _layout_bindings_set;
@@ -933,7 +933,6 @@ class Vulkan:public RenderAPI {
         auto offset_it = buffer._current_uniform_offsets.find(key);
 
         if(offset_it == buffer._current_uniform_offsets.end()) {
-            VkDeviceSize block_size = block_size;
             VkDeviceSize block_stride = (block_size + buffer._dynamic_alignment - 1) & ~(buffer._dynamic_alignment -1);
 
             VkDeviceSize block_offset = buffer._current_uniform_buffer;
@@ -1048,7 +1047,6 @@ class Vulkan:public RenderAPI {
         auto offset_it = storage_buffer._current_uniform_offsets.find(key);
 
         if(offset_it == storage_buffer._current_uniform_offsets.end()) {
-            VkDeviceSize block_size = block_size;
             VkDeviceSize block_stride = (block_size + storage_buffer._dynamic_alignment - 1) & 
                                         ~(storage_buffer._dynamic_alignment -1);
 
