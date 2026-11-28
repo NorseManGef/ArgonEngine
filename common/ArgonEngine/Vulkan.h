@@ -395,6 +395,8 @@ class Vulkan:public RenderAPI {
         VkCommandBuffer begin_single_time_commands();
         void end_single_time_commands(VkCommandBuffer buffer, VkQueue queue);
 
+
+        bool render_pass_active = false;
         void begin_render_pass(VkCommandBuffer buffer, VkRenderPass render_pass,
                                VkFramebuffer framebuffer, VkRect2D render_area,
                                const std::vector<VkClearValue>& clear_values);

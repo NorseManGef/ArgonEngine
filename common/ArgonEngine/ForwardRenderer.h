@@ -184,7 +184,6 @@ namespace Argon {
             }
             std::vector<Renderable*>::iterator it;
             glDepthFunc(GL_LEQUAL);
-            api.pre_draw();
             api.bind_default_framebuffer();
             api.set_viewport(0,0,viewport[0],viewport[1]);
             api.clear(true,true,false);
@@ -200,6 +199,7 @@ namespace Argon {
                     int render_flags=current->render_flags&current->material->render_flags;
                     api.set_render_flags(render_flags|kRenderOpaqueFlags|kRenderDepthMask);
                     api.set_cull_face(current->cull_face);
+                    api.pre_draw();
                     api.draw_vertex_array(current->vertex_array, current->end_vertex,current->vertex_array->draw_type);
                 }
                 ++it;

@@ -1216,10 +1216,13 @@ void Vulkan::CommandPool::begin_render_pass(VkCommandBuffer buffer, VkRenderPass
     };
 
     vkCmdBeginRenderPass(buffer, &render_passInfo, subpassContents);
+
+    render_pass_active = true;
 }
 
 void Vulkan::CommandPool::end_render_pass(VkCommandBuffer buffer) {
     vkCmdEndRenderPass(buffer);
+    render_pass_active = false;
 }
 
 void Vulkan::CommandPool::bind_pipeline(VkCommandBuffer buffer, VkPipeline pipeline, VkPipelineBindPoint bind_point) {
@@ -4099,16 +4102,21 @@ void Vulkan::reflect_shader(ShaderBinary& shader_code, VkShaderStageFlagBits sta
 }
 
 void Vulkan::pre_draw() {
-    VkRect2D rect{
-        .extent = _device->_extent,
-    };
-    _command_pool->begin_render_pass(_cmd_buffers[_current_frame], _render_pass->_render_pass,
-                                     _render_pass->framebuffers[_image_index], rect,
-                                     {state._current_clear_value, state._current_clear_value});
+    if(!_command_pool->render_pass_active) {
+        VkRect2D rect{
+            .extent = _device->_extent,
+        };
+        _command_pool->begin_render_pass(_cmd_buffers[_current_frame], _render_pass->_render_pass,
+                                         _render_pass->framebuffers[_image_index], rect,
+                                         {state._current_clear_value, state._current_clear_value});
+
+    }
 }
 
 void Vulkan::post_draw() {
-    _command_pool->end_render_pass(_cmd_buffers[_current_frame]);
+    if(_command_pool->render_pass_active) {
+        _command_pool->end_render_pass(_cmd_buffers[_current_frame]);
+    }
 }
 
 void Vulkan::clear(bool color, bool depth, bool stencil) {
